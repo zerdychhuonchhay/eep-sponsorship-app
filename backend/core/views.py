@@ -116,21 +116,39 @@ class StudentUploadPreview(APIView):
             )
 class StudentBulkCreateView(APIView):
     """
-    Receives a list of student data and creates multiple student records at once.
+    Receives a list of student data, checks for duplicates, and then
+    creates multiple student records at once.
     """
     def post(self, request, *args, **kwargs):
-        serializer = StudentSerializer(data=request.data, many=True)
+        incoming_data = request.data
         
+        # --- START: New Duplicate Check Logic ---
+        
+        # Get all existing student IDs from the database
+        existing_ids = set(Student.objects.values_list('student_id', flat=True))
+        
+        # Get all IDs from the incoming file
+        incoming_ids = [item['student_id'] for item in incoming_data if 'student_id' in item]
+        
+        # Find which incoming IDs already exist in the database
+        duplicate_ids = set(existing_ids).intersection(incoming_ids)
+        
+        # If any duplicates are found, stop and return an error
+        if duplicate_ids:
+            return Response(
+                {"error": "Duplicate student_id found.", "duplicates": list(duplicate_ids)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # --- END: New Duplicate Check Logic ---
+
+        # If no duplicates are found, proceed with saving the data
+        serializer = StudentSerializer(data=incoming_data, many=True)
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        # Specifically catch database integrity errors (like unique conflicts)
         except IntegrityError as e:
-            return Response(
-                {"error": f"Database Error: A student with one of these IDs likely already exists. Please check your data. Details: {e}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        # Catch any other validation errors
+            return Response({"error": f"Database Error: {e}"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
