@@ -1,5 +1,9 @@
 # backend/core/views.py
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+import pandas as pd
 from rest_framework import viewsets
 from .models import (
     School,
@@ -68,3 +72,34 @@ class GovernmentFilingViewSet(viewsets.ModelViewSet):
     """
     queryset = GovernmentFiling.objects.all().order_by('due_date')
     serializer_class = GovernmentFilingSerializer
+
+class StudentUploadPreview(APIView):
+    """
+    A view to handle Excel file uploads for student data preview.
+    It reads the Excel file, converts it to JSON, and returns it.
+    """
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+
+        if not file:
+            return Response(
+                {"error": "No file was provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Read the excel file using pandas
+            df = pd.read_excel(file)
+            
+            # Convert NaN (Not a Number) values to None (null in JSON)
+            df = df.where(pd.notnull(df), None)
+
+            # Convert the DataFrame to a list of dictionaries
+            data = df.to_dict('records')
+
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": f"There was an error processing the file: {e}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
