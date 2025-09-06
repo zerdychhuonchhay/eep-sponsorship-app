@@ -33,11 +33,14 @@ class FollowUpRecordSerializer(serializers.ModelSerializer):
 
 
 class StudentSerializer(serializers.ModelSerializer):
-    # By defining the DateFields here, we can give them special rules.
-    # The 'input_formats' list tells Django to try parsing the date
-    # using any of these common formats.
-    date_of_birth = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'])
-    eep_enroll_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'])
+    # This is the fix. We are adding `required=False` and `allow_null=True`
+    # to tell the serializer that it's okay for these fields to be empty.
+    date_of_birth = serializers.DateField(
+        input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'], required=False, allow_null=True
+    )
+    eep_enroll_date = serializers.DateField(
+        input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'], required=False, allow_null=True
+    )
 
     class Meta:
         model = Student
