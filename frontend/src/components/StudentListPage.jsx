@@ -1,26 +1,12 @@
 // frontend/src/components/StudentListPage.jsx
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import axios from 'axios';
 import StudentForm from './StudentForm.jsx';
-import { Link as RouterLink } from 'react-router-dom';
-
-// Import Material-UI Components
 import {
-  Container,
-  Typography,
-  Button,
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Alert
+  Container, Typography, Button, Box, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Paper, CircularProgress, Alert
 } from '@mui/material';
 
 const StudentListPage = () => {
@@ -39,7 +25,8 @@ const StudentListPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(API_URL);
-      setStudents(response.data);
+      // THIS IS THE FIX: Get the student list from the 'results' property
+      setStudents(response.data.results);
     } catch (err) {
       setError('Failed to fetch students.');
       console.error('Fetch error:', err);
@@ -71,23 +58,23 @@ const StudentListPage = () => {
         </Paper>
       ) : (
         <Box>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setIsFormVisible(true)}
-            style={{ marginBottom: '16px' }}
-          >
-            Add New Student
-          </Button>
-          <Button
-                variant="outlined"
-                component={RouterLink}
-                to="/import"
-                style={{ marginBottom: '16px' }}
-              >
-                Import Students
-              </Button>
-            </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setIsFormVisible(true)}
+              style={{ marginBottom: '16px', marginRight: '8px' }}
+            >
+              Add New Student
+            </Button>
+            <Button
+              variant="outlined"
+              component={RouterLink}
+              to="/import"
+              style={{ marginBottom: '16px' }}
+            >
+              Import Students
+            </Button>
+        </Box>
       )}
 
       <TableContainer component={Paper}>
@@ -101,14 +88,14 @@ const StudentListPage = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {students.length > 0 ? (
+            {students && students.length > 0 ? (
               students.map((student) => (
                 <TableRow key={student.id} hover>
                   <TableCell>{student.student_id}</TableCell>
                   <TableCell>
-                    <Link to={`/students/${student.id}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
+                    <RouterLink to={`/students/${student.id}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
                       {student.first_name} {student.last_name}
-                    </Link>
+                    </RouterLink>
                   </TableCell>
                   <TableCell>{student.student_status}</TableCell>
                   <TableCell>{student.sponsorship_status}</TableCell>

@@ -1,7 +1,7 @@
 // frontend/src/components/StudentImportPage.jsx
 
-import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import axios from 'axios';
 import {
   Container, Typography, Button, Box, Link as MuiLink, Alert, CircularProgress,
@@ -31,7 +31,7 @@ const StudentImportPage = () => {
   const [validationErrors, setValidationErrors] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const API_PREVIEW_URL = 'https://eep-sponsorship-app-production.up.railway.app/api/students/upload-preview/';
   const API_SAVE_URL = 'https://eep-sponsorship-app-production.up.railway.app/api/students/bulk-create/';
@@ -58,7 +58,10 @@ const StudentImportPage = () => {
       setError(`Failed to process file: ${errorMessage}`);
     } finally {
       setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
     }
+}
   };
 
   const handleMappingChange = (requiredKey, selectedHeader) => {
@@ -92,7 +95,7 @@ const StudentImportPage = () => {
     try {
       await axios.post(API_SAVE_URL, transformedData);
       alert('Successfully imported students!');
-      navigate('/students');
+      window.location.href = '/students';
     } catch (err) {
       const errorData = err.response?.data;
       if (err.response?.status === 400 && Array.isArray(errorData)) {
@@ -120,7 +123,7 @@ const StudentImportPage = () => {
             <Box sx={{ my: 2, display: 'flex', alignItems: 'center' }}>
               <Button variant="contained" component="label">
                 Choose File
-                <input type="file" hidden accept=".xlsx, .xls" onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" hidden accept=".xlsx, .xls" onChange={handleFileChange} />
               </Button>
               {selectedFile && <Typography sx={{ ml: 2 }}>{selectedFile.name}</Typography>}
             </Box>
