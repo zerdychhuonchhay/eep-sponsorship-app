@@ -110,3 +110,20 @@ class StudentUploadPreview(APIView):
                 {"error": f"There was an error processing the file: {e}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+class StudentBulkCreateView(APIView):
+    """
+    Receives a list of student data and creates multiple student records at once.
+    """
+    def post(self, request, *args, **kwargs):
+        # Use the StudentSerializer to validate and create multiple students
+        # The `many=True` flag tells the serializer to expect a list of objects
+        serializer = StudentSerializer(data=request.data, many=True)
+        
+        try:
+            # is_valid will check all records. If any fail, it raises an error.
+            serializer.is_valid(raise_exception=True)
+            # .save() will create all the new student objects in the database
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

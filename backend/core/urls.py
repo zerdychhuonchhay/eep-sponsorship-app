@@ -18,4 +18,6 @@ urlpatterns = [
     path('', include(router.urls)),
     # Add this new URL for the upload preview endpoint
     path('students/upload-preview/', views.StudentUploadPreview.as_view(), name='student-upload-preview'),
+    # Add this new URL for the bulk create endpoint
+    path('students/bulk-create/', views.StudentBulkCreateView.as_view(), name='student-bulk-create'),
 ]
