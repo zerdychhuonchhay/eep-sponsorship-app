@@ -118,15 +118,28 @@ class StudentBulkCreateView(APIView):
     Receives a list of student data and creates multiple student records at once.
     """
     def post(self, request, *args, **kwargs):
-        # Use the StudentSerializer to validate and create multiple students
-        # The `many=True` flag tells the serializer to expect a list of objects
-        serializer = StudentSerializer(data=request.data, many=True)
-        
+        file = request.FILES.get('file')
+
+        if not file:
+            return Response(...)
+
         try:
-            # is_valid will check all records. If any fail, it raises an error.
-            serializer.is_valid(raise_exception=True)
-            # .save() will create all the new student objects in the database
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # CHANGE THIS LINE to force all data to be read as strings
+            df = pd.read_excel(file, dtype=str)
+            
+            # The .where() line is no longer needed, so we can remove it.
+
+            headers = df.columns.tolist()
+            
+            df_sample = df.head(5)
+            # Replace any potential leftover null-like values just in case
+            df_sample = df_sample.where(pd.notnull(df_sample), None)
+            preview_data = df_sample.to_dict('records')
+
+            return Response({
+                "headers": headers,
+                "preview_data": preview_data
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(...)
