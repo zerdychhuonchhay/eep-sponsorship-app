@@ -33,15 +33,21 @@ class FollowUpRecordSerializer(serializers.ModelSerializer):
 
 
 class StudentSerializer(serializers.ModelSerializer):
+    # By defining the DateFields here, we can give them special rules.
+    # The 'input_formats' list tells Django to try parsing the date
+    # using any of these common formats.
+    date_of_birth = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'])
+    eep_enroll_date = serializers.DateField(input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'])
+
+    class Meta:
+        model = Student
+        fields = '__all__'
+        
     # These lines create "nested" serializers. When you request a student,
     # the API response will include a full list of their academic reports
     # and follow-up records, not just their IDs.
     academic_reports = AcademicReportSerializer(many=True, read_only=True)
     follow_up_records = FollowUpRecordSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Student
-        fields = '__all__'
 
 
 class TransactionSerializer(serializers.ModelSerializer):
