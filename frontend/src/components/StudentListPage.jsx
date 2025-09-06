@@ -1,72 +1,128 @@
 // frontend/src/components/StudentListPage.jsx
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
+import StudentForm from './StudentForm.jsx';
+import { Link as RouterLink } from 'react-router-dom';
+
+// Import Material-UI Components
+import {
+  Container,
+  Typography,
+  Button,
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Alert
+} from '@mui/material';
 
 const StudentListPage = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFormVisible, setIsFormVisible] = useState(false);
 
-  // IMPORTANT: Replace this with your actual live Railway App URL
   const API_URL = 'https://eep-sponsorship-app-production.up.railway.app/api/students/';
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const response = await axios.get(API_URL);
-        setStudents(response.data);
-      } catch (err) {
-        setError('Failed to fetch students. Please make sure the API is running.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStudents();
-  }, []); // The empty array ensures this effect runs only once on mount
+  }, []);
 
-  if (loading) {
-    return <div>Loading students...</div>;
-  }
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(API_URL);
+      setStudents(response.data);
+    } catch (err) {
+      setError('Failed to fetch students.');
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
+  const handleStudentAdded = (newStudent) => {
+    setStudents([...students, newStudent]);
+    setIsFormVisible(false);
+  };
+
+  if (loading) return <CircularProgress />;
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <div className="container">
-      <h1>Student Roster</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Student ID</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Status</th>
-            <th>Sponsorship</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.length > 0 ? (
-            students.map((student) => (
-              <tr key={student.id}>
-                <td>{student.student_id}</td>
-                <td>{student.first_name}</td>
-                <td>{student.last_name}</td>
-                <td>{student.student_status}</td>
-                <td>{student.sponsorship_status}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="5">No students found.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <Container maxWidth="md">
+      <Typography variant="h4" component="h1" gutterBottom>
+        Student Roster
+      </Typography>
+
+      {isFormVisible ? (
+        <Paper elevation={3} style={{ padding: '16px', marginBottom: '16px' }}>
+          <StudentForm
+            onFormSubmit={handleStudentAdded}
+            onCancel={() => setIsFormVisible(false)}
+          />
+        </Paper>
+      ) : (
+        <Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setIsFormVisible(true)}
+            style={{ marginBottom: '16px' }}
+          >
+            Add New Student
+          </Button>
+          <Button
+                variant="outlined"
+                component={RouterLink}
+                to="/import"
+                style={{ marginBottom: '16px' }}
+              >
+                Import Students
+              </Button>
+            </Box>
+      )}
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Student ID</TableCell>
+              <TableCell>Full Name</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Sponsorship</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {students.length > 0 ? (
+              students.map((student) => (
+                <TableRow key={student.id} hover>
+                  <TableCell>{student.student_id}</TableCell>
+                  <TableCell>
+                    <Link to={`/students/${student.id}`} style={{ textDecoration: 'none', color: '#1976d2' }}>
+                      {student.first_name} {student.last_name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{student.student_status}</TableCell>
+                  <TableCell>{student.sponsorship_status}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4}>No students found.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Container>
   );
 };
 

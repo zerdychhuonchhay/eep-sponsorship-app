@@ -91,13 +91,20 @@ class StudentUploadPreview(APIView):
             # Read the excel file using pandas
             df = pd.read_excel(file)
             
-            # Convert NaN (Not a Number) values to None (null in JSON)
-            df = df.where(pd.notnull(df), None)
+            # Get the column headers from the uploaded file
+            headers = df.columns.tolist()
+            
+            # Get a sample of the first 5 rows for preview
+            df_sample = df.head(5)
+            df_sample = df_sample.where(pd.notnull(df_sample), None)
+            preview_data = df_sample.to_dict('records')
 
-            # Convert the DataFrame to a list of dictionaries
-            data = df.to_dict('records')
-
-            return Response(data, status=status.HTTP_200_OK)
+            # Send back both the headers and the preview data
+            return Response({
+                "headers": headers,
+                "preview_data": preview_data
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response(
                 {"error": f"There was an error processing the file: {e}"},
