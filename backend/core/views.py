@@ -1,5 +1,6 @@
 # backend/core/views.py
 
+from django.db import IntegrityError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -118,44 +119,18 @@ class StudentBulkCreateView(APIView):
     Receives a list of student data and creates multiple student records at once.
     """
     def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file')
-
-        if not file:
-            return Response(...)
-
-# In backend/core/views.py, inside the StudentUploadPreview class's post method
-
+        serializer = StudentSerializer(data=request.data, many=True)
+        
         try:
-            df = pd.read_excel(file)
-            headers = df.columns.tolist()
-            
-            # --- START OF NEW CLEANING LOGIC ---
-            
-            # 1. Get a sample and convert to a standard Python list of dictionaries
-            df_sample = df.head(5)
-            data_with_potential_nan = df_sample.to_dict('records')
-
-            # 2. Manually loop and clean every single value
-            cleaned_preview_data = []
-            for row in data_with_potential_nan:
-                cleaned_row = {}
-                for key, value in row.items():
-                    # pd.isna() is a robust check for any pandas null-like value (NaN, NaT, etc.)
-                    if pd.isna(value):
-                        cleaned_row[key] = None # Replace with Python's None
-                    else:
-                        cleaned_row[key] = value
-                cleaned_preview_data.append(cleaned_row)
-            
-            # --- END OF NEW CLEANING LOGIC ---
-
-            return Response({
-                "headers": headers,
-                "preview_data": cleaned_preview_data # Return the guaranteed clean data
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # Specifically catch database integrity errors (like unique conflicts)
+        except IntegrityError as e:
             return Response(
-                {"error": f"There was an error processing the file: {e}"},
+                {"error": f"Database Error: A student with one of these IDs likely already exists. Please check your data. Details: {e}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        # Catch any other validation errors
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
