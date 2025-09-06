@@ -123,23 +123,39 @@ class StudentBulkCreateView(APIView):
         if not file:
             return Response(...)
 
-        try:
-            # CHANGE THIS LINE to force all data to be read as strings
-            df = pd.read_excel(file, dtype=str)
-            
-            # The .where() line is no longer needed, so we can remove it.
+# In backend/core/views.py, inside the StudentUploadPreview class's post method
 
+        try:
+            df = pd.read_excel(file)
             headers = df.columns.tolist()
             
+            # --- START OF NEW CLEANING LOGIC ---
+            
+            # 1. Get a sample and convert to a standard Python list of dictionaries
             df_sample = df.head(5)
-            # Replace any potential leftover null-like values just in case
-            df_sample = df_sample.where(pd.notnull(df_sample), None)
-            preview_data = df_sample.to_dict('records')
+            data_with_potential_nan = df_sample.to_dict('records')
+
+            # 2. Manually loop and clean every single value
+            cleaned_preview_data = []
+            for row in data_with_potential_nan:
+                cleaned_row = {}
+                for key, value in row.items():
+                    # pd.isna() is a robust check for any pandas null-like value (NaN, NaT, etc.)
+                    if pd.isna(value):
+                        cleaned_row[key] = None # Replace with Python's None
+                    else:
+                        cleaned_row[key] = value
+                cleaned_preview_data.append(cleaned_row)
+            
+            # --- END OF NEW CLEANING LOGIC ---
 
             return Response({
                 "headers": headers,
-                "preview_data": preview_data
+                "preview_data": cleaned_preview_data # Return the guaranteed clean data
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            return Response(...)
+            return Response(
+                {"error": f"There was an error processing the file: {e}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
