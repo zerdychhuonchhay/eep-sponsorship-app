@@ -13,11 +13,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-dev')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # --- ALLOWED HOSTS ---
-# In production, this will be your live domain name.
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+# We read the allowed hosts from an environment variable for security and flexibility.
+# The .split(',') allows you to add multiple domains in Railway by separating them with a comma.
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # --- APPLICATION DEFINITION ---
