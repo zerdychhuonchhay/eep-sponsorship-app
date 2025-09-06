@@ -90,6 +90,9 @@ class StudentUploadPreview(APIView):
         try:
             # Read the excel file using pandas
             df = pd.read_excel(file)
+
+            # ADD THIS LINE to clean the data immediately
+            df = df.where(pd.notnull(df), None)
             
             # Get the column headers from the uploaded file
             headers = df.columns.tolist()
