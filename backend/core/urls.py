@@ -15,9 +15,10 @@ router.register(r'gov-filings', views.GovernmentFilingViewSet)
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [
-    path('', include(router.urls)),
-    # Add this new URL for the upload preview endpoint
+    # Define specific, custom paths BEFORE the general router
     path('students/upload-preview/', views.StudentUploadPreview.as_view(), name='student-upload-preview'),
-    # Add this new URL for the bulk create endpoint
     path('students/bulk-create/', views.StudentBulkCreateView.as_view(), name='student-bulk-create'),
+
+    # The router should be last, as it has more general patterns
+    path('', include(router.urls)),
 ]
