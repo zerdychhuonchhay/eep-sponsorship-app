@@ -43,30 +43,26 @@ class Student(models.Model):
     student_id = models.CharField(max_length=20, unique=True, help_text="A unique ID for each student (e.g., CPB00002).") # [cite: 23]
     first_name = models.CharField(max_length=100) # [cite: 24]
     last_name = models.CharField(max_length=100) # [cite: 25]
-    date_of_birth = models.DateField() # 
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES) # [cite: 27]
-    profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True) # [cite: 28]
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
 
-    # Compliance and Documentation
-    has_birth_certificate = models.BooleanField(default=False) # 
-    has_sponsorship_contract = models.BooleanField(default=False) # [cite: 30]
+    has_birth_certificate = models.BooleanField(default=False)
+    has_sponsorship_contract = models.BooleanField(default=False)
 
-    # Academic Information
-    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True) # 
-    current_grade = models.CharField(max_length=50) # [cite: 32]
-    eep_enroll_date = models.DateField() # [cite: 33]
-    out_of_program_date = models.DateField(blank=True, null=True) # [cite: 34]
-    student_status = models.CharField(max_length=50, choices=STUDENT_STATUS_CHOICES, default='Pending Qualification') # [cite: 35]
+    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True)
+    current_grade = models.CharField(max_length=50, blank=True)
+    eep_enroll_date = models.DateField(null=True, blank=True)
+    out_of_program_date = models.DateField(blank=True, null=True)
+    student_status = models.CharField(max_length=50, choices=STUDENT_STATUS_CHOICES, default='Pending Qualification')
 
-    # Sponsorship Information
-    sponsorship_status = models.CharField(max_length=50, choices=SPONSORSHIP_STATUS_CHOICES, default='Unsponsored') # [cite: 36]
-    has_housing_sponsorship = models.BooleanField(default=False) # [cite: 37]
-    sponsor_name = models.CharField(max_length=255, blank=True) # [cite: 38]
+    sponsorship_status = models.CharField(max_length=50, choices=SPONSORSHIP_STATUS_CHOICES, default='Unsponsored')
+    has_housing_sponsorship = models.BooleanField(default=False)
+    sponsor_name = models.CharField(max_length=255, blank=True)
 
-    # Guardian & Location Information
-    guardian_name = models.CharField(max_length=255) # [cite: 39]
-    guardian_contact_info = models.TextField(blank=True) # [cite: 40]
-    home_location = models.CharField(max_length=255) # [cite: 41]
+    guardian_name = models.CharField(max_length=255, blank=True)
+    guardian_contact_info = models.TextField(blank=True)
+    home_location = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.student_id})"
