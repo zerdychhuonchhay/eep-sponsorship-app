@@ -125,6 +125,7 @@ class StudentBulkCreateView(APIView):
         incoming_data = request.data
         
         # --- START: Robust Data Cleaning Logic ---
+        # This is the same cleaning logic from our preview endpoint.
         cleaned_data = []
         for student_data in incoming_data:
             cleaned_row = {}
@@ -133,15 +134,24 @@ class StudentBulkCreateView(APIView):
                 if pd.isna(value):
                     cleaned_row[key] = None
                 else:
-                    # Ensure all values are basic types (like string) if they aren't None
-                    cleaned_row[key] = str(value) if not isinstance(value, (str, int, bool)) else value
+                    cleaned_row[key] = value
+            # After cleaning, try to parse and reformat date fields
+            for date_field in ['date_of_birth', 'eep_enroll_date']:
+                if cleaned_row.get(date_field):
+                    try :
+                        date_obj = pd.to_datetime(cleaned_row[date_field])
+                        cleaned_row[date_field] = date_obj.strftime('%Y-%m-%d')
+                    except Exception:
+                        # If parsing fails, it will be caught by the serializer's validation
+                        pass
             cleaned_data.append(cleaned_row)
         # --- END: Robust Data Cleaning Logic ---
 
         existing_ids = set(Student.objects.values_list('student_id', flat=True))
         
         new_students_data = []
-        for student_data in cleaned_data: # Use the cleaned data from now on
+        # Use the fully cleaned data from now on
+        for student_data in cleaned_data:
             if student_data.get('student_id') and student_data.get('student_id') not in existing_ids:
                 new_students_data.append(student_data)
         
