@@ -81,16 +81,18 @@ class StudentUploadPreview(APIView):
     """
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
+        # Get the requested sheet name from the form data
+        sheet_name = request.POST.get('sheet_name')
 
-        if not file:
+        if not file or not sheet_name:
             return Response(
-                {"error": "No file was provided."},
+                {"error": "A file and a sheet name are required."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            # Read the excel file using pandas
-            df = pd.read_excel(file)
+            # Tell pandas which specific sheet to read
+            df = pd.read_excel(file, dtype=str, sheet_name=sheet_name)
 
             # ADD THIS LINE to clean the data immediately
             df = df.where(pd.notnull(df), None)
@@ -101,12 +103,12 @@ class StudentUploadPreview(APIView):
             # Get a sample of the first 5 rows for preview
             df_sample = df.head(5)
             df_sample = df_sample.where(pd.notnull(df_sample), None)
-            preview_data = df_sample.to_dict('records')
+            cleaned_preview_data = df_sample.to_dict('records')
 
             # Send back both the headers and the preview data
             return Response({
                 "headers": headers,
-                "preview_data": preview_data
+                "preview_data": cleaned_preview_data
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
@@ -116,45 +118,47 @@ class StudentUploadPreview(APIView):
             )
 class StudentBulkCreateView(APIView):
     """
-    Receives a list of student data, filters out existing students,
-    and creates records for new students only.
+    Receives a list of student data, checks for duplicates, cleans date formats,
+    and then creates records for new students only.
     """
     def post(self, request, *args, **kwargs):
         incoming_data = request.data
         
-        # Get all existing student IDs from the database once for efficiency
+        # --- START: New Date Cleaning Logic ---
+        cleaned_data_for_validation = []
+        for student_data in incoming_data:
+            # For each student, try to parse and reformat the date fields
+            for date_field in ['date_of_birth', 'eep_enroll_date']:
+                if student_data.get(date_field):
+                    try:
+                        # Use pandas to intelligently parse almost any date format
+                        date_obj = pd.to_datetime(student_data[date_field])
+                        # Reformat it to the exact YYYY-MM-DD string the serializer needs
+                        student_data[date_field] = date_obj.strftime('%Y-%m-%d')
+                    except Exception:
+                        # If parsing fails, leave it as is for the validator to catch
+                        pass
+            cleaned_data_for_validation.append(student_data)
+        # --- END: New Date Cleaning Logic ---
+        
         existing_ids = set(Student.objects.values_list('student_id', flat=True))
         
-        # Filter the incoming data to find only the new students
         new_students_data = []
-        for student_data in incoming_data:
+        for student_data in cleaned_data_for_validation:
             if student_data.get('student_id') not in existing_ids:
                 new_students_data.append(student_data)
         
-        # Calculate how many were new vs. existing
         created_count = len(new_students_data)
         skipped_count = len(incoming_data) - created_count
         
-        # If there are no new students to create, just report back
         if not new_students_data:
-            return Response(
-                {"message": "No new students to import.", "created_count": 0, "skipped_count": skipped_count},
-                status=status.HTTP_200_OK
-            )
+            return Response(...)
 
-        # Proceed with saving only the new students
         serializer = StudentSerializer(data=new_students_data, many=True)
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(
-                {
-                    "message": "Import successful.",
-                    "created_count": created_count,
-                    "skipped_count": skipped_count
-                },
-                status=status.HTTP_201_CREATED
-            )
+            return Response(...)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class ExcelFileAnalyzerView(APIView):
