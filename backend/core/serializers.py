@@ -36,19 +36,16 @@ class StudentSerializer(serializers.ModelSerializer):
     # This is the fix. We are adding `required=False` and `allow_null=True`
     # to tell the serializer that it's okay for these fields to be empty.
     date_of_birth = serializers.DateField(
-        input_formats=['%Y-%m-%d', '%m/%d/%Y', '%d-%b-%Y', 'iso-8601'], required=False, allow_null=True
+        input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'], required=False, allow_null=True
     )
     eep_enroll_date = serializers.DateField(
-        input_formats=['%Y-%m-%d', '%m/%d/%Y', '%d-%b-%Y', 'iso-8601'], required=False, allow_null=True
+        input_formats=['%Y-%m-%d', '%m/%d/%Y', 'iso-8601'], required=False, allow_null=True
     )
 
     class Meta:
         model = Student
         fields = '__all__'
         
-    # These lines create "nested" serializers. When you request a student,
-    # the API response will include a full list of their academic reports
-    # and follow-up records, not just their IDs.
     academic_reports = AcademicReportSerializer(many=True, read_only=True)
     follow_up_records = FollowUpRecordSerializer(many=True, read_only=True)
 
