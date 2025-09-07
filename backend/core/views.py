@@ -118,47 +118,54 @@ class StudentUploadPreview(APIView):
             )
 class StudentBulkCreateView(APIView):
     """
-    Receives a list of student data, checks for duplicates, cleans date formats,
+    Receives a list of student data, cleans it, checks for duplicates,
     and then creates records for new students only.
     """
     def post(self, request, *args, **kwargs):
         incoming_data = request.data
         
-        # --- START: New Date Cleaning Logic ---
-        cleaned_data_for_validation = []
+        # --- START: Robust Data Cleaning Logic ---
+        cleaned_data = []
         for student_data in incoming_data:
-            # For each student, try to parse and reformat the date fields
-            for date_field in ['date_of_birth', 'eep_enroll_date']:
-                if student_data.get(date_field):
-                    try:
-                        # Use pandas to intelligently parse almost any date format
-                        date_obj = pd.to_datetime(student_data[date_field])
-                        # Reformat it to the exact YYYY-MM-DD string the serializer needs
-                        student_data[date_field] = date_obj.strftime('%Y-%m-%d')
-                    except Exception:
-                        # If parsing fails, leave it as is for the validator to catch
-                        pass
-            cleaned_data_for_validation.append(student_data)
-        # --- END: New Date Cleaning Logic ---
-        
+            cleaned_row = {}
+            for key, value in student_data.items():
+                # Use pandas' robust isna() to check for any null-like value
+                if pd.isna(value):
+                    cleaned_row[key] = None
+                else:
+                    # Ensure all values are basic types (like string) if they aren't None
+                    cleaned_row[key] = str(value) if not isinstance(value, (str, int, bool)) else value
+            cleaned_data.append(cleaned_row)
+        # --- END: Robust Data Cleaning Logic ---
+
         existing_ids = set(Student.objects.values_list('student_id', flat=True))
         
         new_students_data = []
-        for student_data in cleaned_data_for_validation:
-            if student_data.get('student_id') not in existing_ids:
+        for student_data in cleaned_data: # Use the cleaned data from now on
+            if student_data.get('student_id') and student_data.get('student_id') not in existing_ids:
                 new_students_data.append(student_data)
         
         created_count = len(new_students_data)
         skipped_count = len(incoming_data) - created_count
         
         if not new_students_data:
-            return Response(...)
+            return Response(
+                {"message": "No new students to import.", "created_count": 0, "skipped_count": skipped_count},
+                status=status.HTTP_200_OK
+            )
 
         serializer = StudentSerializer(data=new_students_data, many=True)
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(...)
+            return Response(
+                {
+                    "message": "Import successful.",
+                    "created_count": created_count,
+                    "skipped_count": skipped_count
+                },
+                status=status.HTTP_201_CREATED
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class ExcelFileAnalyzerView(APIView):
