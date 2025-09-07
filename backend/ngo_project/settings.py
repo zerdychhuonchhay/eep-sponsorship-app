@@ -9,7 +9,7 @@ SECRET_KEY = 'django-insecure-your-secret-key-here' # You can leave this as is f
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['eep-sponsorship-app-production.up.railway.app']
 
 # Application definition
 INSTALLED_APPS = [
@@ -45,14 +45,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", # Default AI Studio / Vite port
     "http://127.0.0.1:5173",
     "https://aistudio.google.com"
-    'eep-sponsorship-app-production.up.railway.app'
 ]
 
-# settings.py
-
-# WARNING: This allows all websites to connect to your API.
-# This should only be used for temporary debugging.
-CORS_ORIGIN_ALLOW_ALL = True
 
 # Use this for more flexible matching of AI Studio's dynamic URLs
 CORS_ALLOWED_ORIGIN_REGEXES = [
