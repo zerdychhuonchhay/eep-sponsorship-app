@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../apiConfig.js';
 
 // Import Material-UI Form Components
 import {
@@ -30,15 +31,14 @@ const StudentForm = ({ onFormSubmit, onCancel, initialData = null }) => {
   const [error, setError] = useState(null);
 
   const isEditMode = initialData !== null;
-  const API_URL = 'https://eep-sponsorship-app-production.up.railway.app/api/students/';
 
   useEffect(() => {
     if (isEditMode && initialData) {
       // Ensure date fields are in yyyy-mm-dd format for the input
       const formattedData = {
         ...initialData,
-        date_of_birth: initialData.date_of_birth.split('T')[0],
-        eep_enroll_date: initialData.eep_enroll_date.split('T')[0],
+        date_of_birth: initialData.date_of_birth ? initialData.date_of_birth.split('T')[0] : '',
+        eep_enroll_date: initialData.eep_enroll_date ? initialData.eep_enroll_date.split('T')[0] : '',
       };
       setFormData(formattedData);
     }
@@ -55,9 +55,9 @@ const StudentForm = ({ onFormSubmit, onCancel, initialData = null }) => {
     try {
       let response;
       if (isEditMode) {
-        response = await axios.put(`${API_URL}${initialData.id}/`, formData);
+        response = await axios.put(`${API_ENDPOINTS.students}${initialData.id}/`, formData);
       } else {
-        response = await axios.post(API_URL, formData);
+        response = await axios.post(API_ENDPOINTS.students, formData);
       }
       onFormSubmit(response.data);
     } catch (err) {
@@ -75,7 +75,7 @@ const StudentForm = ({ onFormSubmit, onCancel, initialData = null }) => {
       <TextField margin="normal" required fullWidth id="student_id" label="Student ID" name="student_id" value={formData.student_id} onChange={handleChange} />
       <TextField margin="normal" required fullWidth id="first_name" label="First Name" name="first_name" value={formData.first_name} onChange={handleChange} />
       <TextField margin="normal" required fullWidth id="last_name" label="Last Name" name="last_name" value={formData.last_name} onChange={handleChange} />
-      <TextField margin="normal" required fullWidth name="date_of_birth" label="Date of Birth" type="date" value={formData.date_of_birth} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+      <TextField margin="normal" fullWidth name="date_of_birth" label="Date of Birth" type="date" value={formData.date_of_birth} onChange={handleChange} InputLabelProps={{ shrink: true }} />
       <FormControl fullWidth margin="normal">
         <InputLabel id="gender-label">Gender</InputLabel>
         <Select labelId="gender-label" id="gender" name="gender" value={formData.gender} label="Gender" onChange={handleChange}>
@@ -83,10 +83,10 @@ const StudentForm = ({ onFormSubmit, onCancel, initialData = null }) => {
           <MenuItem value="Female">Female</MenuItem>
         </Select>
       </FormControl>
-      <TextField margin="normal" required fullWidth id="current_grade" label="Current Grade" name="current_grade" value={formData.current_grade} onChange={handleChange} />
-      <TextField margin="normal" required fullWidth name="eep_enroll_date" label="Program Enroll Date" type="date" value={formData.eep_enroll_date} onChange={handleChange} InputLabelProps={{ shrink: true }} />
-      <TextField margin="normal" required fullWidth id="guardian_name" label="Guardian Name" name="guardian_name" value={formData.guardian_name} onChange={handleChange} />
-      <TextField margin="normal" required fullWidth id="home_location" label="Home Location" name="home_location" value={formData.home_location} onChange={handleChange} />
+      <TextField margin="normal" fullWidth id="current_grade" label="Current Grade" name="current_grade" value={formData.current_grade} onChange={handleChange} />
+      <TextField margin="normal" fullWidth name="eep_enroll_date" label="Program Enroll Date" type="date" value={formData.eep_enroll_date} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+      <TextField margin="normal" fullWidth id="guardian_name" label="Guardian Name" name="guardian_name" value={formData.guardian_name} onChange={handleChange} />
+      <TextField margin="normal" fullWidth id="home_location" label="Home Location" name="home_location" value={formData.home_location} onChange={handleChange} />
       
       {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
 

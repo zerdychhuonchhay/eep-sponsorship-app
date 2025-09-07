@@ -1,5 +1,6 @@
 # backend/core/views.py
 
+from django.db.models import Count
 from django.db import IntegrityError
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -204,21 +205,31 @@ class ExcelFileAnalyzerView(APIView):
         
 class DashboardStatsView(APIView):
     """
-    A view to provide summary statistics for the main dashboard.
+    A view to provide summary statistics and chart data for the main dashboard.
     """
     def get(self, request, *args, **kwargs):
-        # Perform calculations using the Django ORM for efficiency
+        # ... (the simple stat calculations remain the same)
         total_students = Student.objects.count()
         active_students = Student.objects.filter(student_status='Active').count()
         sponsored_students = Student.objects.filter(sponsorship_status='Sponsored').count()
         unsponsored_students = Student.objects.filter(sponsorship_status='Unsponsored').count()
 
-        # Compile the statistics into a dictionary
+        # --- START: New Chart Data Logic ---
+        # Group students by their 'current_grade' and count how many are in each group
+        students_by_grade = (
+            Student.objects
+            .values('current_grade')
+            .annotate(count=Count('id'))
+            .order_by('current_grade')
+        )
+        # --- END: New Chart Data Logic ---
+
         stats = {
             'total_students': total_students,
             'active_students': active_students,
             'sponsored_students': sponsored_students,
             'unsponsored_students': unsponsored_students,
+            'students_by_grade': list(students_by_grade), # Add the new chart data to the response
         }
         
         return Response(stats, status=status.HTTP_200_OK)
