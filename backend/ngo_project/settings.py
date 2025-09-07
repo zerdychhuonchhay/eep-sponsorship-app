@@ -12,10 +12,15 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-secret-key-here'
 DEBUG = False
 
 # This allows your live Railway domain to be accessed.
-ALLOWED_HOSTS = ['eep-sponsorship-app-production.up.railway.app']
+ALLOWED_HOSTS = [
+    'eep-sponsorship-app-production.up.railway.app',
+    '127.0.0.1',
+    'localhost',
+    ]
 
 # --- Application definition ---
 INSTALLED_APPS = [
+    'jazzmin',  # For a better admin interface
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -104,3 +109,41 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+JAZZMIN_SETTINGS = {
+    # title of the window (Will default to current_admin_site.site_title if absent or None)
+    "site_title": "NGO Admin",
+
+    # Title on the login screen (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_header": "NGO Admin",
+
+    # Title on the brand (19 chars max) (defaults to current_admin_site.site_header if absent or None)
+    "site_brand": "NGO Sponsorship",
+
+    # Logo to use for your site, must be present in static files, used for brand on top left
+    # "site_logo": "path/to/your/logo.png",
+
+    # Welcome text on the login screen
+    "welcome_sign": "Welcome to the NGO Sponsorship Admin",
+
+    # Copyright on the footer
+    "copyright": "NGO Sponsorship Ltd",
+
+    # The model admin to search from the search bar, search model admin has to be defined in your admin.py
+    "search_model": "core.Student",
+
+    # Links to put along the top menu
+    "topmenu_links": [
+        {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"model": "core.Student"},
+    ],
+
+    #############
+    # UI Tweaks #
+    #############
+    "show_ui_builder": False, # Set to True to customize the UI from the admin panel
+
+    "changeform_format": "horizontal_tabs",
+    # override change forms on a per modeladmin basis
+    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
+}
