@@ -45,6 +45,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", # Default AI Studio / Vite port
     "http://127.0.0.1:5173",
     "https://aistudio.google.com"
+    'eep-sponsorship-app-production.up.railway.app'
 ]
 
 # Use this for more flexible matching of AI Studio's dynamic URLs
