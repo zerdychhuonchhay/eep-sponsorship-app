@@ -41,6 +41,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     """
     queryset = Student.objects.all().order_by('first_name')
     serializer_class = StudentSerializer
+    pagination_class = None # Disable pagination for simplicity; adjust as needed
 
 
 class AcademicReportViewSet(viewsets.ModelViewSet):
@@ -100,12 +101,18 @@ class StudentUploadPreview(APIView):
             # Get the column headers from the uploaded file
             headers = df.columns.tolist()
             
-            # Get a sample of the first 5 rows for preview
-            df_sample = df.head(5)
-            df_sample = df_sample.where(pd.notnull(df_sample), None)
-            cleaned_preview_data = df_sample.to_dict('records')
+            # THIS IS THE FIX: We now process the entire DataFrame (df), not just a sample.
+            all_data = df.to_dict('records')
+            cleaned_preview_data = []
+            for row in all_data:
+                cleaned_row = {}
+                for key, value in row.items():
+                    if pd.isna(value):
+                        cleaned_row[key] = None
+                    else:
+                        cleaned_row[key] = value
+                cleaned_preview_data.append(cleaned_row)
 
-            # Send back both the headers and the preview data
             return Response({
                 "headers": headers,
                 "preview_data": cleaned_preview_data
