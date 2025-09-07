@@ -19,6 +19,7 @@ urlpatterns = [
     path('students/upload-preview/', views.StudentUploadPreview.as_view(), name='student-upload-preview'),
     path('students/bulk-create/', views.StudentBulkCreateView.as_view(), name='student-bulk-create'),
     path('import/analyze/', views.ExcelFileAnalyzerView.as_view(), name='excel-file-analyzer'),
+    path('dashboard-stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'), # Example of a custom endpoint
     
     # The router should be last, as it has more general patterns
     path('', include(router.urls)),

@@ -201,3 +201,24 @@ class ExcelFileAnalyzerView(APIView):
             return Response({"sheet_names": sheet_names}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Could not analyze the file: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+class DashboardStatsView(APIView):
+    """
+    A view to provide summary statistics for the main dashboard.
+    """
+    def get(self, request, *args, **kwargs):
+        # Perform calculations using the Django ORM for efficiency
+        total_students = Student.objects.count()
+        active_students = Student.objects.filter(student_status='Active').count()
+        sponsored_students = Student.objects.filter(sponsorship_status='Sponsored').count()
+        unsponsored_students = Student.objects.filter(sponsorship_status='Unsponsored').count()
+
+        # Compile the statistics into a dictionary
+        stats = {
+            'total_students': total_students,
+            'active_students': active_students,
+            'sponsored_students': sponsored_students,
+            'unsponsored_students': unsponsored_students,
+        }
+        
+        return Response(stats, status=status.HTTP_200_OK)
