@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { api } from '../services/api';
-import { Task, TaskStatus, TaskPriority } from '../types';
-import Modal from '../components/Modal';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons';
-import { useNotification } from '../contexts/NotificationContext';
-import { SkeletonTable } from '../components/SkeletonLoader';
-import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls';
+import { api } from '../services/api.ts';
+import { Task, TaskStatus, TaskPriority } from '../types.ts';
+import Modal from '../components/Modal.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
+import { useNotification } from '../contexts/NotificationContext.tsx';
+import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls.tsx';
 
 type TaskFormData = Omit<Task, 'id'>;
 

@@ -1,19 +1,15 @@
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, NavLink } from 'react-router-dom';
-import DashboardPage from './pages/DashboardPage';
-import StudentsPage from './pages/StudentsPage';
-import TransactionsPage from './pages/TransactionsPage';
-import FilingsPage from './pages/FilingsPage';
-import AcademicsPage from './pages/AcademicsPage';
-import TasksPage from './pages/TasksPage';
-import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, MenuIcon, MoonIcon, SunIcon, LogoIcon, SearchIcon, BellIcon, ArrowDownIcon, LogoutIcon, CloseIcon } from './components/Icons';
-import { NotificationProvider } from './contexts/NotificationContext';
-import Toast from './components/Toast';
-import { api } from './services/api';
+import DashboardPage from './pages/DashboardPage.tsx';
+import StudentsPage from './pages/StudentsPage.tsx';
+import TransactionsPage from './pages/TransactionsPage.tsx';
+import FilingsPage from './pages/FilingsPage.tsx';
+import AcademicsPage from './pages/AcademicsPage.tsx';
+import TasksPage from './pages/TasksPage.tsx';
+import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, MenuIcon, MoonIcon, SunIcon, LogoIcon, SearchIcon, BellIcon, ArrowDownIcon, LogoutIcon, CloseIcon } from './components/Icons.tsx';
+import { NotificationProvider } from './contexts/NotificationContext.tsx';
+import Toast from './components/Toast.tsx';
+import { api } from './services/api.ts';
 
 const App: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api } from '../services/api.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
-import { StudentStatus, Transaction, TransactionType } from '../types';
-import { SkeletonDashboard } from '../components/SkeletonLoader';
-import { ErrorIcon } from '../components/Icons';
+import { StudentStatus, Transaction, TransactionType } from '../types.ts';
+import { SkeletonDashboard } from '../components/SkeletonLoader.tsx';
+import { ErrorIcon } from '../components/Icons.tsx';
 
 interface StatCardProps {
     title: string;
@@ -131,7 +131,7 @@ const DashboardPage: React.FC = () => {
     }
 
     const incomeExpenseData = [
-        { name: 'Financials', income: stats.income_vs_expense.income, expense: stats.income_vs_expense.expense }
+        { name: 'Financials', income: stats.incomeVsExpense.income, expense: stats.incomeVsExpense.expense }
     ];
 
     const statusColors: Record<StudentStatus, string> = {
@@ -140,7 +140,7 @@ const DashboardPage: React.FC = () => {
         [StudentStatus.PENDING_QUALIFICATION]: '#F2994A',
     };
     
-    const studentStatusData = Object.entries(stats.student_status_distribution).map(([name, value]) => ({ name, value }));
+    const studentStatusData = Object.entries(stats.studentStatusDistribution).map(([name, value]) => ({ name, value }));
 
     const renderCustomizedLabel = (props: any) => {
       const { x, y, width, value } = props;
@@ -152,15 +152,15 @@ const DashboardPage: React.FC = () => {
       );
     };
 
-    const chartData = chartView === 'total' ? incomeExpenseData : (stats.monthly_breakdown || []);
+    const chartData = chartView === 'total' ? incomeExpenseData : (stats.monthlyBreakdown || []);
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-                <StatCard title="Total Students" value={stats.total_students} iconBgClass="bg-primary/10" icon={<svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.122-1.28-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.122-1.28.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>} />
-                <StatCard title="Active Students" value={stats.active_students} iconBgClass="bg-success/10" icon={<svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" ><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>} />
-                <StatCard title="Net Balance" value={`$${stats.net_balance.toLocaleString()}`} iconBgClass="bg-secondary/10" icon={<svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01M12 16v-1m0 1v.01M4 4h16v16H4V4z"></path></svg>} />
-                <StatCard title="Upcoming Filings" value={stats.upcoming_filings} iconBgClass="bg-warning/10" icon={<svg className="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>} />
+                <StatCard title="Total Students" value={stats.totalStudents} iconBgClass="bg-primary/10" icon={<svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.122-1.28-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.122-1.28.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>} />
+                <StatCard title="Active Students" value={stats.activeStudents} iconBgClass="bg-success/10" icon={<svg className="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" ><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>} />
+                <StatCard title="Net Balance" value={`$${stats.netBalance.toLocaleString()}`} iconBgClass="bg-secondary/10" icon={<svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01M12 16v-1m0 1v.01M4 4h16v16H4V4z"></path></svg>} />
+                <StatCard title="Upcoming Filings" value={stats.upcomingFilings} iconBgClass="bg-warning/10" icon={<svg className="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>} />
             </div>
 
             <div className="grid grid-cols-12 gap-4 md:gap-6 2xl:gap-7.5">

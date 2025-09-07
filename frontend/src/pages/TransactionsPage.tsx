@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '../services/api';
-import { Transaction, TransactionType, Student, TRANSACTION_CATEGORIES } from '../types';
-import Modal from '../components/Modal';
-import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '../components/Icons';
-import { useNotification } from '../contexts/NotificationContext';
-import { SkeletonTable } from '../components/SkeletonLoader';
-import { FormInput, FormSelect } from '../components/forms/FormControls';
+import { api } from '../services/api.ts';
+import { Transaction, TransactionType, Student, TRANSACTION_CATEGORIES } from '../types.ts';
+import Modal from '../components/Modal.tsx';
+import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
+import { useNotification } from '../contexts/NotificationContext.tsx';
+import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { FormInput, FormSelect } from '../components/forms/FormControls.tsx';
 
 const TransactionForm: React.FC<{ 
     onSave: (transaction: Omit<Transaction, 'id'> | Transaction) => void; 

@@ -8,48 +8,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-            colors: {
-              primary: '#3C50E0',
-              secondary: '#80CAEE',
-              success: '#10B981',
-              danger: '#DC3545',
-              warning: '#F2994A',
-              
-              black: '#1C2434',
-              'box-dark': '#24303F',
-              'box-dark-2': '#1A222C',
-              'body-color': '#64748B',
-
-              stroke: '#E2E8F0',
-              strokedark: '#2E3A47',
-              'form-input': '#24303F',
-              whiten: '#F1F5F9',
-              white: '#FFFFFF',
-              gray: {
-                DEFAULT: '#EFF4FB',
-                '2': '#F7F9FC',
-                '300': '#D1D5DB',
-                '400': '#9CA3AF',
-                '500': '#6B7280',
-                '600': '#4B5563',
-              },
-            }
-          }
-        }
-      }
-    </script>
     <style>
+      /* Base styles to prevent flash of unstyled content */
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #F7F9FC; /* Corresponds to gray-2 */
+      }
+      .dark body {
+        background-color: #1A222C; /* Corresponds to box-dark-2 */
+      }
       @media print {
         body * {
           visibility: hidden;
@@ -76,20 +45,10 @@
         -webkit-line-clamp: 2;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.1.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
-    "react/": "https://aistudiocdn.com/react@^19.1.1/",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.8.2",
-    "recharts": "https://aistudiocdn.com/recharts@^3.1.2"
-  }
-}
-</script>
+
 </head>
   <body class="bg-gray-2 dark:bg-box-dark-2 font-sans">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

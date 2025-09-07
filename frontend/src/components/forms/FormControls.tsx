@@ -1,5 +1,5 @@
 import React from 'react';
-import { YesNo, WellbeingStatus } from '../../types';
+import { YesNo, WellbeingStatus } from '../../types.ts';
 
 export const FormInput: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, ...props }) => (
     <div>

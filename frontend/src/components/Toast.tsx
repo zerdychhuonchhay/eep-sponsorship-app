@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { useNotification } from '../contexts/NotificationContext';
-import { SuccessIcon, ErrorIcon, CloseIcon } from './Icons';
+import { useNotification } from '../contexts/NotificationContext.tsx';
+import { SuccessIcon, ErrorIcon, CloseIcon } from './Icons.tsx';
 
 const Toast: React.FC = () => {
     const { toast, hideToast } = useNotification();

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { api } from '../services/api';
-import { AcademicReport, Student } from '../types';
-import Modal from '../components/Modal';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons';
-import { useNotification } from '../contexts/NotificationContext';
-import { SkeletonTable } from '../components/SkeletonLoader';
-import AcademicReportForm from '../components/AcademicReportForm';
+import { api } from '../services/api.ts';
+import { AcademicReport, Student } from '../types.ts';
+import Modal from '../components/Modal.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
+import { useNotification } from '../contexts/NotificationContext.tsx';
+import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import AcademicReportForm from '../components/AcademicReportForm.tsx';
 
 type ReportFormData = Omit<AcademicReport, 'id' | 'student_id' | 'student_name'>;
 
@@ -212,4 +212,4 @@ const AcademicsPage: React.FC = () => {
     );
 };
 
-export default AcademicsPage;    
+export default AcademicsPage;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { AcademicReport, Student } from '../types';
-import { FormInput, FormSelect, FormTextArea } from './forms/FormControls';
+import { AcademicReport, Student } from '../types.ts';
+import { FormInput, FormSelect, FormTextArea } from './forms/FormControls.tsx';
 
 type ReportFormData = Omit<AcademicReport, 'id' | 'student_id' | 'student_name'>;
 

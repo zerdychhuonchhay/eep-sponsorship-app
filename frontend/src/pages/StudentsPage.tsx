@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { api } from '../services/api';
-import { Student, FollowUpRecord, Gender, StudentStatus, SponsorshipStatus, AcademicReport, WellbeingStatus, YesNo, RISK_FACTORS, HealthStatus, InteractionStatus, TransportationType } from '../types';
-import Modal from '../components/Modal';
-import { PlusIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon, UploadIcon, DownloadIcon } from '../components/Icons';
-import { useNotification } from '../contexts/NotificationContext';
-import { SkeletonTable } from '../components/SkeletonLoader';
-import { FormInput, FormSelect, FormTextArea, FormCheckbox, FormSection, FormSubSection, YesNoNASelect, WellbeingSelect } from '../components/forms/FormControls';
-import AcademicReportForm from '../components/AcademicReportForm';
+import { api } from '../services/api.ts';
+import { Student, FollowUpRecord, Gender, StudentStatus, SponsorshipStatus, AcademicReport, WellbeingStatus, YesNo, RISK_FACTORS, HealthStatus, InteractionStatus, TransportationType } from '../types.ts';
+import Modal from '../components/Modal.tsx';
+import { PlusIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon, UploadIcon, DownloadIcon } from '../components/Icons.tsx';
+import { useNotification } from '../contexts/NotificationContext.tsx';
+import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { FormInput, FormSelect, FormTextArea, FormCheckbox, FormSection, FormSubSection, YesNoNASelect, WellbeingSelect } from '../components/forms/FormControls.tsx';
+import AcademicReportForm from '../components/AcademicReportForm.tsx';
 
 // --- Helper Functions ---
 const calculateAge = (dob: string): number => {
