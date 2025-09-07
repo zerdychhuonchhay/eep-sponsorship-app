@@ -44,6 +44,12 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", # Default AI Studio / Vite port
     "http://127.0.0.1:5173",
+    "https://aistudio.google.com"
+]
+
+# Use this for more flexible matching of AI Studio's dynamic URLs
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.aistudio\.google\.com$",
 ]
 
 ROOT_URLCONF = 'ngo_project.urls'
