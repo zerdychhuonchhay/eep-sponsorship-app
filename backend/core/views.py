@@ -116,39 +116,60 @@ class StudentUploadPreview(APIView):
             )
 class StudentBulkCreateView(APIView):
     """
-    Receives a list of student data, checks for duplicates, and then
-    creates multiple student records at once.
+    Receives a list of student data, filters out existing students,
+    and creates records for new students only.
     """
     def post(self, request, *args, **kwargs):
         incoming_data = request.data
         
-        # --- START: New Duplicate Check Logic ---
-        
-        # Get all existing student IDs from the database
+        # Get all existing student IDs from the database once for efficiency
         existing_ids = set(Student.objects.values_list('student_id', flat=True))
         
-        # Get all IDs from the incoming file
-        incoming_ids = [item['student_id'] for item in incoming_data if 'student_id' in item]
+        # Filter the incoming data to find only the new students
+        new_students_data = []
+        for student_data in incoming_data:
+            if student_data.get('student_id') not in existing_ids:
+                new_students_data.append(student_data)
         
-        # Find which incoming IDs already exist in the database
-        duplicate_ids = set(existing_ids).intersection(incoming_ids)
+        # Calculate how many were new vs. existing
+        created_count = len(new_students_data)
+        skipped_count = len(incoming_data) - created_count
         
-        # If any duplicates are found, stop and return an error
-        if duplicate_ids:
+        # If there are no new students to create, just report back
+        if not new_students_data:
             return Response(
-                {"error": "Duplicate student_id found.", "duplicates": list(duplicate_ids)},
-                status=status.HTTP_400_BAD_REQUEST
+                {"message": "No new students to import.", "created_count": 0, "skipped_count": skipped_count},
+                status=status.HTTP_200_OK
             )
-        
-        # --- END: New Duplicate Check Logic ---
 
-        # If no duplicates are found, proceed with saving the data
-        serializer = StudentSerializer(data=incoming_data, many=True)
+        # Proceed with saving only the new students
+        serializer = StudentSerializer(data=new_students_data, many=True)
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except IntegrityError as e:
-            return Response({"error": f"Database Error: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "message": "Import successful.",
+                    "created_count": created_count,
+                    "skipped_count": skipped_count
+                },
+                status=status.HTTP_201_CREATED
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class ExcelFileAnalyzerView(APIView):
+    """
+    Analyzes an uploaded Excel file and returns a list of its sheet names.
+    """
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Use pandas.ExcelFile to efficiently get sheet names without loading data
+            xls = pd.ExcelFile(file)
+            sheet_names = xls.sheet_names
+            return Response({"sheet_names": sheet_names}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Could not analyze the file: {e}"}, status=status.HTTP_400_BAD_REQUEST)
