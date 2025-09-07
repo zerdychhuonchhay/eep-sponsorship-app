@@ -17,6 +17,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 # The .split(',') allows you to add multiple domains in Railway by separating them with a comma.
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
+CORS_ALLOW_ALL_ORIGINS = True
 
 # --- APPLICATION DEFINITION ---
 INSTALLED_APPS = [
@@ -102,4 +103,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # This allows your frontend (running on localhost:5173) to make requests to your backend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://aistudio.google.com",
 ]
