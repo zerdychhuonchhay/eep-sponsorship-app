@@ -5,10 +5,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-your-secret-key-here' # You can leave this as is for now
+SECRET_KEY = 'django-insecure-your-secret-key-here'
 
-DEBUG = True
+DEBUG = True # It's okay to leave this as True on Railway for now
 
+# FIX #1: Add your live domain to ALLOWED_HOSTS
 ALLOWED_HOSTS = ['eep-sponsorship-app-production.up.railway.app']
 
 # Application definition
@@ -18,20 +19,19 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    # Add WhiteNoise here
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
-    
-    # Third-party apps
     'rest_framework',
     'corsheaders',
-    
-    # Your local app
     'core',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Add WhiteNoise middleware right after SecurityMiddleware
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # Add CorsMiddleware high up
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -40,18 +40,19 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Allow your frontend to connect
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173", # Default AI Studio / Vite port
-    "http://127.0.0.1:5173",
-    "https://aistudio.google.com"
-]
-
-
-# Use this for more flexible matching of AI Studio's dynamic URLs
+# This is for AI Studio - it is correct
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.aistudio\.google\.com$",
 ]
+
+# This is for local development
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# FIX #2: Add your live domain as a trusted origin for CSRF
+CSRF_TRUSTED_ORIGINS = ['https://eep-sponsorship-app-production.up.railway.app']
 
 ROOT_URLCONF = 'ngo_project.urls'
 
@@ -73,7 +74,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ngo_project.wsgi.application'
 
-# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -93,10 +93,12 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+# FIX #3: Configure a root for static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# This is the storage engine WhiteNoise will use
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (User-uploaded content like profile photos)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
