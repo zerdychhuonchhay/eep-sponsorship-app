@@ -1,25 +1,17 @@
 # backend/ngo_project/settings.py
 
 import os
-import dj_database_url
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- SECURITY WARNINGS ---
-# These are loaded from environment variables in production for security.
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-dev')
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = 'django-insecure-your-secret-key-here' # You can leave this as is for now
 
-# --- ALLOWED HOSTS ---
-# We read the allowed hosts from an environment variable for security and flexibility.
-# The .split(',') allows you to add multiple domains in Railway by separating them with a comma.
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+DEBUG = True
 
-CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = []
 
-# --- APPLICATION DEFINITION ---
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -27,24 +19,31 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
     # Third-party apps
-    'corsheaders',
     'rest_framework',
-
-    # Your apps
+    'corsheaders',
+    
+    # Your local app
     'core',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # Add CorsMiddleware high up
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# Allow your frontend to connect
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173", # Default AI Studio / Vite port
+    "http://127.0.0.1:5173",
 ]
 
 ROOT_URLCONF = 'ngo_project.urls'
@@ -67,41 +66,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ngo_project.wsgi.application'
 
-
-# --- DATABASE CONFIGURATION ---
-# This uses the DATABASE_URL from the environment in production,
-# but falls back to the local sqlite3 database for development.
+# Database
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
-
-# --- PASSWORD VALIDATION ---
 AUTH_PASSWORD_VALIDATORS = [
-    # ... (default validators)
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# --- INTERNATIONALIZATION ---
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
-# --- STATIC FILES (CSS, JavaScript, Images) ---
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 
+# Media files (User-uploaded content like profile photos)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# --- DEFAULT PRIMARY KEY FIELD TYPE ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# --- CORS CONFIGURATION ---
-# This allows your frontend (running on localhost:5173) to make requests to your backend
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://aistudio.google.com",
-]

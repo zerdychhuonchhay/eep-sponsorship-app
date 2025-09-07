@@ -1,165 +1,212 @@
-# backend/core/models.py
+# D:\Learning Programming\eep-sponsorship-app\backend\core\models.py
 
 from django.db import models
 from django.utils import timezone
 
-# -----------------------------------------------------------------------------
-# Helper Models
-# -----------------------------------------------------------------------------
+# --- Enums from types.ts translated to Django Choices ---
 
-class School(models.Model):
-    """
-    A simple model to store school names, referenced by the Student model.
-    """
-    name = models.CharField(max_length=255, unique=True)
+class Gender(models.TextChoices):
+    MALE = 'Male', 'Male'
+    FEMALE = 'Female', 'Female'
+    OTHER = 'Other', 'Other'
 
-    def __str__(self):
-        return self.name
+class StudentStatus(models.TextChoices):
+    PENDING_QUALIFICATION = 'Pending Qualification', 'Pending Qualification'
+    ACTIVE = 'Active', 'Active'
+    INACTIVE = 'Inactive', 'Inactive'
 
-# -----------------------------------------------------------------------------
-# 1. Student & Historical Records
-# -----------------------------------------------------------------------------
+class SponsorshipStatus(models.TextChoices):
+    SPONSORED = 'Sponsored', 'Sponsored'
+    UNSPONSORED = 'Unsponsored', 'Unsponsored'
+
+class WellbeingStatus(models.TextChoices):
+    GOOD = 'Good', 'Good'
+    AVERAGE = 'Average', 'Average'
+    POOR = 'Poor', 'Poor'
+    NA = 'N/A', 'N/A'
+
+class YesNo(models.TextChoices):
+    YES = 'Yes', 'Yes'
+    NO = 'No', 'No'
+    NA = 'N/A', 'N/A'
+
+class HealthStatus(models.TextChoices):
+    EXCELLENT = 'Excellent', 'Excellent'
+    GOOD = 'Good', 'Good'
+    AVERAGE = 'Average', 'Average'
+    ISSUES = 'Issues', 'Issues'
+
+class InteractionStatus(models.TextChoices):
+    EXCELLENT = 'Excellent', 'Excellent'
+    GOOD = 'Good', 'Good'
+    AVERAGE = 'Average', 'Average'
+
+class TransportationType(models.TextChoices):
+    SCHOOL_BUS = 'School Bus', 'School Bus'
+    BICYCLE = 'Bicycle', 'Bicycle'
+    WALKING = 'Walking', 'Walking'
+    OTHER = 'Other', 'Other'
+
+# --- Main Models ---
 
 class Student(models.Model):
-    """
-    The core model for managing student information. [cite: 22]
-    """
-    # Choices for status fields to ensure data consistency
-    GENDER_CHOICES = (
-        ('Male', 'Male'),
-        ('Female', 'Female'),
-    )
-    STUDENT_STATUS_CHOICES = (
-        ('Pending Qualification', 'Pending Qualification'),
-        ('Active', 'Active'),
-        ('Inactive', 'Inactive'),
-    )
-    SPONSORSHIP_STATUS_CHOICES = (
-        ('Sponsored', 'Sponsored'),
-        ('Unsponsored', 'Unsponsored'),
-    )
-
-    # Core Student Information
-    student_id = models.CharField(max_length=20, unique=True, help_text="A unique ID for each student (e.g., CPB00002).") # [cite: 23]
-    first_name = models.CharField(max_length=100) # [cite: 24]
-    last_name = models.CharField(max_length=100) # [cite: 25]
-    date_of_birth = models.DateField(null=True, blank=True)
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
-    profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
-
-    has_birth_certificate = models.BooleanField(default=False)
-    has_sponsorship_contract = models.BooleanField(default=False)
-
-    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True)
+    student_id = models.CharField(max_length=100, unique=True, primary_key=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    date_of_birth = models.DateField()
+    gender = models.CharField(max_length=20, choices=Gender.choices)
+    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    
+    school = models.CharField(max_length=255, blank=True)
     current_grade = models.CharField(max_length=50, blank=True)
-    eep_enroll_date = models.DateField(null=True, blank=True)
-    out_of_program_date = models.DateField(blank=True, null=True)
-    student_status = models.CharField(max_length=50, choices=STUDENT_STATUS_CHOICES, default='Pending Qualification')
-
-    sponsorship_status = models.CharField(max_length=50, choices=SPONSORSHIP_STATUS_CHOICES, default='Unsponsored')
+    eep_enroll_date = models.DateField()
+    out_of_program_date = models.DateField(null=True, blank=True)
+    student_status = models.CharField(max_length=50, choices=StudentStatus.choices, default=StudentStatus.PENDING_QUALIFICATION)
+    sponsorship_status = models.CharField(max_length=50, choices=SponsorshipStatus.choices, default=SponsorshipStatus.UNSPONSORED)
     has_housing_sponsorship = models.BooleanField(default=False)
     sponsor_name = models.CharField(max_length=255, blank=True)
-
+    
+    application_date = models.DateField(default=timezone.now)
+    has_birth_certificate = models.BooleanField(default=False)
+    siblings_count = models.PositiveIntegerField(default=0)
+    household_members_count = models.PositiveIntegerField(default=0)
+    city = models.CharField(max_length=100, blank=True)
+    village_slum = models.CharField(max_length=100, blank=True)
     guardian_name = models.CharField(max_length=255, blank=True)
-    guardian_contact_info = models.TextField(blank=True)
+    guardian_contact_info = models.CharField(max_length=255, blank=True)
     home_location = models.CharField(max_length=255, blank=True)
+    
+    father_details = models.JSONField(default=dict)
+    mother_details = models.JSONField(default=dict)
+    
+    annual_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    guardian_if_not_parents = models.CharField(max_length=255, blank=True)
+    parent_support_level = models.IntegerField(default=3) # 1-5
+    closest_private_school = models.CharField(max_length=255, blank=True)
+    currently_in_school = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    previous_schooling = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    
+    previous_schooling_details = models.JSONField(default=dict)
+    
+    grade_level_before_eep = models.CharField(max_length=50, blank=True)
+    child_responsibilities = models.TextField(blank=True)
+    health_status = models.CharField(max_length=50, choices=HealthStatus.choices, default=HealthStatus.AVERAGE)
+    health_issues = models.TextField(blank=True)
+    interaction_with_others = models.CharField(max_length=50, choices=InteractionStatus.choices, default=InteractionStatus.AVERAGE)
+    interaction_issues = models.TextField(blank=True)
+    child_story = models.TextField(blank=True)
+    other_notes = models.TextField(blank=True)
+    risk_level = models.IntegerField(default=3) # 1-5
+    transportation = models.CharField(max_length=50, choices=TransportationType.choices, default=TransportationType.WALKING)
+    has_sponsorship_contract = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.student_id})"
 
-
 class AcademicReport(models.Model):
-    """
-    Stores historical academic reports for a student. [cite: 42]
-    """
-    PASS_FAIL_CHOICES = (
-        ('Pass', 'Pass'),
-        ('Fail', 'Fail'),
-    )
-    
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='academic_reports') # [cite: 44]
-    report_period = models.CharField(max_length=100, help_text='The period the report covers (e.g., "Q1 2025").') # [cite: 45]
-    grade_level = models.CharField(max_length=50) # [cite: 46]
-    subjects_and_grades = models.TextField() # [cite: 47]
-    overall_average = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True) # [cite: 48]
-    pass_fail_status = models.CharField(max_length=10, choices=PASS_FAIL_CHOICES) # [cite: 49]
-    teacher_comments = models.TextField(blank=True) # [cite: 50]
+    # FIX APPLIED: Added to_field to specify the text-based primary key
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='academic_reports', to_field='student_id')
+    report_period = models.CharField(max_length=100)
+    grade_level = models.CharField(max_length=50)
+    subjects_and_grades = models.TextField(blank=True)
+    overall_average = models.FloatField()
+    pass_fail_status = models.CharField(max_length=10, choices=[('Pass', 'Pass'), ('Fail', 'Fail')])
+    teacher_comments = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Academic Report for {self.student} - {self.report_period}"
-
+        return f"Report for {self.student.first_name} - {self.report_period}"
+    
+    @property
+    def student_name(self):
+        return f"{self.student.first_name} {self.student.last_name}"
 
 class FollowUpRecord(models.Model):
-    """
-    Stores records from field worker follow-ups with students. [cite: 51]
-    """
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='follow_up_records') # [cite: 53]
-    date_of_follow_up = models.DateField() # [cite: 54]
-    location_of_follow_up = models.CharField(max_length=255) # [cite: 55]
-    health_status_notes = models.TextField() # [cite: 56]
-    risk_factors = models.TextField(help_text="A text field for a checklist of specific risk factors.") # [cite: 57]
-    parent_work_status = models.CharField(max_length=255, blank=True) # [cite: 58]
-    hygiene_products_provided = models.BooleanField(default=False) # [cite: 59]
-    staff_notes = models.TextField(blank=True, help_text="Staff notes, recommendations, and protection concerns.") # [cite: 60]
-    completed_by = models.CharField(max_length=100) # [cite: 61]
-    reviewed_by = models.CharField(max_length=100, blank=True) # [cite: 62]
+    # FIX APPLIED: Added to_field to specify the text-based primary key
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='follow_up_records', to_field='student_id')
+    date_of_follow_up = models.DateField()
+    location = models.CharField(max_length=255)
+    parent_guardian = models.CharField(max_length=255, blank=True)
+    
+    physical_health = models.CharField(max_length=20, choices=WellbeingStatus.choices, default=WellbeingStatus.NA)
+    physical_health_notes = models.TextField(blank=True)
+    social_interaction = models.CharField(max_length=20, choices=WellbeingStatus.choices, default=WellbeingStatus.NA)
+    social_interaction_notes = models.TextField(blank=True)
+    home_life = models.CharField(max_length=20, choices=WellbeingStatus.choices, default=WellbeingStatus.NA)
+    home_life_notes = models.TextField(blank=True)
+    drugs_alcohol_violence = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    drugs_alcohol_violence_notes = models.TextField(blank=True)
+    
+    risk_factors_list = models.JSONField(default=list)
+    risk_factors_details = models.TextField(blank=True)
+    condition_of_home = models.CharField(max_length=20, choices=WellbeingStatus.choices, default=WellbeingStatus.NA)
+    condition_of_home_notes = models.TextField(blank=True)
+    mother_working = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    father_working = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    other_family_member_working = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    current_work_details = models.TextField(blank=True)
+    attending_church = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+
+    staff_notes = models.TextField(blank=True)
+    changes_recommendations = models.TextField(blank=True)
+    
+    child_protection_concerns = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    human_trafficking_risk = models.CharField(max_length=10, choices=YesNo.choices, default=YesNo.NA)
+    completed_by = models.CharField(max_length=100)
+    date_completed = models.DateField(default=timezone.now)
+    reviewed_by = models.CharField(max_length=100, blank=True)
+    date_reviewed = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return f"Follow-Up for {self.student} on {self.date_of_follow_up}"
-
-# -----------------------------------------------------------------------------
-# 2. The Transaction Model
-# -----------------------------------------------------------------------------
+        return f"Follow-Up for {self.student.first_name} on {self.date_of_follow_up}"
 
 class Transaction(models.Model):
-    """
-    Tracks all income and expenses for the organization. [cite: 63]
-    """
-    TYPE_CHOICES = (
-        ('Income', 'Income'),
-        ('Expense', 'Expense'),
-    )
-    CATEGORY_CHOICES = (
-        # You can expand this list based on your needs
-        ('School Fees', 'School Fees'),
-        ('Hot Lunches', 'Hot Lunches'),
-        ('Gas', 'Gas'),
-        ('Sponsorship', 'Sponsorship'),
-        ('Donation', 'Donation'),
-        ('Other', 'Other'),
-    )
-
-    date = models.DateField(default=timezone.now) # [cite: 64]
-    description = models.CharField(max_length=255) # [cite: 65]
-    location = models.CharField(max_length=255, blank=True) # [cite: 66]
-    amount = models.DecimalField(max_digits=10, decimal_places=2) # 
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES) # [cite: 68]
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES) # [cite: 69]
-    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True) # [cite: 70]
+    class TransactionType(models.TextChoices):
+        INCOME = 'Income', 'Income'
+        EXPENSE = 'Expense', 'Expense'
+    
+    date = models.DateField()
+    description = models.CharField(max_length=255)
+    location = models.CharField(max_length=255, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    type = models.CharField(max_length=20, choices=TransactionType.choices)
+    category = models.CharField(max_length=100)
+    # FIX APPLIED: Added to_field to specify the text-based primary key
+    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', to_field='student_id')
 
     def __str__(self):
-        return f"{self.date} - {self.type}: {self.description} (${self.amount})"
-
-# -----------------------------------------------------------------------------
-# 3. The GovernmentFiling Model
-# -----------------------------------------------------------------------------
+        return f"{self.date} - {self.description} (${self.amount})"
 
 class GovernmentFiling(models.Model):
-    """
-    Manages government and compliance documents and deadlines. [cite: 71]
-    """
-    STATUS_CHOICES = (
-        ('Pending', 'Pending'),
-        ('Submitted', 'Submitted'),
-        ('Approved', 'Approved'),
-    )
+    class FilingStatus(models.TextChoices):
+        PENDING = 'Pending', 'Pending'
+        SUBMITTED = 'Submitted', 'Submitted'
 
-    document_name = models.CharField(max_length=255) # [cite: 72]
-    authority = models.CharField(max_length=255) # [cite: 73]
-    due_date = models.DateField() # [cite: 74]
-    submission_date = models.DateField(blank=True, null=True) # [cite: 75]
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending') # [cite: 76]
-    attached_file = models.FileField(upload_to='gov_filings/', blank=True, null=True) # [cite: 77]
+    document_name = models.CharField(max_length=255)
+    authority = models.CharField(max_length=255)
+    due_date = models.DateField()
+    submission_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=FilingStatus.choices, default=FilingStatus.PENDING)
+    attached_file = models.FileField(upload_to='filings/', null=True, blank=True)
 
     def __str__(self):
-        return f"{self.document_name} for {self.authority} (Due: {self.due_date})"
+        return f"{self.document_name} - Due: {self.due_date}"
+
+class Task(models.Model):
+    class TaskStatus(models.TextChoices):
+        TO_DO = 'To Do', 'To Do'
+        IN_PROGRESS = 'In Progress', 'In Progress'
+        DONE = 'Done', 'Done'
+
+    class TaskPriority(models.TextChoices):
+        HIGH = 'High', 'High'
+        MEDIUM = 'Medium', 'Medium'
+        LOW = 'Low', 'Low'
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    dueDate = models.DateField()
+    priority = models.CharField(max_length=20, choices=TaskPriority.choices, default=TaskPriority.MEDIUM)
+    status = models.CharField(max_length=20, choices=TaskStatus.choices, default=TaskStatus.TO_DO)
+
+    def __str__(self):
+        return self.title
