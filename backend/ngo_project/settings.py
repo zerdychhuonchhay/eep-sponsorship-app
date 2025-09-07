@@ -48,6 +48,12 @@ CORS_ALLOWED_ORIGINS = [
     'eep-sponsorship-app-production.up.railway.app'
 ]
 
+# settings.py
+
+# WARNING: This allows all websites to connect to your API.
+# This should only be used for temporary debugging.
+CORS_ORIGIN_ALLOW_ALL = True
+
 # Use this for more flexible matching of AI Studio's dynamic URLs
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.aistudio\.google\.com$",
