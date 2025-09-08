@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
 type ToastType = 'success' | 'error';
 
@@ -18,16 +18,18 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [toast, setToast] = useState<ToastMessage | null>(null);
 
-    const showToast = (message: string, type: ToastType) => {
+    const showToast = useCallback((message: string, type: ToastType) => {
         setToast({ message, type });
-    };
+    }, []);
 
-    const hideToast = () => {
+    const hideToast = useCallback(() => {
         setToast(null);
-    };
+    }, []);
+
+    const value = useMemo(() => ({ toast, showToast, hideToast }), [toast, showToast, hideToast]);
 
     return (
-        <NotificationContext.Provider value={{ toast, showToast, hideToast }}>
+        <NotificationContext.Provider value={value}>
             {children}
         </NotificationContext.Provider>
     );

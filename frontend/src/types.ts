@@ -1,4 +1,16 @@
+export interface PaginatedResponse<T> {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: T[];
+}
 
+export type SortConfig<T> = {
+    key: keyof T | string; // Allow string for special keys like 'age'
+    order: 'asc' | 'desc';
+};
+
+export type StudentLookup = Pick<Student, 'studentId' | 'firstName' | 'lastName'>;
 
 export enum Gender {
     MALE = 'Male',
@@ -62,125 +74,125 @@ export const RISK_FACTORS = [
 ];
 
 export interface ParentDetails {
-    is_living: YesNo;
-    is_at_home: YesNo;
-    is_working: YesNo;
+    isLiving: YesNo;
+    isAtHome: YesNo;
+    isWorking: YesNo;
     occupation: string;
     skills: string;
 }
 
 export interface Student {
-    student_id: string;
-    first_name: string;
-    last_name: string;
-    date_of_birth: string;
+    studentId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
     gender: Gender;
-    profile_photo?: string;
+    profilePhoto?: string;
     
     // --- Core Program Data ---
     school: string;
-    current_grade: string;
-    eep_enroll_date: string;
-    out_of_program_date?: string;
-    student_status: StudentStatus;
-    sponsorship_status: SponsorshipStatus;
-    has_housing_sponsorship: boolean;
-    sponsor_name?: string;
+    currentGrade: string;
+    eepEnrollDate: string;
+    outOfProgramDate?: string;
+    studentStatus: StudentStatus;
+    sponsorshipStatus: SponsorshipStatus;
+    hasHousingSponsorship: boolean;
+    sponsorName?: string;
     
     // --- Merged from Risk Assessment ---
-    application_date: string;
-    has_birth_certificate: boolean;
-    siblings_count: number;
-    household_members_count: number;
+    applicationDate: string;
+    hasBirthCertificate: boolean;
+    siblingsCount: number;
+    householdMembersCount: number;
     city: string;
-    village_slum: string;
-    guardian_name: string;
-    guardian_contact_info: string;
-    home_location: string;
-    father_details: ParentDetails;
-    mother_details: ParentDetails;
-    annual_income: number;
-    guardian_if_not_parents: string;
-    parent_support_level: number; // 1-5
-    closest_private_school: string;
-    currently_in_school: YesNo;
-    previous_schooling: YesNo;
-    previous_schooling_details: {
+    villageSlum: string;
+    guardianName: string;
+    guardianContactInfo: string;
+    homeLocation: string;
+    fatherDetails: ParentDetails;
+    motherDetails: ParentDetails;
+    annualIncome: number;
+    guardianIfNotParents: string;
+    parentSupportLevel: number; // 1-5
+    closestPrivateSchool: string;
+    currentlyInSchool: YesNo;
+    previousSchooling: YesNo;
+    previousSchoolingDetails: {
         when: string;
-        how_long: string;
+        howLong: string;
         where: string;
     };
-    grade_level_before_eep: string;
-    child_responsibilities: string;
-    health_status: HealthStatus;
-    health_issues: string;
-    interaction_with_others: InteractionStatus;
-    interaction_issues: string;
-    child_story: string;
-    other_notes: string;
-    risk_level: number; // 1-5
+    gradeLevelBeforeEep: string;
+    childResponsibilities: string;
+    healthStatus: HealthStatus;
+    healthIssues: string;
+    interactionWithOthers: InteractionStatus;
+    interactionIssues: string;
+    childStory: string;
+    otherNotes: string;
+    riskLevel: number; // 1-5
     transportation: TransportationType;
-    has_sponsorship_contract: boolean;
+    hasSponsorshipContract: boolean;
     
     // Follow-ups and reports
-    academic_reports?: AcademicReport[];
-    follow_up_records?: FollowUpRecord[];
+    academicReports?: AcademicReport[];
+    followUpRecords?: FollowUpRecord[];
 }
 
 
 export interface AcademicReport {
     id: string;
-    student_id: string;
-    student_name?: string; // Added for convenience
-    report_period: string;
-    grade_level: string;
-    subjects_and_grades: string;
-    overall_average: number;
-    pass_fail_status: 'Pass' | 'Fail';
-    teacher_comments: string;
+    studentId: string;
+    studentName?: string; // Added for convenience
+    reportPeriod: string;
+    gradeLevel: string;
+    subjectsAndGrades: string;
+    overallAverage: number;
+    passFailStatus: 'Pass' | 'Fail';
+    teacherComments: string;
 }
 
 export interface FollowUpRecord {
     id: string;
-    student_id: string;
-    child_name: string;
-    child_current_age: number;
-    date_of_follow_up: string;
+    studentId: string;
+    childName: string;
+    childCurrentAge: number;
+    dateOfFollowUp: string;
     location: string;
-    parent_guardian: string;
+    parentGuardian: string;
 
     // Section 2: Well-being
-    physical_health: WellbeingStatus;
-    physical_health_notes: string;
-    social_interaction: WellbeingStatus;
-    social_interaction_notes: string;
-    home_life: WellbeingStatus;
-    home_life_notes: string;
-    drugs_alcohol_violence: YesNo;
-    drugs_alcohol_violence_notes: string;
+    physicalHealth: WellbeingStatus;
+    physicalHealthNotes: string;
+    socialInteraction: WellbeingStatus;
+    socialInteractionNotes: string;
+    homeLife: WellbeingStatus;
+    homeLifeNotes: string;
+    drugsAlcoholViolence: YesNo;
+    drugsAlcoholViolenceNotes: string;
 
     // Section 2a: Risk Factors
-    risk_factors_list: string[];
-    risk_factors_details: string;
-    condition_of_home: WellbeingStatus;
-    condition_of_home_notes: string;
-    mother_working: YesNo;
-    father_working: YesNo;
-    other_family_member_working: YesNo;
-    current_work_details: string;
-    attending_church: YesNo;
+    riskFactorsList: string[];
+    riskFactorsDetails: string;
+    conditionOfHome: WellbeingStatus;
+    conditionOfHomeNotes: string;
+    motherWorking: YesNo;
+    fatherWorking: YesNo;
+    otherFamilyMemberWorking: YesNo;
+    currentWorkDetails: string;
+    attendingChurch: YesNo;
 
     // Section 4: EEP Staff Notes
-    staff_notes: string;
-    changes_recommendations: string;
+    staffNotes: string;
+    changesRecommendations: string;
 
     // Section 5: Conclusion
-    child_protection_concerns: YesNo;
-    human_trafficking_risk: YesNo;
-    completed_by: string;
-    date_completed: string;
-    reviewed_by: string;
-    date_reviewed: string;
+    childProtectionConcerns: YesNo;
+    humanTraffickingRisk: YesNo;
+    completedBy: string;
+    dateCompleted: string;
+    reviewedBy: string;
+    dateReviewed: string;
 }
 
 
@@ -212,7 +224,7 @@ export interface Transaction {
     amount: number;
     type: TransactionType;
     category: string;
-    student_id?: string;
+    studentId?: string;
 }
 
 export enum FilingStatus {
@@ -222,12 +234,12 @@ export enum FilingStatus {
 
 export interface GovernmentFiling {
     id: string;
-    document_name: string;
+    documentName: string;
     authority: string;
-    due_date: string;
-    submission_date?: string;
+    dueDate: string;
+    submissionDate?: string;
     status: FilingStatus;
-    attached_file?: File | string;
+    attachedFile?: File | string;
 }
 
 export enum TaskStatus {

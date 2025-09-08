@@ -1,28 +1,37 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../services/api.ts';
-import { Task, TaskStatus, TaskPriority } from '../types.ts';
+import { Task, TaskStatus, TaskPriority, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, DotsVerticalIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls.tsx';
+import { useTableControls } from '../hooks/useTableControls.ts';
+import Pagination from '../components/Pagination.tsx';
+import AdvancedFilter, { FilterOption } from '../components/AdvancedFilter.tsx';
+import ActiveFiltersDisplay from '../components/ActiveFiltersDisplay.tsx';
+import PageHeader from '@/components/layout/PageHeader.tsx';
+import Button from '@/components/ui/Button.tsx';
+import Badge from '@/components/ui/Badge.tsx';
+import EmptyState from '@/components/EmptyState.tsx';
 
 type TaskFormData = Omit<Task, 'id'>;
 
-const getInitialTaskFormData = (initialData?: Task | null): TaskFormData => {
-    return {
+const TaskForm: React.FC<{ 
+    onSave: (task: TaskFormData) => void; 
+    onCancel: () => void; 
+    initialData?: Task | null;
+    isSubmitting: boolean;
+}> = ({ onSave, onCancel, initialData, isSubmitting }) => {
+    const isEdit = !!initialData;
+    
+    const [formData, setFormData] = useState<TaskFormData>(() => ({
         title: initialData?.title || '',
         description: initialData?.description || '',
         dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
         priority: initialData?.priority || TaskPriority.MEDIUM,
         status: initialData?.status || TaskStatus.TO_DO,
-    };
-};
-
-const TaskForm: React.FC<{ onSave: (task: TaskFormData) => void; onCancel: () => void; initialData?: Task | null }> = ({ onSave, onCancel, initialData }) => {
-    const isEdit = !!initialData;
-    
-    const [formData, setFormData] = useState<TaskFormData>(() => getInitialTaskFormData(initialData));
+    }));
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -31,13 +40,7 @@ const TaskForm: React.FC<{ onSave: (task: TaskFormData) => void; onCancel: () =>
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const confirmationMessage = isEdit 
-            ? 'Are you sure you want to save these changes?' 
-            : 'Are you sure you want to create this new task?';
-        
-        if (window.confirm(confirmationMessage)) {
-            onSave(formData);
-        }
+        onSave(formData);
     };
 
     return (
@@ -47,15 +50,15 @@ const TaskForm: React.FC<{ onSave: (task: TaskFormData) => void; onCancel: () =>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormInput label="Due Date" id="dueDate" type="date" name="dueDate" value={formData.dueDate} onChange={handleChange} required />
                 <FormSelect label="Priority" id="priority" name="priority" value={formData.priority} onChange={handleChange}>
-                    {Object.values(TaskPriority).map(p => <option key={p} value={p}>{p}</option>)}
+                    {Object.values(TaskPriority).map((p: string) => <option key={p} value={p}>{p}</option>)}
                 </FormSelect>
                 <FormSelect label="Status" id="status" name="status" value={formData.status} onChange={handleChange}>
-                    {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <button type="button" onClick={onCancel} className="px-4 py-2 rounded bg-gray dark:bg-box-dark-2 hover:opacity-90">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-primary text-white hover:opacity-90">{isEdit ? 'Update Task' : 'Save Task'}</button>
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+                <Button type="submit" isLoading={isSubmitting}>{isEdit ? 'Update Task' : 'Save Task'}</Button>
             </div>
         </form>
     );
@@ -63,45 +66,71 @@ const TaskForm: React.FC<{ onSave: (task: TaskFormData) => void; onCancel: () =>
 
 
 const TasksPage: React.FC = () => {
-    const [tasks, setTasks] = useState<Task[]>([]);
+    const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Task> | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
-    const [filterStatus, setFilterStatus] = useState<'All' | TaskStatus>('All');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Task; order: 'asc' | 'desc' } | null>({ key: 'dueDate', order: 'asc' });
+    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const { showToast } = useNotification();
+
+    const {
+        sortConfig, currentPage, filters, apiQueryString,
+        handleSort, setCurrentPage, handleFilterChange, applyFilters, clearFilters
+    } = useTableControls<Task>({
+        initialSortConfig: { key: 'dueDate', order: 'asc' },
+        initialFilters: { status: '', priority: '' }
+    });
+    
+    const filterOptions: FilterOption[] = [
+        { id: 'status', label: 'Status', options: Object.values(TaskStatus).map(s => ({ value: s, label: s }))},
+        { id: 'priority', label: 'Priority', options: Object.values(TaskPriority).map(p => ({ value: p, label: p }))},
+    ];
 
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await api.getTasks();
-            setTasks(data);
-        } catch (error) {
-            console.error("Failed to fetch tasks", error);
-            showToast('Failed to load tasks.', 'error');
+            const data = await api.getTasks(apiQueryString);
+            setPaginatedData(data);
+        } catch (error: any) {
+            showToast(error.message || 'Failed to load tasks.', 'error');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [apiQueryString, showToast]);
 
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setOpenDropdownId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleSaveTask = async (taskData: TaskFormData) => {
+        setIsSubmitting(true);
         try {
-            if (editingTask) { // Update
+            if (editingTask) {
                 await api.updateTask({ ...taskData, id: editingTask.id });
-                setEditingTask(null);
                 showToast('Task updated successfully!', 'success');
-            } else { // Add
+            } else {
                 await api.addTask(taskData);
-                setIsAdding(false);
                 showToast('Task added successfully!', 'success');
             }
+            setEditingTask(null);
+            setIsAdding(false);
             fetchTasks();
         } catch (error: any) {
             showToast(error.message || 'Failed to save task.', 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
@@ -116,34 +145,23 @@ const TasksPage: React.FC = () => {
             }
         }
     };
-
-    const handleSort = (key: keyof Task) => {
-        let order: 'asc' | 'desc' = 'asc';
-        if (sortConfig && sortConfig.key === key && sortConfig.order === 'asc') {
-            order = 'desc';
-        }
-        setSortConfig({ key, order });
-    };
-
-    const sortedAndFilteredTasks = useMemo(() => {
-        let filtered = tasks.filter(t => filterStatus === 'All' || t.status === filterStatus);
-        
-        if (sortConfig) {
-            filtered.sort((a, b) => {
-                const aVal = a[sortConfig.key];
-                const bVal = b[sortConfig.key];
-                if (aVal < bVal) return sortConfig.order === 'asc' ? -1 : 1;
-                if (aVal > bVal) return sortConfig.order === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-        return filtered;
-    }, [tasks, filterStatus, sortConfig]);
     
-    const priorityColors: Record<TaskPriority, string> = {
-        [TaskPriority.HIGH]: 'bg-danger/10 text-danger',
-        [TaskPriority.MEDIUM]: 'bg-warning/10 text-warning',
-        [TaskPriority.LOW]: 'bg-primary/10 text-primary',
+    const handleQuickStatusChange = async (task: Task, newStatus: TaskStatus) => {
+        setPaginatedData(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                results: prev.results.map(t => t.id === task.id ? { ...t, status: newStatus } : t)
+            };
+        });
+        
+        try {
+            await api.updateTask({ ...task, status: newStatus });
+            showToast(`Task "${task.title}" status updated to ${newStatus}.`, 'success');
+        } catch (error: any) {
+            showToast(`Failed to update task: ${error.message}`, 'error');
+            fetchTasks(); // Revert on error
+        }
     };
     
     const statusColors: Record<TaskStatus, string> = {
@@ -151,87 +169,120 @@ const TasksPage: React.FC = () => {
         [TaskStatus.IN_PROGRESS]: 'bg-secondary/20 text-secondary',
         [TaskStatus.DONE]: 'bg-success/20 text-success',
     };
+    
+    const tasks = paginatedData?.results || [];
+    const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    if (loading) return <SkeletonTable rows={5} cols={5} />;
+    if (loading && !paginatedData) {
+        return (
+            <>
+                <PageHeader title="Tasks" />
+                <SkeletonTable rows={5} cols={5} />
+            </>
+        )
+    };
 
     return (
-        <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <select 
-                    value={filterStatus}
-                    onChange={e => setFilterStatus(e.target.value as any)}
-                    className="rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 px-5 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"
-                >
-                    <option value="All">All Statuses</option>
-                    {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <button onClick={() => setIsAdding(true)} className="flex w-full sm:w-auto justify-center items-center bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90">
-                    <PlusIcon /> <span className="ml-2">Add Task</span>
-                </button>
-            </div>
+        <>
+            <PageHeader title="Tasks">
+                <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                    Add Task
+                </Button>
+            </PageHeader>
+            <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-md">
+                <div className="flex flex-col sm:flex-row justify-start items-center mb-6 gap-4">
+                    <AdvancedFilter
+                        filterOptions={filterOptions}
+                        currentFilters={filters}
+                        onApply={applyFilters}
+                        onClear={clearFilters}
+                    />
+                </div>
+                
+                <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="bg-gray-2 dark:bg-box-dark-2">
-                        <tr>
-                            <th className="p-4 font-medium text-black dark:text-white">
-                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort('title')}>
-                                    Task
-                                    {sortConfig?.key === 'title' && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                </button>
-                            </th>
-                            <th className="p-4 font-medium text-black dark:text-white">
-                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort('dueDate')}>
-                                    Due Date
-                                    {sortConfig?.key === 'dueDate' && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                </button>
-                            </th>
-                             <th className="p-4 font-medium text-black dark:text-white">
-                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort('priority')}>
-                                    Priority
-                                    {sortConfig?.key === 'priority' && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                </button>
-                            </th>
-                            <th className="p-4 font-medium text-black dark:text-white">
-                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort('status')}>
-                                    Status
-                                    {sortConfig?.key === 'status' && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                </button>
-                            </th>
-                            <th className="p-4 font-medium text-black dark:text-white">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedAndFilteredTasks.map((task, index) => (
-                            <tr key={task.id} className={index === sortedAndFilteredTasks.length - 1 ? '' : 'border-b border-stroke dark:border-strokedark'}>
-                                <td className="p-4 text-black dark:text-white">
-                                    <p className="font-medium">{task.title}</p>
-                                    {task.description && <p className="text-sm text-body-color dark:text-gray-400 mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
-                                </td>
-                                <td className="p-4 text-body-color dark:text-gray-300">{new Date(task.dueDate).toLocaleDateString()}</td>
-                                <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${priorityColors[task.priority]}`}>{task.priority}</span></td>
-                                <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[task.status]}`}>{task.status}</span></td>
-                                <td className="p-4">
-                                    <div className="flex items-center space-x-3.5">
-                                        <button onClick={() => setEditingTask(task)} className="hover:text-primary"><EditIcon /></button>
-                                        <button onClick={() => handleDeleteTask(task.id)} className="hover:text-danger"><TrashIcon /></button>
-                                    </div>
-                                </td>
+                <div className="overflow-x-auto mt-4">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-gray-2 dark:bg-box-dark-2">
+                                {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
+                                    <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
+                                        <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                            {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                        </button>
+                                    </th>
+                                ))}
+                                <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {tasks.length > 0 ? tasks.map((task) => (
+                                <tr key={task.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                    <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
+                                        <p className="font-medium">{task.title}</p>
+                                        {task.description && <p className="text-sm text-body-color dark:text-gray-400 mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
+                                    </td>
+                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(task.dueDate).toLocaleDateString()}</td>
+                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={task.priority} /></td>
+                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                        <select 
+                                            value={task.status} 
+                                            onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
+                                            className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </td>
+                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                         <div className="relative inline-block" ref={openDropdownId === task.id ? dropdownRef : null}>
+                                            <button 
+                                                onClick={() => setOpenDropdownId(openDropdownId === task.id ? null : task.id)} 
+                                                className="hover:text-primary p-1 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
+                                                aria-label="Actions"
+                                            >
+                                                <DotsVerticalIcon />
+                                            </button>
+                                            {openDropdownId === task.id && (
+                                                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark z-10">
+                                                    <div className="py-1">
+                                                        <button onClick={() => { setEditingTask(task); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                                            <EditIcon /> Edit
+                                                        </button>
+                                                        <button onClick={() => { handleDeleteTask(task.id); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-danger hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                                            <TrashIcon /> Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr>
+                                    <td colSpan={5}>
+                                        <EmptyState title="No Tasks Found" />
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {tasks.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
 
-            <Modal isOpen={isAdding || !!editingTask} onClose={() => { setIsAdding(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add New Task'}>
-                <TaskForm 
-                    key={editingTask ? editingTask.id : 'new-task'}
-                    onSave={handleSaveTask}
-                    onCancel={() => { setIsAdding(false); setEditingTask(null); }}
-                    initialData={editingTask}
-                />
-            </Modal>
-        </div>
+                <Modal isOpen={isAdding || !!editingTask} onClose={() => { setIsAdding(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add New Task'}>
+                    <TaskForm 
+                        key={editingTask ? editingTask.id : 'new-task'}
+                        onSave={handleSaveTask}
+                        onCancel={() => { setIsAdding(false); setEditingTask(null); }}
+                        initialData={editingTask}
+                        isSubmitting={isSubmitting}
+                    />
+                </Modal>
+            </div>
+        </>
     );
 };
 

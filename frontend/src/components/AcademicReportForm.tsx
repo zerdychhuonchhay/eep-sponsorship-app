@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { AcademicReport, Student } from '../types.ts';
+import { AcademicReport, StudentLookup } from '../types.ts';
 import { FormInput, FormSelect, FormTextArea } from './forms/FormControls.tsx';
+import Button from './ui/Button.tsx';
 
-type ReportFormData = Omit<AcademicReport, 'id' | 'student_id' | 'student_name'>;
+type ReportFormData = Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>;
 
 interface AcademicReportFormProps {
-    onSave: (data: ReportFormData, student_id: string) => void;
+    onSave: (data: ReportFormData, studentId: string) => void;
     onCancel: () => void;
-    students: Student[];
+    students: StudentLookup[];
     initialData?: AcademicReport | null;
     studentId?: string; // Pre-selected student ID
+    isSaving: boolean;
 }
 
 const AcademicReportForm: React.FC<AcademicReportFormProps> = ({ 
@@ -17,23 +19,24 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
     onCancel, 
     students, 
     initialData, 
-    studentId: preselectedStudentId 
+    studentId: preselectedStudentId,
+    isSaving
 }) => {
     const isEdit = !!initialData;
     
-    const [studentId, setStudentId] = useState(preselectedStudentId || initialData?.student_id || '');
+    const [studentId, setStudentId] = useState(preselectedStudentId || initialData?.studentId || '');
     const [formData, setFormData] = useState<ReportFormData>({
-        report_period: initialData?.report_period || '',
-        grade_level: initialData?.grade_level || '',
-        subjects_and_grades: initialData?.subjects_and_grades || '',
-        overall_average: initialData?.overall_average || 0,
-        pass_fail_status: initialData?.pass_fail_status || 'Pass',
-        teacher_comments: initialData?.teacher_comments || ''
+        reportPeriod: initialData?.reportPeriod || '',
+        gradeLevel: initialData?.gradeLevel || '',
+        subjectsAndGrades: initialData?.subjectsAndGrades || '',
+        overallAverage: initialData?.overallAverage || 0,
+        passFailStatus: initialData?.passFailStatus || 'Pass',
+        teacherComments: initialData?.teacherComments || ''
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'overall_average' ? parseFloat(value) || 0 : value }));
+        setFormData(prev => ({ ...prev, [name]: name === 'overallAverage' ? parseFloat(value) || 0 : value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -50,27 +53,27 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
              <div>
                 <FormSelect label="Student" id="student_id" name="student_id" value={studentId} onChange={e => setStudentId(e.target.value)} required disabled={isEdit || !!preselectedStudentId}>
                     <option value="">-- Select Student --</option>
-                    {students.map(s => <option key={s.student_id} value={s.student_id}>{s.first_name} {s.last_name} ({s.student_id})</option>)}
+                    {students.map(s => <option key={s.studentId} value={s.studentId}>{s.firstName} {s.lastName} ({s.studentId})</option>)}
                 </FormSelect>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput label="Report Period (e.g., Term 1 2024)" id="report_period" name="report_period" value={formData.report_period} onChange={handleChange} required />
-                <FormInput label="Grade Level" id="grade_level" name="grade_level" value={formData.grade_level} onChange={handleChange} required />
-                <FormInput label="Overall Average" id="overall_average" name="overall_average" type="number" step="0.1" value={formData.overall_average} onChange={handleChange} />
-                <FormSelect label="Pass/Fail Status" id="pass_fail_status" name="pass_fail_status" value={formData.pass_fail_status} onChange={handleChange}>
+                <FormInput label="Report Period (e.g., Term 1 2024)" id="reportPeriod" name="reportPeriod" value={formData.reportPeriod} onChange={handleChange} required />
+                <FormInput label="Grade Level" id="gradeLevel" name="gradeLevel" value={formData.gradeLevel} onChange={handleChange} required />
+                <FormInput label="Overall Average" id="overallAverage" name="overallAverage" type="number" step="0.1" value={formData.overallAverage} onChange={handleChange} />
+                <FormSelect label="Pass/Fail Status" id="passFailStatus" name="passFailStatus" value={formData.passFailStatus} onChange={handleChange}>
                     <option value="Pass">Pass</option>
                     <option value="Fail">Fail</option>
                 </FormSelect>
             </div>
             <div>
-                <FormTextArea label="Subjects & Grades" id="subjects_and_grades" name="subjects_and_grades" value={formData.subjects_and_grades} onChange={handleChange} placeholder="e.g., Math: A, Science: B+" />
+                <FormTextArea label="Subjects & Grades" id="subjectsAndGrades" name="subjectsAndGrades" value={formData.subjectsAndGrades} onChange={handleChange} placeholder="e.g., Math: A, Science: B+" />
             </div>
             <div>
-                <FormTextArea label="Teacher Comments" id="teacher_comments" name="teacher_comments" value={formData.teacher_comments} onChange={handleChange} />
+                <FormTextArea label="Teacher Comments" id="teacherComments" name="teacherComments" value={formData.teacherComments} onChange={handleChange} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <button type="button" onClick={onCancel} className="px-4 py-2 rounded bg-gray dark:bg-box-dark-2 hover:opacity-90">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-primary text-white hover:opacity-90">{isEdit ? 'Update Report' : 'Save Report'}</button>
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                <Button type="submit" isLoading={isSaving}>{isEdit ? 'Update Report' : 'Save Report'}</Button>
             </div>
         </form>
     );

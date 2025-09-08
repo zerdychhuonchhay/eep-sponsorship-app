@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { SuccessIcon, ErrorIcon, CloseIcon } from './Icons.tsx';
+import { SuccessIcon, ErrorIcon } from './Icons.tsx';
 
 const Toast: React.FC = () => {
     const { toast, hideToast } = useNotification();
@@ -9,29 +9,29 @@ const Toast: React.FC = () => {
         if (toast) {
             const timer = setTimeout(() => {
                 hideToast();
-            }, 5000); // Auto-dismiss after 5 seconds
+            }, 5000); // Auto-hide after 5 seconds
             return () => clearTimeout(timer);
         }
     }, [toast, hideToast]);
 
-    if (!toast) return null;
+    if (!toast) {
+        return null;
+    }
 
     const isSuccess = toast.type === 'success';
     const bgColor = isSuccess ? 'bg-success' : 'bg-danger';
-    const icon = isSuccess ? <SuccessIcon /> : <ErrorIcon />;
+    const Icon = isSuccess ? SuccessIcon : ErrorIcon;
 
     return (
-        <div
-            className={`fixed top-5 right-5 z-50 flex items-center justify-between w-full max-w-sm p-4 text-white rounded-lg shadow-lg ${bgColor} transform transition-transform duration-300 ease-in-out ${toast ? 'translate-x-0' : 'translate-x-full'}`}
+        <div 
+            className={`fixed top-5 right-5 z-50 flex items-center px-6 py-4 rounded-lg shadow-lg text-white ${bgColor}`}
             role="alert"
         >
-            <div className="flex items-center gap-3">
-                {icon}
-                <p className="text-sm font-medium">{toast.message}</p>
+            <div className="mr-4">
+                <Icon />
             </div>
-            <button onClick={hideToast} className="p-1 rounded-full hover:bg-white/20" aria-label="Dismiss">
-                <CloseIcon />
-            </button>
+            <span>{toast.message}</span>
+            <button onClick={hideToast} className="ml-6 font-bold opacity-70 hover:opacity-100">&times;</button>
         </div>
     );
 };
