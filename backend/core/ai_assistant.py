@@ -1,19 +1,14 @@
 import os
+import json
 import google.generativeai as genai
 from datetime import date, timedelta
 from django.db.models import Sum
-from .models import Student, Transaction, Task, StudentStatus, SponsorshipStatus
+from .models import Student, Transaction, Task, StudentStatus, SponsorshipStatus, Sponsor
 
 # --- Tool Definitions ---
-# These functions allow the AI model to query your database safely.
 
 def get_student_count(status: str = None, sponsorship: str = None) -> str:
-    """
-    Gets the count of students based on their status or sponsorship.
-    Args:
-        status (str): The status to filter by (e.g., 'Active', 'Inactive', 'Pending Qualification').
-        sponsorship (str): The sponsorship status to filter by (e.g., 'Sponsored', 'Unsponsored').
-    """
+    # ... (this function remains the same)
     queryset = Student.objects.all()
     description = []
     if status:
@@ -37,12 +32,7 @@ def get_student_count(status: str = None, sponsorship: str = None) -> str:
         return f"There are a total of {count} students in the system."
 
 def list_students(sponsorship: str, limit: int = 10) -> str:
-    """
-    Lists the names of students, filtered by sponsorship status.
-    Args:
-        sponsorship (str): The sponsorship status to filter by (e.g., 'Unsponsored', 'Sponsored').
-        limit (int): The maximum number of students to list. Defaults to 10.
-    """
+    # ... (this function remains the same)
     valid_sponsorships = [s[0] for s in SponsorshipStatus.choices]
     if sponsorship not in valid_sponsorships:
         return f"Invalid sponsorship status '{sponsorship}'. Valid options are: {', '.join(valid_sponsorships)}"
@@ -61,11 +51,7 @@ def list_students(sponsorship: str, limit: int = 10) -> str:
     return response
 
 def get_financial_summary(period: str) -> str:
-    """
-    Provides a financial summary (income, expenses, net balance) for a given period.
-    Args:
-        period (str): The period to summarize. Supported values: 'last_month', 'this_month'.
-    """
+    # ... (this function remains the same)
     today = date.today()
     if period == 'last_month':
         first_day_of_this_month = today.replace(day=1)
@@ -88,12 +74,7 @@ def get_financial_summary(period: str) -> str:
             f"- Net Balance: ${net_balance:,.2f}")
 
 def get_tasks_summary(priority: str = None, due_period: str = None) -> str:
-    """
-    Provides a summary of tasks, optionally filtered by priority and due period.
-    Args:
-        priority (str): The task priority to filter by (e.g., 'High', 'Medium', 'Low').
-        due_period (str): The due period to filter by. Supported values: 'this_week', 'overdue'.
-    """
+    # ... (this function remains the same)
     queryset = Task.objects.exclude(status=Task.TaskStatus.DONE)
     today = date.today()
     description_parts = []
@@ -124,12 +105,66 @@ def get_tasks_summary(priority: str = None, due_period: str = None) -> str:
     description = " ".join(description_parts)
     return f"Here are the top tasks {description}:\n" + "\n".join(task_list)
 
+# --- NEW TOOL FOR REPORTING ---
+def generate_report(
+    report_type: str, 
+    file_format: str, 
+    student_status: str = None,
+    sponsorship_status: str = None, 
+    sponsor_name: str = None,
+    start_date: str = None, 
+    end_date: str = None
+) -> str:
+    """
+    Generates a report and returns the data and instructions to the frontend.
+    Args:
+        report_type (str): The type of report. Supported: 'student_roster', 'financial'.
+        file_format (str): The format to download. Supported: 'csv', 'pdf'.
+        student_status (str): Filter for student status.
+        sponsorship_status (str): Filter for sponsorship status.
+        sponsor_name (str): The name of the sponsor to filter by.
+        start_date (str): Start date for financial report (YYYY-MM-DD).
+        end_date (str): End date for financial report (YYYY-MM-DD).
+    """
+    if report_type == 'student_roster':
+        filters = {}
+        if student_status: filters['student_status'] = student_status
+        if sponsorship_status: filters['sponsorship_status'] = sponsorship_status
+        if sponsor_name:
+            try:
+                sponsor = Sponsor.objects.get(name__iexact=sponsor_name)
+                filters['sponsor'] = sponsor.id
+            except Sponsor.DoesNotExist:
+                return f"Sponsor named '{sponsor_name}' not found."
+        
+        students = Student.objects.filter(**filters).select_related('sponsor')
+        data = [{
+            'studentId': s.student_id, 'firstName': s.first_name, 'lastName': s.last_name,
+            'dateOfBirth': s.date_of_birth.isoformat(), 'gender': s.gender, 'studentStatus': s.student_status,
+            'sponsorshipStatus': s.sponsorship_status, 'sponsorName': s.sponsor.name if s.sponsor else 'N/A',
+            'school': s.school, 'currentGrade': s.current_grade
+        } for s in students]
+        
+        # This special string tells the frontend to trigger a download
+        return f"[GENERATE_REPORT]\n{json.dumps({'type': 'student_roster', 'format': file_format, 'data': data})}"
+
+    elif report_type == 'financial':
+        if not start_date or not end_date:
+            return "Start and end dates are required for financial reports."
+        
+        transactions = Transaction.objects.filter(date__range=[start_date, end_date])
+        data = [{
+            'date': t.date.isoformat(), 'description': t.description, 'category': t.category,
+            'type': t.type, 'amount': float(t.amount)
+        } for t in transactions]
+        
+        return f"[GENERATE_REPORT]\n{json.dumps({'type': 'financial', 'format': file_format, 'data': data, 'startDate': start_date, 'endDate': end_date})}"
+        
+    return f"Unsupported report type: {report_type}"
+
 # --- Main Assistant Logic ---
 
 def query_assistant(prompt: str, history: list) -> str:
-    """
-    Handles a user's query by interacting with the Gemini model and its defined tools.
-    """
     api_key = os.environ.get("API_KEY")
     if not api_key:
         return "The AI Assistant is not configured. An API key is missing on the server."
@@ -143,6 +178,7 @@ def query_assistant(prompt: str, history: list) -> str:
                 list_students,
                 get_financial_summary,
                 get_tasks_summary,
+                generate_report, # <-- ADD THE NEW TOOL HERE
             ]
         )
         

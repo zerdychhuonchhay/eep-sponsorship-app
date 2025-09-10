@@ -37,9 +37,8 @@ const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({ logEntry, onC
                         {Object.entries(logEntry.changes).map(([field, values]) => (
                             <tr key={field} className="border-b border-stroke dark:border-strokedark">
                                 <td className="p-2 capitalize font-medium text-black dark:text-white">{field.replace(/([A-Z])/g, ' $1')}</td>
-                                {/* FIX: Cast 'values' to access 'old' and 'new' properties, as TypeScript infers it as 'unknown'. */}
-                                <td className="p-2 text-body-color dark:text-gray-300">{formatValue((values as any).old)}</td>
-                                <td className="p-2 text-black dark:text-white">{formatValue((values as any).new)}</td>
+                                <td className="p-2 text-body-color dark:text-gray-300">{formatValue((values as { old: any; new: any }).old)}</td>
+                                <td className="p-2 text-black dark:text-white">{formatValue((values as { old: any; new: any }).new)}</td>
                             </tr>
                         ))}
                     </tbody>

@@ -6,7 +6,6 @@ import TransactionsPage from '@/pages/TransactionsPage.tsx';
 import FilingsPage from '@/pages/FilingsPage.tsx';
 import AcademicsPage from '@/pages/AcademicsPage.tsx';
 import TasksPage from '@/pages/TasksPage.tsx';
-import { NotificationProvider } from '@/contexts/NotificationContext.tsx';
 import { DataProvider } from '@/contexts/DataContext.tsx';
 import { UIProvider } from '@/contexts/UIContext.tsx';
 import Toast from '@/components/Toast.tsx';
@@ -14,6 +13,8 @@ import Header from '@/components/layout/Header.tsx';
 import Sidebar from '@/components/layout/Sidebar.tsx';
 import { SkeletonTable } from './components/SkeletonLoader.tsx';
 import AIAssistant from './components/AIAssistant.tsx';
+import { GlobalNotificationProvider } from './contexts/GlobalNotificationProvider.tsx';
+import DebugEventLogger from './components/debug/DebugEventLogger.tsx';
 
 const AuditLogPage = React.lazy(() => import('@/pages/AuditLogPage.tsx'));
 const SponsorsPage = React.lazy(() => import('@/pages/SponsorsPage.tsx'));
@@ -70,10 +71,11 @@ const App: React.FC = () => (
     <HashRouter>
         <UIProvider>
             <DataProvider>
-                <NotificationProvider>
+                <GlobalNotificationProvider>
                     <AppContent />
                     <Toast />
-                </NotificationProvider>
+                    <DebugEventLogger />
+                </GlobalNotificationProvider>
             </DataProvider>
         </UIProvider>
     </HashRouter>

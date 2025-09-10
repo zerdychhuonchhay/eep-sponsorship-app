@@ -185,12 +185,10 @@ const ReportsPage: React.FC = () => {
                         <div className="space-y-4 mb-4">
                             <FormSelect label="Status" name="student_status" value={studentFilters.student_status} onChange={handleStudentFilterChange}>
                                 <option value="">All Statuses</option>
-                                {/* FIX: Explicitly cast enum value to string to resolve TypeScript inference issue. */}
                                 {Object.values(StudentStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                             </FormSelect>
                             <FormSelect label="Sponsorship" name="sponsorship_status" value={studentFilters.sponsorship_status} onChange={handleStudentFilterChange}>
                                 <option value="">All Sponsorships</option>
-                                {/* FIX: Explicitly cast enum value to string to resolve TypeScript inference issue. */}
                                 {Object.values(SponsorshipStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                             </FormSelect>
                             <FormSelect label="Sponsor" name="sponsor" value={studentFilters.sponsor} onChange={handleStudentFilterChange}>

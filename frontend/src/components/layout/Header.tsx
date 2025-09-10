@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon } from '@/components/Icons.tsx';
+import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon, BugIcon } from '@/components/Icons.tsx';
+import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -10,7 +11,10 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isDebugOpen, setIsDebugOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    // FIX: Changed ref type from HTMLDivElement to HTMLLIElement to match the `li` element it is attached to.
+    const debugRef = useRef<HTMLLIElement>(null);
 
     useEffect(() => {
         if (isDarkMode) {
@@ -26,6 +30,13 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsProfileOpen(false);
+            }
+            if (debugRef.current && !debugRef.current.contains(event.target as Node)) {
+                // Check if the click was on the trigger button itself
+                const trigger = (event.target as HTMLElement).closest('button');
+                if (!trigger || trigger.id !== 'debug-trigger') {
+                     setIsDebugOpen(false);
+                }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -57,6 +68,12 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-black dark:text-white">
                                 {isDarkMode ? <SunIcon /> : <MoonIcon />}
                             </button>
+                        </li>
+                        <li className="relative" ref={debugRef}>
+                            <button id="debug-trigger" onClick={() => setIsDebugOpen(p => !p)} className="text-black dark:text-white">
+                                <BugIcon />
+                            </button>
+                            <NotificationCenter isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} />
                         </li>
                      </ul>
                      

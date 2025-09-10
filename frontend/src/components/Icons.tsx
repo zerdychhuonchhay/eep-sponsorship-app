@@ -162,3 +162,7 @@ export const SparklesIcon: React.FC<{ className?: string }> = ({ className }) =>
         <path fillRule="evenodd" d="M6.333 19.5c-3.667-4.25-1.5-11.25 3.75-12.75 5.25-1.5 8.25 5.25 4.5 9.5-3.75 4.25-10.5 4.5-8.25 3.25Z" clipRule="evenodd" />
     </svg>
 );
+
+export const BugIcon: React.FC = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M4.93 4.93l4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M4.93 19.07l4.24-4.24"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+);
