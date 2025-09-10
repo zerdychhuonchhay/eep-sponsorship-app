@@ -113,7 +113,11 @@ export const api = {
     getSponsorLookup: async (): Promise<SponsorLookup[]> => apiClient('/sponsors/lookup/'),
     
     // Student Endpoints
-    getAllStudentsForReport: async (): Promise<Student[]> => apiClient('/students/all/'),
+    getAllStudentsForReport: async (filters: Record<string, string> = {}): Promise<Student[]> => {
+        const params = new URLSearchParams(filters);
+        const queryString = params.toString();
+        return apiClient(`/students/all/?${queryString}`);
+    },
     getStudentById: async (id: string): Promise<Student> => apiClient(`/students/${id}/`),
     addStudent: async (studentData: Omit<Student, 'academicReports' | 'followUpRecords'> & { profilePhoto?: File }) => {
         const { profilePhoto, ...rest } = studentData;
@@ -189,6 +193,10 @@ export const api = {
     },
     
     // Transaction Endpoints
+    getTransactionsForReport: async (dateRange: { start: string, end: string }): Promise<Transaction[]> => {
+        const params = new URLSearchParams(dateRange);
+        return apiClient(`/transactions/all/?${params.toString()}`);
+    },
     addTransaction: async (data: Omit<Transaction, 'id'>) => apiClient('/transactions/', { method: 'POST', body: JSON.stringify(convertKeysToSnake(data)) }),
     updateTransaction: async (data: Transaction) => {
         const { id, ...rest } = data;

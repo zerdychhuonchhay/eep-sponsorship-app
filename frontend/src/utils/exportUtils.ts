@@ -42,12 +42,14 @@ export const exportToCsv = <T extends Record<string, any>>(
  * @param headers A mapping of object keys to display names for the PDF table header.
  * @param title The title of the report.
  * @param fileName The name of the file to download.
+ * @param summary An optional string to display above the table.
  */
 export const exportToPdf = <T extends Record<string, any>>(
     data: T[], 
     headers: Record<keyof T, string>, 
     title: string, 
-    fileName: string
+    fileName: string,
+    summary?: string
 ): void => {
     if (typeof window.jspdf === 'undefined' || typeof (window.jspdf as any).jsPDF.autoTable === 'undefined') {
         // Fallback for when jspdf-autotable is not loaded
@@ -65,10 +67,18 @@ export const exportToPdf = <T extends Record<string, any>>(
     const body = data.map(row => 
         headerKeys.map(key => String(row[key] ?? ''))
     );
+    
+    let startY = 30;
+    if (summary) {
+        doc.setFontSize(10);
+        doc.text(summary, 14, startY);
+        startY += (summary.split('\n').length * 5) + 10;
+    }
 
     doc.autoTable({
         head,
         body,
+        startY,
         didDrawPage: (data: any) => {
             // Header
             doc.setFontSize(20);

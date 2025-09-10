@@ -77,7 +77,6 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return StudentListSerializer
-        # The new 'all' action will also use the StudentListSerializer
         if self.action == 'get_all':
             return StudentListSerializer
         return StudentSerializer
@@ -97,9 +96,6 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='all', pagination_class=None)
     def get_all(self, request):
-        """
-        Returns a complete list of all students without pagination for reporting purposes.
-        """
         students = self.get_queryset()
         serializer = self.get_serializer(students, many=True)
         return Response(serializer.data)
@@ -237,11 +233,34 @@ class TransactionViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['date', 'description', 'category', 'type', 'amount']
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if type := self.request.query_params.get('type'): queryset = queryset.filter(type=type)
         if category := self.request.query_params.get('category'): queryset = queryset.filter(category=category)
         return queryset
+
+    # --- NEW ACTION FOR FINANCIAL REPORT ---
+    @action(detail=False, methods=['get'], url_path='all', pagination_class=None)
+    def get_all(self, request):
+        """
+        Returns a list of all transactions within a date range for reporting.
+        """
+        start_date_str = request.query_params.get('start')
+        end_date_str = request.query_params.get('end')
+        
+        queryset = self.get_queryset().order_by('date')
+        
+        if start_date_str and end_date_str:
+            try:
+                start_date = parse_date(start_date_str).date()
+                end_date = parse_date(end_date_str).date()
+                queryset = queryset.filter(date__range=[start_date, end_date])
+            except (ValueError, TypeError):
+                return Response({'error': 'Invalid date format provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 class GovernmentFilingViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     queryset = GovernmentFiling.objects.all()
@@ -351,7 +370,6 @@ def recent_transactions(request):
     serializer = TransactionSerializer(recent, many=True)
     return Response(serializer.data)
 
-# --- CORRECTED LINE ---
 @api_view(['POST'])
 def query_ai_assistant(request):
     prompt = request.data.get('prompt')
