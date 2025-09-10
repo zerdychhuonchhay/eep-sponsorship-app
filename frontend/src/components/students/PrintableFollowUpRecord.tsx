@@ -1,6 +1,6 @@
 import React from 'react';
 import { Student, FollowUpRecord } from '@/types.ts';
-import { formatDateForDisplay } from '@/pages/StudentsPage.tsx';
+import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 
 interface PrintableFollowUpRecordProps {
     record: FollowUpRecord;

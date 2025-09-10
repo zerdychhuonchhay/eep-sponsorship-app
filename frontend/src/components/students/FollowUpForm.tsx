@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Student, FollowUpRecord, WellbeingStatus, YesNo, RISK_FACTORS } from '@/types.ts';
 import { FormInput, FormTextArea, FormSection, FormSubSection, YesNoNASelect, WellbeingSelect } from '@/components/forms/FormControls.tsx';
-import { calculateAge } from '@/pages/StudentsPage.tsx';
+import { calculateAge } from '@/utils/dateUtils.ts';
 import Button from '@/components/ui/Button.tsx';
 
 interface FollowUpFormProps {

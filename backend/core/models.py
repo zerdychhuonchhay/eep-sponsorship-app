@@ -1,7 +1,12 @@
-# core/models.py
+# [your_django_app]/models.py
 
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+
+# --- Choices Enums ---
 
 class Gender(models.TextChoices):
     MALE = 'Male', 'Male'
@@ -45,11 +50,23 @@ class TransportationType(models.TextChoices):
     WALKING = 'Walking', 'Walking'
     OTHER = 'Other', 'Other'
 
+# --- Default Functions for JSONFields ---
+
 def default_parent_details():
     return {"is_living": "N/A", "is_at_home": "N/A", "is_working": "N/A", "occupation": "", "skills": ""}
 
 def default_schooling_details():
     return {"when": "", "how_long": "", "where": ""}
+
+# --- Models ---
+
+class Sponsor(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    sponsorship_start_date = models.DateField()
+
+    def __str__(self):
+        return self.name
 
 class Student(models.Model):
     student_id = models.CharField(max_length=100, unique=True, primary_key=True)
@@ -65,7 +82,8 @@ class Student(models.Model):
     student_status = models.CharField(max_length=50, choices=StudentStatus.choices, default=StudentStatus.PENDING_QUALIFICATION)
     sponsorship_status = models.CharField(max_length=50, choices=SponsorshipStatus.choices, default=SponsorshipStatus.UNSPONSORED)
     has_housing_sponsorship = models.BooleanField(default=False)
-    sponsor_name = models.CharField(max_length=255, blank=True)
+    # UPDATED: Changed from CharField to a proper database relationship
+    sponsor = models.ForeignKey(Sponsor, on_delete=models.SET_NULL, null=True, blank=True, related_name='sponsored_students')
     application_date = models.DateField(default=timezone.now)
     has_birth_certificate = models.BooleanField(default=False)
     siblings_count = models.PositiveIntegerField(default=0)
@@ -111,8 +129,8 @@ class AcademicReport(models.Model):
 
 class FollowUpRecord(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='follow_up_records', to_field='student_id')
-    child_name = models.CharField(max_length=255, default='') # Default added
-    child_current_age = models.PositiveIntegerField(default=0) # Default added
+    child_name = models.CharField(max_length=255, default='') 
+    child_current_age = models.PositiveIntegerField(default=0)
     date_of_follow_up = models.DateField()
     location = models.CharField(max_length=255)
     parent_guardian = models.CharField(max_length=255, blank=True)
@@ -183,3 +201,27 @@ class Task(models.Model):
     priority = models.CharField(max_length=20, choices=TaskPriority.choices, default=TaskPriority.MEDIUM)
     status = models.CharField(max_length=20, choices=TaskStatus.choices, default=TaskStatus.TO_DO)
     def __str__(self): return self.title
+
+class AuditLog(models.Model):
+    class AuditAction(models.TextChoices):
+        CREATE = 'CREATE', 'Create'
+        UPDATE = 'UPDATE', 'Update'
+        DELETE = 'DELETE', 'Delete'
+    
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    user_identifier = models.CharField(max_length=255, default="System") 
+    action = models.CharField(max_length=10, choices=AuditAction.choices)
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.CharField(max_length=255)
+    content_object = GenericForeignKey('content_type', 'object_id')
+    object_repr = models.CharField(max_length=255) 
+
+    changes = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f'{self.action} on {self.object_repr} by {self.user_identifier} at {self.timestamp}'

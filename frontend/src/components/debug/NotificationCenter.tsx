@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDebugNotification, DebugNotification, DebugNotificationType } from '@/contexts/DebugNotificationContext.tsx';
-import { CopyIcon, ErrorIcon, CheckIcon } from '@/components/Icons.tsx';
+import { CopyIcon, ErrorIcon, SuccessIcon } from '@/components/Icons.tsx';
 
 interface NotificationCenterProps {
     isOpen: boolean;
@@ -10,26 +10,17 @@ interface NotificationCenterProps {
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
     const { notifications, clearNotifications } = useDebugNotification();
     const [showAll, setShowAll] = useState(false);
-    const [copiedId, setCopiedId] = useState<number | null>(null);
 
     const typeClasses: Record<DebugNotificationType, { bg: string, text: string, icon: React.ReactNode }> = {
-        api_success: { bg: 'bg-success/10', text: 'text-success', icon: '✅' },
-        api_error: { bg: 'bg-danger/10', text: 'text-danger', icon: '❌' },
+        api_success: { bg: 'bg-success/10', text: 'text-success', icon: <SuccessIcon /> },
+        api_error: { bg: 'bg-danger/10', text: 'text-danger', icon: <ErrorIcon /> },
         error: { bg: 'bg-danger/10', text: 'text-danger', icon: <ErrorIcon /> },
         info: { bg: 'bg-primary/10', text: 'text-primary', icon: 'ℹ️' },
     };
 
-    useEffect(() => {
-        if (copiedId) {
-            const timer = setTimeout(() => setCopiedId(null), 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [copiedId]);
-
     const handleCopy = (notif: DebugNotification) => {
         const textToCopy = `[${notif.timestamp.toISOString()}] [${notif.type.toUpperCase()}]\nMessage: ${notif.message}\n${notif.duration ? `Duration: ${notif.duration}ms` : ''}`;
         navigator.clipboard.writeText(textToCopy);
-        setCopiedId(notif.id);
     };
 
     const filteredNotifications = useMemo(() => {
@@ -70,12 +61,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                                 <p className="text-xs text-body-color">{notif.timestamp.toLocaleTimeString()}</p>
                             </div>
                              {(notif.type === 'api_error' || notif.type === 'error') && (
-                                <button 
-                                    onClick={() => handleCopy(notif)} 
-                                    className={`p-1 ${copiedId === notif.id ? 'text-success' : 'text-body-color hover:text-primary'}`} 
-                                    title="Copy for debug"
-                                >
-                                    {copiedId === notif.id ? <CheckIcon /> : <CopyIcon />}
+                                <button onClick={() => handleCopy(notif)} className="p-1 text-body-color hover:text-primary" title="Copy for debug">
+                                    <CopyIcon />
                                 </button>
                             )}
                         </div>

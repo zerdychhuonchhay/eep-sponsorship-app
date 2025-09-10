@@ -4,6 +4,7 @@ interface EmptyStateProps {
   title?: string;
   message?: string;
   icon?: React.ReactNode;
+  action?: React.ReactNode;
 }
 
 const DefaultIcon = () => (
@@ -13,7 +14,8 @@ const DefaultIcon = () => (
 const EmptyState: React.FC<EmptyStateProps> = ({ 
   title = "No Results Found", 
   message = "Try adjusting your search or filter criteria.",
-  icon = <DefaultIcon />
+  icon = <DefaultIcon />,
+  action
 }) => {
   return (
     <div className="text-center p-10 border-t border-stroke dark:border-strokedark">
@@ -22,6 +24,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       </div>
       <h3 className="text-lg font-semibold text-black dark:text-white mb-1">{title}</h3>
       <p className="text-body-color dark:text-gray-400">{message}</p>
+      {action && <div className="mt-6">{action}</div>}
     </div>
   );
 };

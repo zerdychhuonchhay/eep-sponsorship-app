@@ -1,7 +1,7 @@
 import React from 'react';
 import { FollowUpRecord, WellbeingStatus, YesNo } from '@/types.ts';
 import { EditIcon, DownloadIcon } from '@/components/Icons.tsx';
-import { formatDateForDisplay } from '@/pages/StudentsPage.tsx';
+import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 
 interface FollowUpRecordViewProps {
     record: FollowUpRecord;

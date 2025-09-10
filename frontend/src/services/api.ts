@@ -1,17 +1,13 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 const apiClient = async (endpoint: string, options: RequestInit = {}) => {
     const completeUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-    const requestId = Date.now() + Math.random();
 
-    window.dispatchEvent(new CustomEvent('api-request-start', { detail: { requestId, endpoint, method: options.method || 'GET' } }));
-
-    let response;
     try {
-        response = await fetch(completeUrl, {
+        const response = await fetch(completeUrl, {
             ...options,
             headers: {
                 'Accept': 'application/json',
@@ -21,6 +17,12 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
         });
 
         if (!response.ok) {
+            // Add specific handling for 405 Method Not Allowed error
+            if (response.status === 405) {
+                const detailedMessage = `API Error (405 - Method Not Allowed): The server endpoint for '${endpoint}' does not exist or is not configured to accept a ${options.method || 'GET'} request. Please ensure the backend API view/route is correctly implemented.`;
+                throw new Error(detailedMessage);
+            }
+
             let errorData;
             let errorMessage = `API request failed with status ${response.status}.`;
             try {
@@ -42,7 +44,7 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
             } catch (e) { /* response was not json */ }
             throw new Error(errorMessage);
         }
-
+        
         if (response.status === 204) return null;
 
         const data = await response.json();
@@ -70,18 +72,8 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
 
         return convertKeysToCamel(fixUrlsInData(data));
 
-    } catch (error) {
+    } catch (error: any) {
         throw error;
-    } finally {
-        window.dispatchEvent(new CustomEvent('api-request-end', { 
-            detail: { 
-                requestId, 
-                endpoint, 
-                method: options.method || 'GET', 
-                status: response?.status, 
-                ok: response?.ok 
-            } 
-        }));
     }
 };
 
@@ -113,11 +105,15 @@ export const api = {
     getAllAcademicReports: async (queryString: string): Promise<PaginatedResponse<AcademicReport>> => apiClient(`/academic-reports/?${queryString}`),
     getFilings: async (queryString: string): Promise<PaginatedResponse<GovernmentFiling>> => apiClient(`/filings/?${queryString}`),
     getTasks: async (queryString: string): Promise<PaginatedResponse<Task>> => apiClient(`/tasks/?${queryString}`),
-    
+    getAuditLogs: async (queryString: string): Promise<PaginatedResponse<AuditLog>> => apiClient(`/audit-logs/?${queryString}`),
+    getSponsors: async (queryString: string): Promise<PaginatedResponse<Sponsor>> => apiClient(`/sponsors/?${queryString}`),
+
     // LOOKUPS (for dropdowns)
     getStudentLookup: async (): Promise<StudentLookup[]> => apiClient('/students/lookup/'),
+    getSponsorLookup: async (): Promise<SponsorLookup[]> => apiClient('/sponsors/lookup/'),
     
     // Student Endpoints
+    getAllStudentsForReport: async (): Promise<Student[]> => apiClient('/students/all/'),
     getStudentById: async (id: string): Promise<Student> => apiClient(`/students/${id}/`),
     addStudent: async (studentData: Omit<Student, 'academicReports' | 'followUpRecords'> & { profilePhoto?: File }) => {
         const { profilePhoto, ...rest } = studentData;
@@ -162,6 +158,16 @@ export const api = {
         return apiClient('/students/bulk_import/', {
             method: 'POST',
             body: JSON.stringify(snakeCaseData)
+        });
+    },
+    bulkUpdateStudents: async (studentIds: string[], updates: Partial<Pick<Student, 'studentStatus' | 'sponsorshipStatus'>>): Promise<{ updatedCount: number }> => {
+        const payload = {
+            student_ids: studentIds,
+            updates: convertKeysToSnake(updates),
+        };
+        return apiClient('/students/bulk_update/', {
+            method: 'POST',
+            body: JSON.stringify(payload),
         });
     },
 
@@ -214,4 +220,21 @@ export const api = {
         return apiClient(`/tasks/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(rest)) });
     },
     deleteTask: async (id: string) => apiClient(`/tasks/${id}/`, { method: 'DELETE' }),
+
+    // Sponsor Endpoints
+    getSponsorById: async (id: string): Promise<Sponsor> => apiClient(`/sponsors/${id}/`),
+    addSponsor: async (data: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>): Promise<Sponsor> => apiClient('/sponsors/', { method: 'POST', body: JSON.stringify(convertKeysToSnake(data)) }),
+    updateSponsor: async (data: Omit<Sponsor, 'sponsoredStudentCount'>): Promise<Sponsor> => {
+        const { id, ...rest } = data;
+        return apiClient(`/sponsors/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(rest)) });
+    },
+    deleteSponsor: async (id: string) => apiClient(`/sponsors/${id}/`, { method: 'DELETE' }),
+
+    // AI Assistant
+    queryAIAssistant: async (prompt: string, conversationHistory: any[]): Promise<{ response: string }> => {
+        return apiClient('/ai-assistant/query/', {
+            method: 'POST',
+            body: JSON.stringify({ prompt, history: conversationHistory })
+        });
+    },
 };

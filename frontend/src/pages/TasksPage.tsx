@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { Task, TaskStatus, TaskPriority, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, DotsVerticalIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls.tsx';
@@ -14,6 +14,8 @@ import PageHeader from '@/components/layout/PageHeader.tsx';
 import Button from '@/components/ui/Button.tsx';
 import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
+import { Card, CardContent } from '@/components/ui/Card.tsx';
+import ActionDropdown from '@/components/ActionDropdown.tsx';
 
 type TaskFormData = Omit<Task, 'id'>;
 
@@ -71,8 +73,6 @@ const TasksPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const { showToast } = useNotification();
 
     const {
@@ -104,16 +104,6 @@ const TasksPage: React.FC = () => {
         fetchTasks();
     }, [fetchTasks]);
     
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpenDropdownId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     const handleSaveTask = async (taskData: TaskFormData) => {
         setIsSubmitting(true);
         try {
@@ -183,106 +173,90 @@ const TasksPage: React.FC = () => {
     };
 
     return (
-        <>
+        <div className="space-y-6">
             <PageHeader title="Tasks">
                 <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
                     Add Task
                 </Button>
             </PageHeader>
-            <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-md">
-                <div className="flex flex-col sm:flex-row justify-start items-center mb-6 gap-4">
-                    <AdvancedFilter
-                        filterOptions={filterOptions}
-                        currentFilters={filters}
-                        onApply={applyFilters}
-                        onClear={clearFilters}
-                    />
-                </div>
-                
-                <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
 
-                <div className="overflow-x-auto mt-4">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
-                                    <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
-                                        <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                            {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                        </button>
-                                    </th>
-                                ))}
-                                <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tasks.length > 0 ? tasks.map((task) => (
-                                <tr key={task.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                    <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
-                                        <p className="font-medium">{task.title}</p>
-                                        {task.description && <p className="text-sm text-body-color dark:text-gray-400 mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
-                                    </td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(task.dueDate).toLocaleDateString()}</td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={task.priority} /></td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                        <select 
-                                            value={task.status} 
-                                            onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
-                                            className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
-                                        </select>
-                                    </td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                         <div className="relative inline-block" ref={openDropdownId === task.id ? dropdownRef : null}>
-                                            <button 
-                                                onClick={() => setOpenDropdownId(openDropdownId === task.id ? null : task.id)} 
-                                                className="hover:text-primary p-1 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
-                                                aria-label="Actions"
-                                            >
-                                                <DotsVerticalIcon />
+            <Card>
+                <CardContent>
+                    <div className="flex justify-end mb-4">
+                        <AdvancedFilter
+                            filterOptions={filterOptions}
+                            currentFilters={filters}
+                            onApply={applyFilters}
+                            onClear={clearFilters}
+                        />
+                    </div>
+                    <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-2 dark:bg-box-dark-2">
+                                    {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
+                                        <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
+                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
                                             </button>
-                                            {openDropdownId === task.id && (
-                                                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark z-10">
-                                                    <div className="py-1">
-                                                        <button onClick={() => { setEditingTask(task); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <EditIcon /> Edit
-                                                        </button>
-                                                        <button onClick={() => { handleDeleteTask(task.id); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-danger hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <TrashIcon /> Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
+                                        </th>
+                                    ))}
+                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={5}>
-                                        <EmptyState title="No Tasks Found" />
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {tasks.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                            </thead>
+                            <tbody>
+                                {tasks.length > 0 ? tasks.map((task) => (
+                                    <tr key={task.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                        <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
+                                            <p className="font-medium">{task.title}</p>
+                                            {task.description && <p className="text-sm text-body-color dark:text-gray-400 mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
+                                        </td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(task.dueDate).toLocaleDateString()}</td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={task.priority} /></td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                            <select 
+                                                value={task.status} 
+                                                onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
+                                                className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                             <ActionDropdown items={[
+                                                { label: 'Edit', icon: <EditIcon />, onClick: () => setEditingTask(task) },
+                                                { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' },
+                                            ]} />
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={5}>
+                                            <EmptyState title="No Tasks Found" />
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {tasks.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                </CardContent>
+            </Card>
 
-                <Modal isOpen={isAdding || !!editingTask} onClose={() => { setIsAdding(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add New Task'}>
-                    <TaskForm 
-                        key={editingTask ? editingTask.id : 'new-task'}
-                        onSave={handleSaveTask}
-                        onCancel={() => { setIsAdding(false); setEditingTask(null); }}
-                        initialData={editingTask}
-                        isSubmitting={isSubmitting}
-                    />
-                </Modal>
-            </div>
-        </>
+            <Modal isOpen={isAdding || !!editingTask} onClose={() => { setIsAdding(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add New Task'}>
+                <TaskForm 
+                    key={editingTask ? editingTask.id : 'new-task'}
+                    onSave={handleSaveTask}
+                    onCancel={() => { setIsAdding(false); setEditingTask(null); }}
+                    initialData={editingTask}
+                    isSubmitting={isSubmitting}
+                />
+            </Modal>
+        </div>
     );
 };
 

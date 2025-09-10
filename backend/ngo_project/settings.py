@@ -1,7 +1,10 @@
 # backend/ngo_project/settings.py
 
 import os
+from dotenv import load_dotenv
 from pathlib import Path
+
+load_dotenv() # <-- Add this line to load the .env file
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -147,3 +150,4 @@ JAZZMIN_SETTINGS = {
     # override change forms on a per modeladmin basis
     "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
 }
+
