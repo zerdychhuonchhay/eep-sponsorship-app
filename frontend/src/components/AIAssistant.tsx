@@ -4,6 +4,8 @@ import { api } from '@/services/api.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 import Button from './ui/Button.tsx';
+import { exportToCsv, exportToPdf, exportFinancialCsvWithSummary } from '@/utils/exportUtils.ts';
+import { Transaction, TransactionType } from '@/types.ts';
 
 interface Message {
     role: 'user' | 'model';
@@ -25,6 +27,76 @@ const AIAssistant: React.FC = () => {
 
     useEffect(scrollToBottom, [messages]);
 
+    const handleReportGeneration = (reportPayload: any) => {
+        const { type, format, data, startDate, endDate } = reportPayload;
+        const now = new Date().toISOString().split('T')[0];
+
+        if (type === 'student_roster') {
+            if (!data || data.length === 0) {
+                showToast('The AI assistant returned no student data to generate a report.', 'info');
+                return;
+            }
+            const headers = {
+                studentId: 'Student ID',
+                firstName: 'First Name',
+                lastName: 'Last Name',
+                dateOfBirth: 'Date of Birth',
+                gender: 'Gender',
+                studentStatus: 'Status',
+                sponsorshipStatus: 'Sponsorship',
+                sponsorName: 'Sponsor',
+                school: 'School',
+                currentGrade: 'Grade',
+            };
+            const fileName = `AI_Student_Roster_${now}`;
+            if (format === 'csv') {
+                exportToCsv(data, headers, `${fileName}.csv`);
+            } else if (format === 'pdf') {
+                exportToPdf(data, headers, 'AI Generated Student Roster', `${fileName}.pdf`);
+            }
+        } else if (type === 'financial') {
+             if (!data || data.length === 0) {
+                showToast('The AI assistant returned no transaction data to generate a report.', 'info');
+                return;
+            }
+            const totalIncome = data.filter((t: Transaction) => t.type === TransactionType.INCOME).reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0);
+            const totalExpense = data.filter((t: Transaction) => t.type === TransactionType.EXPENSE).reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0);
+            const netBalance = totalIncome - totalExpense;
+            
+            const reportData = data.map((t: Transaction) => ({
+                ...t,
+                amount: `$${Number(t.amount).toFixed(2)}`,
+            }));
+
+            const headers = {
+                date: 'Date',
+                description: 'Description',
+                category: 'Category',
+                type: 'Type',
+                amount: 'Amount',
+            };
+            
+            const fileName = `AI_Financial_Report_${startDate}_to_${endDate}`;
+
+            if (format === 'csv') {
+                const summaryData = {
+                    title: 'AI Generated Financial Summary',
+                    range: `Date Range: ${startDate} to ${endDate}`,
+                    income: `Total Income: $${totalIncome.toFixed(2)}`,
+                    expense: `Total Expenses: $${totalExpense.toFixed(2)}`,
+                    net: `Net Balance: $${netBalance.toFixed(2)}`,
+                };
+                exportFinancialCsvWithSummary(reportData, headers, summaryData, `${fileName}.csv`);
+            } else if (format === 'pdf') {
+                const summary = `Financial Summary from ${startDate} to ${endDate}\nTotal Income: $${totalIncome.toFixed(2)}\nTotal Expenses: $${totalExpense.toFixed(2)}\nNet Balance: $${netBalance.toFixed(2)}`;
+                exportToPdf(reportData, headers, 'AI Generated Financial Report', `${fileName}.pdf`, summary);
+            }
+        }
+
+        const modelMessage: Message = { role: 'model', text: `I have generated the ${type.replace(/_/g, ' ')} report for you. Your download should begin shortly.` };
+        setMessages(prev => [...prev, modelMessage]);
+    };
+
     const handleSendMessage = async (prompt: string) => {
         if (!prompt.trim()) return;
 
@@ -40,8 +112,22 @@ const AIAssistant: React.FC = () => {
 
         try {
             const result = await api.queryAIAssistant(prompt, conversationHistory);
-            const modelMessage: Message = { role: 'model', text: result.response };
-            setMessages(prev => [...prev, modelMessage]);
+            
+            if (result.response.startsWith('[GENERATE_REPORT]')) {
+                const jsonString = result.response.replace('[GENERATE_REPORT]\n', '');
+                try {
+                    const reportPayload = JSON.parse(jsonString);
+                    handleReportGeneration(reportPayload);
+                } catch (e) {
+                    console.error("Failed to parse report JSON from AI:", e);
+                    showToast('The AI returned an invalid report format.', 'error');
+                    const errorMessage: Message = { role: 'model', text: "I tried to generate a report, but the data was corrupted. Please try again." };
+                    setMessages(prev => [...prev, errorMessage]);
+                }
+            } else {
+                const modelMessage: Message = { role: 'model', text: result.response };
+                setMessages(prev => [...prev, modelMessage]);
+            }
         } catch (error: any) {
             showToast(error.message || 'Failed to get response from AI assistant.', 'error');
             const errorMessage: Message = { role: 'model', text: "Sorry, I encountered an error. Please try again." };
@@ -60,7 +146,7 @@ const AIAssistant: React.FC = () => {
         "How many active students do we have?",
         "List all unsponsored students.",
         "Summarize our finances for last month.",
-        "Show me high-priority tasks due this week.",
+        "Generate a CSV report of all active students.",
     ];
 
     return (

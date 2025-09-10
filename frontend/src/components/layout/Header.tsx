@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon, BugIcon } from '@/components/Icons.tsx';
 import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
+import { useTheme } from '@/contexts/ThemeContext.tsx';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -9,22 +10,12 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
-    const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+    const { theme, setTheme } = useTheme();
+    const isDarkMode = theme === 'dark';
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isDebugOpen, setIsDebugOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    // FIX: Changed ref type from HTMLDivElement to HTMLLIElement to match the `li` element it is attached to.
     const debugRef = useRef<HTMLLIElement>(null);
-
-    useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [isDarkMode]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -65,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
                 <div className="flex items-center gap-3 2xsm:gap-7">
                      <ul className="flex items-center gap-2 2xsm:gap-4">
                         <li>
-                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-black dark:text-white">
+                            <button onClick={() => setTheme(isDarkMode ? 'light' : 'dark')} className="text-black dark:text-white">
                                 {isDarkMode ? <SunIcon /> : <MoonIcon />}
                             </button>
                         </li>

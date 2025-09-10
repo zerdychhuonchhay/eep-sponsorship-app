@@ -6,7 +6,7 @@ import PageHeader from '@/components/layout/PageHeader.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import Button from '@/components/ui/Button.tsx';
 import { DownloadIcon } from '@/components/Icons.tsx';
-import { exportToCsv, exportToPdf } from '@/utils/exportUtils.ts';
+import { exportToCsv, exportToPdf, exportFinancialCsvWithSummary } from '@/utils/exportUtils.ts';
 import { useData } from '@/contexts/DataContext.tsx';
 import { FormSelect, FormInput } from '@/components/forms/FormControls.tsx';
 
@@ -148,17 +148,14 @@ const ReportsPage: React.FC = () => {
             const fileName = `Financial_Report_${financialFilters.start}_to_${financialFilters.end}`;
 
             if (format === 'csv') {
-                const csvDataWithSummary = [
-                    { date: 'Financial Summary' },
-                    { date: `Date Range: ${financialFilters.start} to ${financialFilters.end}`},
-                    { date: `Total Income: $${totalIncome.toFixed(2)}`},
-                    { date: `Total Expenses: $${totalExpense.toFixed(2)}`},
-                    { date: `Net Balance: $${netBalance.toFixed(2)}`},
-                    { date: ''}, // Spacer row
-                    headers,
-                    ...reportData,
-                ];
-                exportToCsv(csvDataWithSummary, {}, `${fileName}.csv`);
+                 const summaryData = {
+                    title: 'Financial Summary',
+                    range: `Date Range: ${financialFilters.start} to ${financialFilters.end}`,
+                    income: `Total Income: $${totalIncome.toFixed(2)}`,
+                    expense: `Total Expenses: $${totalExpense.toFixed(2)}`,
+                    net: `Net Balance: $${netBalance.toFixed(2)}`,
+                };
+                exportFinancialCsvWithSummary(reportData, headers, summaryData, `${fileName}.csv`);
             } else {
                 exportToPdf(reportData, headers, 'Financial Report', `${fileName}.pdf`, summary);
             }
