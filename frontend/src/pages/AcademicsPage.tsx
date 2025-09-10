@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
-import { AcademicReport, PaginatedResponse, StudentLookup } from '../types.ts';
+import { AcademicReport, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, DotsVerticalIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable } from '../components/SkeletonLoader.tsx';
 import AcademicReportForm from '../components/AcademicReportForm.tsx';
@@ -14,18 +14,17 @@ import PageHeader from '@/components/layout/PageHeader.tsx';
 import Button from '@/components/ui/Button.tsx';
 import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
+import { Card, CardContent } from '@/components/ui/Card.tsx';
+import ActionDropdown from '@/components/ActionDropdown.tsx';
 
 type ReportFormData = Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>;
 
 const AcademicsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AcademicReport> | null>(null);
-    const [students, setStudents] = useState<StudentLookup[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalState, setModalState] = useState<'add' | 'edit' | null>(null);
     const [selectedReport, setSelectedReport] = useState<AcademicReport | null>(null);
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const { showToast } = useNotification();
 
     const {
@@ -50,12 +49,8 @@ const AcademicsPage: React.FC = () => {
     const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
-            const [reportsData, studentsData] = await Promise.all([
-                api.getAllAcademicReports(apiQueryString),
-                api.getStudentLookup()
-            ]);
+            const reportsData = await api.getAllAcademicReports(apiQueryString);
             setPaginatedData(reportsData);
-            setStudents(studentsData);
         } catch (error: any) {
             showToast(error.message || 'Failed to load academic data.', 'error');
         } finally {
@@ -66,16 +61,6 @@ const AcademicsPage: React.FC = () => {
     useEffect(() => {
         fetchAllData();
     }, [fetchAllData]);
-    
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpenDropdownId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const handleSaveReport = async (formData: ReportFormData, studentId: string) => {
         setIsSubmitting(true);
@@ -122,98 +107,81 @@ const AcademicsPage: React.FC = () => {
     };
 
     return (
-        <>
+        <div className="space-y-6">
             <PageHeader title="Academics">
                 <Button onClick={() => { setSelectedReport(null); setModalState('add'); }} icon={<PlusIcon />}>
                     Add Report
                 </Button>
             </PageHeader>
-            <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-md">
-                <div className="flex flex-col sm:flex-row justify-start items-center mb-6 gap-4">
-                     <AdvancedFilter
-                        filterOptions={filterOptions}
-                        currentFilters={filters}
-                        onApply={applyFilters}
-                        onClear={clearFilters}
-                    />
-                </div>
-                
-                <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
-
-                <div className="overflow-x-auto mt-4">
-                    <table className="w-full text-left">
-                        <thead>
-                             <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                {(['studentName', 'reportPeriod', 'gradeLevel', 'overallAverage', 'passFailStatus'] as (keyof AcademicReport)[]).map(key => (
-                                    <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
-                                        <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                            {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                        </button>
-                                    </th>
-                                ))}
-                                <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {allReports.length > 0 ? allReports.map(report => (
-                                 <tr key={report.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                    <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{report.studentName}</td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.reportPeriod}</td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.gradeLevel}</td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage.toFixed(1)}%</td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                        <Badge type={report.passFailStatus} />
-                                    </td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                        <div className="relative inline-block" ref={openDropdownId === report.id ? dropdownRef : null}>
-                                            <button 
-                                                onClick={() => setOpenDropdownId(openDropdownId === report.id ? null : report.id)} 
-                                                className="hover:text-primary p-1 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
-                                                aria-label="Actions"
-                                            >
-                                                <DotsVerticalIcon />
+           
+            <Card>
+                <CardContent>
+                     <div className="flex justify-end mb-4">
+                        <AdvancedFilter
+                           filterOptions={filterOptions}
+                           currentFilters={filters}
+                           onApply={applyFilters}
+                           onClear={clearFilters}
+                       />
+                    </div>
+                    <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-left">
+                            <thead>
+                                 <tr className="bg-gray-2 dark:bg-box-dark-2">
+                                    {(['studentName', 'reportPeriod', 'gradeLevel', 'overallAverage', 'passFailStatus'] as (keyof AcademicReport)[]).map(key => (
+                                        <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
+                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
                                             </button>
-                                            {openDropdownId === report.id && (
-                                                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark z-10">
-                                                    <div className="py-1">
-                                                        <button onClick={() => { setSelectedReport(report); setModalState('edit'); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <EditIcon /> Edit
-                                                        </button>
-                                                        <button onClick={() => { handleDeleteReport(report.id); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-danger hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <TrashIcon /> Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
+                                        </th>
+                                    ))}
+                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={6}>
-                                        <EmptyState title="No Academic Reports Found" />
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {allReports.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
-
-                <Modal isOpen={!!modalState} onClose={() => setModalState(null)} title={modalState === 'edit' ? 'Edit Academic Report' : 'Add New Academic Report'}>
-                    <AcademicReportForm 
-                        key={selectedReport ? selectedReport.id : 'new-report'}
-                        onSave={handleSaveReport} 
-                        onCancel={() => setModalState(null)}
-                        students={students}
-                        initialData={selectedReport}
-                        isSaving={isSubmitting}
-                    />
-                </Modal>
-            </div>
-        </>
+                            </thead>
+                            <tbody>
+                                {allReports.length > 0 ? allReports.map(report => (
+                                     <tr key={report.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                        <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{report.studentName}</td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.reportPeriod}</td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.gradeLevel}</td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage.toFixed(1)}%</td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                            <Badge type={report.passFailStatus} />
+                                        </td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                            <ActionDropdown items={[
+                                                { label: 'Edit', icon: <EditIcon />, onClick: () => { setSelectedReport(report); setModalState('edit'); } },
+                                                { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' },
+                                            ]} />
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={6}>
+                                            <EmptyState title="No Academic Reports Found" />
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {allReports.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                </CardContent>
+            </Card>
+            
+            <Modal isOpen={!!modalState} onClose={() => setModalState(null)} title={modalState === 'edit' ? 'Edit Academic Report' : 'Add New Academic Report'}>
+                <AcademicReportForm 
+                    key={selectedReport ? selectedReport.id : 'new-report'}
+                    onSave={handleSaveReport} 
+                    onCancel={() => setModalState(null)}
+                    initialData={selectedReport}
+                    isSaving={isSubmitting}
+                />
+            </Modal>
+        </div>
     );
 };
 

@@ -1,4 +1,6 @@
-import { defineConfig } from 'vite'
+/// <reference types="vitest" />
+// FIX: Import `defineConfig` from `vitest/config` to include type definitions for the `test` property.
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -7,7 +9,13 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      // FIX: __dirname is not available in ES modules. Resolve from the project root instead.
+      '@': path.resolve('./src'),
     },
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+  }
 })

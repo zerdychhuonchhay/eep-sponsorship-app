@@ -30,6 +30,10 @@ const badgeStyles: Record<string, string> = {
     // AcademicReport Pass/Fail
     'Pass': 'bg-success/10 text-success',
     'Fail': 'bg-danger/10 text-danger',
+    // Audit Log Actions
+    'CREATE': 'bg-success/10 text-success',
+    'UPDATE': 'bg-secondary/10 text-secondary',
+    'DELETE': 'bg-danger/10 text-danger',
 };
 
 const Badge: React.FC<BadgeProps> = ({ type, className }) => {

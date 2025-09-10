@@ -1,5 +1,5 @@
 /**
- * Parses a value that might be a date (from Excel, string, etc.) into a YYYY-MM-DD string.
+ * Parses a value that might be a a date (from Excel, string, etc.) into a YYYY-MM-DD string.
  * Excel dates can be imported as numbers (days since 1900/1904).
  * @param dateValue The value to parse.
  * @returns A string in 'YYYY-MM-DD' format, or null if invalid.
@@ -48,4 +48,36 @@ export const parseAndFormatDate = (dateValue: any): string | null => {
     const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
 
     return `${year}-${month}-${day}`;
+};
+
+/**
+ * Calculates the age from a date of birth string.
+ * @param dob The date of birth string.
+ * @returns The calculated age as a number, or 'N/A' if the date is invalid.
+ */
+export const calculateAge = (dob: string): number | string => {
+    if (!dob || isNaN(new Date(dob).getTime())) return 'N/A';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
+/**
+ * Formats a date string for display in a user-friendly format (e.g., "Jan 1, 2024").
+ * @param dateStr The date string to format.
+ * @returns A formatted date string, or 'N/A' if the date is invalid.
+ */
+export const formatDateForDisplay = (dateStr?: string) => {
+    if (!dateStr || isNaN(new Date(dateStr).getTime())) return 'N/A';
+    // Use toLocaleDateString for better internationalization support.
+    return new Date(dateStr).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
 };

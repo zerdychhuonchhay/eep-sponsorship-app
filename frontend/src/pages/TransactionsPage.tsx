@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { Transaction, TransactionType, TRANSACTION_CATEGORIES, PaginatedResponse, StudentLookup } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon, DotsVerticalIcon } from '../components/Icons.tsx';
+import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect } from '../components/forms/FormControls.tsx';
@@ -14,6 +14,9 @@ import PageHeader from '@/components/layout/PageHeader.tsx';
 import Button from '@/components/ui/Button.tsx';
 import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
+import { Card, CardContent } from '@/components/ui/Card.tsx';
+import ActionDropdown from '@/components/ActionDropdown.tsx';
+import { useData } from '@/contexts/DataContext.tsx';
 
 const TransactionForm: React.FC<{ 
     onSave: (transaction: Omit<Transaction, 'id'> | Transaction) => void; 
@@ -79,13 +82,11 @@ const TransactionForm: React.FC<{
 
 const TransactionsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Transaction> | null>(null);
-    const [students, setStudents] = useState<StudentLookup[]>([]);
+    const { studentLookup: students } = useData();
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const { showToast } = useNotification();
     
     const { 
@@ -104,12 +105,8 @@ const TransactionsPage: React.FC = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [transData, studentsData] = await Promise.all([
-                api.getTransactions(apiQueryString), 
-                api.getStudentLookup()
-            ]);
+            const transData = await api.getTransactions(apiQueryString);
             setPaginatedData(transData);
-            setStudents(studentsData);
         } catch (error: any) {
             showToast(error.message || 'Failed to load transaction data.', 'error');
         } finally {
@@ -120,16 +117,6 @@ const TransactionsPage: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpenDropdownId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const handleSave = async (transaction: Omit<Transaction, 'id'> | Transaction) => {
         setIsSubmitting(true);
@@ -176,100 +163,94 @@ const TransactionsPage: React.FC = () => {
     };
 
     return (
-        <>
+        <div className="space-y-6">
             <PageHeader title="Transactions">
                 <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
                     Log Transaction
                 </Button>
             </PageHeader>
-            <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-md">
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                    <AdvancedFilter 
-                        filterOptions={filterOptions}
-                        currentFilters={filters}
-                        onApply={applyFilters}
-                        onClear={clearFilters}
-                    />
-                </div>
-
-                <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
-
-                <div className="overflow-x-auto mt-4">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction)[]).map(key => (
-                                    <th key={key} className={`py-4 px-4 font-medium text-black dark:text-white ${key === 'amount' ? 'text-right' : ''}`}>
-                                        <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key)}>
-                                            {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                        </button>
-                                    </th>
-                                ))}
-                                 <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {transactions.length > 0 ? transactions.map((t) => (
-                                <tr key={t.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                    <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{new Date(t.date).toLocaleDateString()}</td>
-                                    <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{t.description}</td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{t.category}</td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                        <Badge type={t.type} />
-                                    </td>
-                                    <td className={`py-5 px-4 font-medium text-right border-b border-stroke dark:border-strokedark ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
-                                        ${Number(t.amount).toFixed(2)}
-                                    </td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                        <div className="relative inline-block" ref={openDropdownId === t.id ? dropdownRef : null}>
-                                            <button 
-                                                onClick={() => setOpenDropdownId(openDropdownId === t.id ? null : t.id)} 
-                                                className="hover:text-primary p-1 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
-                                                aria-label="Actions"
-                                            >
-                                                <DotsVerticalIcon />
+           
+            <Card>
+                <CardContent>
+                     <div className="flex justify-end mb-4">
+                        <AdvancedFilter 
+                            filterOptions={filterOptions}
+                            currentFilters={filters}
+                            onApply={applyFilters}
+                            onClear={clearFilters}
+                        />
+                    </div>
+                    <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-2 dark:bg-box-dark-2">
+                                    {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
+                                        <th key={key as string} className={`py-4 px-4 font-medium text-black dark:text-white ${key === 'amount' ? 'text-right' : ''}`}>
+                                            <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
+                                                {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
                                             </button>
-                                            {openDropdownId === t.id && (
-                                                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark z-10">
-                                                    <div className="py-1">
-                                                        <button onClick={() => { setEditingTransaction(t); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <EditIcon /> Edit
-                                                        </button>
-                                                        <button onClick={() => { handleDelete(t.id); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-danger hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <TrashIcon /> Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
+                                        </th>
+                                    ))}
+                                     <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={6}>
-                                        <EmptyState title="No Transactions Found" />
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {transactions.length > 0 ? transactions.map((t) => {
+                                    const student = students.find(s => s.studentId === t.studentId);
+                                    return (
+                                        <tr key={t.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                            <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{new Date(t.date).toLocaleDateString()}</td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                <p className="font-medium text-black dark:text-white">{t.description}</p>
+                                                {student && (
+                                                    <p className="text-sm text-body-color dark:text-gray-300">
+                                                        For: {student.firstName} {student.lastName}
+                                                    </p>
+                                                )}
+                                            </td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{t.category}</td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                <Badge type={t.type} />
+                                            </td>
+                                            <td className={`py-5 px-4 font-medium text-right border-b border-stroke dark:border-strokedark ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
+                                                ${Number(t.amount).toFixed(2)}
+                                            </td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                                <ActionDropdown items={[
+                                                    { label: 'Edit', icon: <EditIcon />, onClick: () => setEditingTransaction(t) },
+                                                    { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(t.id), className: 'text-danger' },
+                                                ]} />
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
+                                    <tr>
+                                        <td colSpan={6}>
+                                            <EmptyState title="No Transactions Found" />
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                    {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                </CardContent>
+            </Card>
 
-                <Modal isOpen={isAdding || !!editingTransaction} onClose={() => { setIsAdding(false); setEditingTransaction(null); }} title={editingTransaction ? 'Edit Transaction' : 'Log a New Transaction'}>
-                    <TransactionForm 
-                        key={editingTransaction ? editingTransaction.id : 'new-transaction'}
-                        onSave={handleSave} 
-                        onCancel={() => { setIsAdding(false); setEditingTransaction(null); }} 
-                        students={students}
-                        initialData={editingTransaction}
-                        isSubmitting={isSubmitting}
-                    />
-                </Modal>
-            </div>
-        </>
+            <Modal isOpen={isAdding || !!editingTransaction} onClose={() => { setIsAdding(false); setEditingTransaction(null); }} title={editingTransaction ? 'Edit Transaction' : 'Log a New Transaction'}>
+                <TransactionForm 
+                    key={editingTransaction ? editingTransaction.id : 'new-transaction'}
+                    onSave={handleSave} 
+                    onCancel={() => { setIsAdding(false); setEditingTransaction(null); }} 
+                    students={students}
+                    initialData={editingTransaction}
+                    isSubmitting={isSubmitting}
+                />
+            </Modal>
+        </div>
     );
 };
 

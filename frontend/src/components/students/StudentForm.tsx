@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Student, Gender, StudentStatus, SponsorshipStatus, YesNo, HealthStatus, InteractionStatus, TransportationType } from '@/types.ts';
 import { FormInput, FormSelect, FormTextArea, FormCheckbox, FormSection, FormSubSection, YesNoNASelect } from '@/components/forms/FormControls.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
+import { useData } from '@/contexts/DataContext.tsx';
 import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
 import Button from '@/components/ui/Button.tsx';
 
@@ -9,6 +10,7 @@ interface StudentFormProps {
     student?: Student | null;
     onSave: (data: any) => void;
     onCancel: () => void;
+    isSaving: boolean;
 }
 
 const formatDateForInput = (dateStr?: string) => {
@@ -16,15 +18,17 @@ const formatDateForInput = (dateStr?: string) => {
     return new Date(dateStr).toISOString().split('T')[0];
 };
 
-const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) => {
+const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, isSaving }) => {
     const isEdit = !!student?.studentId;
     const [errors, setErrors] = useState<Record<string, string>>({});
     const { showToast } = useNotification();
+    const { sponsorLookup } = useData();
+
     const [formData, setFormData] = useState(() => {
         const initialData = {
             studentId: '', firstName: '', lastName: '', dateOfBirth: '', gender: Gender.OTHER, profilePhoto: undefined,
             school: '', currentGrade: '', eepEnrollDate: '', outOfProgramDate: '', studentStatus: StudentStatus.PENDING_QUALIFICATION,
-            sponsorshipStatus: SponsorshipStatus.UNSPONSORED, hasHousingSponsorship: false, sponsorName: '', applicationDate: '',
+            sponsorshipStatus: SponsorshipStatus.UNSPONSORED, hasHousingSponsorship: false, sponsor: '', applicationDate: '',
             hasBirthCertificate: false, siblingsCount: 0, householdMembersCount: 0, city: '', villageSlum: '',
             guardianName: '', guardianContactInfo: '', homeLocation: '',
             fatherDetails: { isLiving: YesNo.NA, isAtHome: YesNo.NA, isWorking: YesNo.NA, occupation: '', skills: '' },
@@ -45,6 +49,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
                 applicationDate: formatDateForInput(student.applicationDate),
                 outOfProgramDate: formatDateForInput(student.outOfProgramDate),
                 profilePhoto: undefined, // Clear photo on edit form load, only handle new uploads
+                sponsor: student.sponsor || '', // Ensure sponsor is an ID string
             };
         }
         return initialData;
@@ -119,8 +124,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
         const fieldsToValidate: (keyof typeof formData)[] = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'];
         
         fieldsToValidate.forEach(field => {
-            // FIX: `field` can be a symbol, which cannot be used as an index type for `newErrors` or passed to `validateField`.
-            const error = validateField(String(field), formData[field] as string, formData);
+            const error = validateField(String(field), (formData as any)[field] as string, formData);
             if (error) {
                 newErrors[String(field)] = error;
             }
@@ -138,7 +142,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
             return;
         }
         setErrors({});
-        onSave(formData);
+        const dataToSave = { ...formData, sponsor: formData.sponsor === '' ? null : formData.sponsor };
+        onSave(dataToSave);
     };
 
     const tabs: Tab[] = [
@@ -165,7 +170,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
                 <FormSelect label="Sponsorship Status" id="sponsorshipStatus" name="sponsorshipStatus" value={formData.sponsorshipStatus} onChange={handleChange}>
                     {Object.values(SponsorshipStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                <FormInput label="Sponsor Name" id="sponsorName" name="sponsorName" value={formData.sponsorName || ''} onChange={handleChange} />
+                <FormSelect label="Sponsor" id="sponsor" name="sponsor" value={formData.sponsor || ''} onChange={handleChange}>
+                    <option value="">-- No Sponsor --</option>
+                    {sponsorLookup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </FormSelect>
                 <FormInput label="Application Date" id="applicationDate" name="applicationDate" type="date" value={formData.applicationDate} onChange={handleChange} onBlur={handleBlur} required error={errors.applicationDate} />
                 <FormInput label="EEP Enroll Date" id="eepEnrollDate" name="eepEnrollDate" type="date" value={formData.eepEnrollDate} onChange={handleChange} onBlur={handleBlur} required error={errors.eepEnrollDate} />
                 <FormInput label="Out of Program Date" id="outOfProgramDate" name="outOfProgramDate" type="date" value={formData.outOfProgramDate || ''} onChange={handleChange} onBlur={handleBlur} error={errors.outOfProgramDate} />
@@ -246,8 +254,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
         <form onSubmit={handleSubmit} className="space-y-4">
             <Tabs tabs={tabs} />
             <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-                <Button type="submit">{isEdit ? 'Update Student' : 'Save Student'}</Button>
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                <Button type="submit" isLoading={isSaving}>{isEdit ? 'Update Student' : 'Save Student'}</Button>
             </div>
         </form>
     );

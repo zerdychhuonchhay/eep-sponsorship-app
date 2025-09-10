@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { GovernmentFiling, FilingStatus, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { ArrowUpIcon, ArrowDownIcon, PlusIcon, EditIcon, TrashIcon, DotsVerticalIcon } from '../components/Icons.tsx';
+import { ArrowUpIcon, ArrowDownIcon, PlusIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
 import { SkeletonTable } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect } from '../components/forms/FormControls.tsx';
 import { useTableControls } from '../hooks/useTableControls.ts';
@@ -14,6 +14,8 @@ import PageHeader from '@/components/layout/PageHeader.tsx';
 import Button from '@/components/ui/Button.tsx';
 import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
+import { Card, CardContent } from '@/components/ui/Card.tsx';
+import ActionDropdown from '@/components/ActionDropdown.tsx';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
@@ -78,8 +80,6 @@ const FilingsPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [selectedFiling, setSelectedFiling] = useState<GovernmentFiling | null>(null);
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
     const { showToast } = useNotification();
     
     const {
@@ -110,16 +110,6 @@ const FilingsPage: React.FC = () => {
         fetchFilings();
     }, [fetchFilings]);
     
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setOpenDropdownId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     const handleSave = async (filingData: GovernmentFiling | Omit<GovernmentFiling, 'id'>) => {
         setIsSubmitting(true);
         try {
@@ -165,96 +155,80 @@ const FilingsPage: React.FC = () => {
     }
 
     return (
-        <>
+        <div className="space-y-6">
             <PageHeader title="Government Filings">
                 <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
                     New Filing
                 </Button>
             </PageHeader>
-            <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-md">
-                <div className="flex flex-col sm:flex-row justify-start items-center mb-4">
-                    <AdvancedFilter
-                        filterOptions={filterOptions}
-                        currentFilters={filters}
-                        onApply={applyFilters}
-                        onClear={clearFilters}
-                    />
-                </div>
-
-                <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
-                
-                <div className="overflow-x-auto mt-4">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
-                                    <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
-                                        <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
-                                        </button>
-                                    </th>
-                                ))}
-                                <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filings.length > 0 ? filings.map((f) => (
-                                <tr key={f.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                    <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{f.documentName}</td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{f.authority}</td>
-                                    <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(f.dueDate).toLocaleDateString()}</td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                        <Badge type={f.status} />
-                                    </td>
-                                    <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                        <div className="relative inline-block" ref={openDropdownId === f.id ? dropdownRef : null}>
-                                            <button 
-                                                onClick={() => setOpenDropdownId(openDropdownId === f.id ? null : f.id)} 
-                                                className="hover:text-primary p-1 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
-                                                aria-label="Actions"
-                                            >
-                                                <DotsVerticalIcon />
+            
+            <Card>
+                <CardContent>
+                    <div className="flex justify-end mb-4">
+                        <AdvancedFilter
+                            filterOptions={filterOptions}
+                            currentFilters={filters}
+                            onApply={applyFilters}
+                            onClear={clearFilters}
+                        />
+                    </div>
+                    <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-2 dark:bg-box-dark-2">
+                                    {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
+                                        <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
+                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
                                             </button>
-                                            {openDropdownId === f.id && (
-                                                <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark z-10">
-                                                    <div className="py-1">
-                                                        <button onClick={() => { setSelectedFiling(f); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <EditIcon /> Edit
-                                                        </button>
-                                                        <button onClick={() => { handleDelete(f.id); setOpenDropdownId(null); }} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-danger hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                            <TrashIcon /> Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
+                                        </th>
+                                    ))}
+                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={5}>
-                                        <EmptyState title="No Filings Found" />
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {filings.length > 0 ? filings.map((f) => (
+                                    <tr key={f.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                        <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{f.documentName}</td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{f.authority}</td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(f.dueDate).toLocaleDateString()}</td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                            <Badge type={f.status} />
+                                        </td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                            <ActionDropdown items={[
+                                                { label: 'Edit', icon: <EditIcon />, onClick: () => setSelectedFiling(f) },
+                                                { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(f.id), className: 'text-danger' },
+                                            ]} />
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={5}>
+                                            <EmptyState title="No Filings Found" />
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                {filings.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                    {filings.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                </CardContent>
+            </Card>
 
-                <Modal isOpen={isAdding || !!selectedFiling} onClose={() => { setIsAdding(false); setSelectedFiling(null); }} title={selectedFiling ? 'Update Government Filing' : 'Add New Government Filing'}>
-                    <FilingForm 
-                        key={selectedFiling ? selectedFiling.id : 'new-filing'}
-                        filing={selectedFiling} 
-                        onSave={handleSave} 
-                        onCancel={() => { setIsAdding(false); setSelectedFiling(null); }}
-                        isSubmitting={isSubmitting}
-                    />
-                </Modal>
-            </div>
-        </>
+            <Modal isOpen={isAdding || !!selectedFiling} onClose={() => { setIsAdding(false); setSelectedFiling(null); }} title={selectedFiling ? 'Update Government Filing' : 'Add New Government Filing'}>
+                <FilingForm 
+                    key={selectedFiling ? selectedFiling.id : 'new-filing'}
+                    filing={selectedFiling} 
+                    onSave={handleSave} 
+                    onCancel={() => { setIsAdding(false); setSelectedFiling(null); }}
+                    isSubmitting={isSubmitting}
+                />
+            </Modal>
+        </div>
     );
 };
 

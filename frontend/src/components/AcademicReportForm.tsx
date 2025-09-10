@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { AcademicReport, StudentLookup } from '../types.ts';
 import { FormInput, FormSelect, FormTextArea } from './forms/FormControls.tsx';
 import Button from './ui/Button.tsx';
+import { useData } from '@/contexts/DataContext.tsx';
 
 type ReportFormData = Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>;
 
 interface AcademicReportFormProps {
     onSave: (data: ReportFormData, studentId: string) => void;
     onCancel: () => void;
-    students: StudentLookup[];
     initialData?: AcademicReport | null;
     studentId?: string; // Pre-selected student ID
     isSaving: boolean;
@@ -17,12 +17,12 @@ interface AcademicReportFormProps {
 const AcademicReportForm: React.FC<AcademicReportFormProps> = ({ 
     onSave, 
     onCancel, 
-    students, 
     initialData, 
     studentId: preselectedStudentId,
     isSaving
 }) => {
     const isEdit = !!initialData;
+    const { studentLookup: students } = useData();
     
     const [studentId, setStudentId] = useState(preselectedStudentId || initialData?.studentId || '');
     const [formData, setFormData] = useState<ReportFormData>({

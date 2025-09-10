@@ -11,6 +11,7 @@ export type SortConfig<T> = {
 };
 
 export type StudentLookup = Pick<Student, 'studentId' | 'firstName' | 'lastName'>;
+export type SponsorLookup = Pick<Sponsor, 'id' | 'name'>;
 
 export enum Gender {
     MALE = 'Male',
@@ -97,7 +98,8 @@ export interface Student {
     studentStatus: StudentStatus;
     sponsorshipStatus: SponsorshipStatus;
     hasHousingSponsorship: boolean;
-    sponsorName?: string;
+    sponsor?: string; // This will hold the Sponsor ID
+    sponsorName?: string; // Read-only from backend
     
     // --- Merged from Risk Assessment ---
     applicationDate: string;
@@ -261,4 +263,29 @@ export interface Task {
     dueDate: string;
     priority: TaskPriority;
     status: TaskStatus;
+}
+
+export enum AuditAction {
+    CREATE = 'CREATE',
+    UPDATE = 'UPDATE',
+    DELETE = 'DELETE',
+}
+
+export interface AuditLog {
+    id: number;
+    timestamp: string;
+    userIdentifier: string;
+    action: AuditAction;
+    contentType: string; // e.g., 'student', 'transaction'
+    objectId: string;
+    objectRepr: string;
+    changes: Record<string, { old: any; new: any }> | null;
+}
+
+export interface Sponsor {
+    id: string;
+    name: string;
+    email: string;
+    sponsorshipStartDate: string;
+    sponsoredStudentCount: number;
 }

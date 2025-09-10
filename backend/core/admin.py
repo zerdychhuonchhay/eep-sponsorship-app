@@ -7,7 +7,8 @@ from .models import (
     FollowUpRecord,
     Transaction,
     GovernmentFiling,
-    Task
+    Task,
+    Sponsor,
 )
 
 class StudentAdmin(admin.ModelAdmin):
@@ -26,6 +27,7 @@ class GovernmentFilingAdmin(admin.ModelAdmin):
     search_fields = ('document_name',)
 
 admin.site.register(Student, StudentAdmin)
+admin.site.register(Sponsor)
 admin.site.register(AcademicReport)
 admin.site.register(FollowUpRecord)
 admin.site.register(Transaction, TransactionAdmin)

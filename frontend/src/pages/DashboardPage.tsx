@@ -5,6 +5,7 @@ import { StudentsIcon, FilingsIcon, TransactionsIcon, TrendUpIcon, TrendDownIcon
 import { SkeletonCard } from '../components/SkeletonLoader.tsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import PageHeader from '@/components/layout/PageHeader.tsx';
+import { Card, CardContent, CardHeader } from '@/components/ui/Card.tsx';
 
 interface DashboardStats {
     stats: {
@@ -85,25 +86,27 @@ const StatCard: React.FC<{
     const trendColor = trend?.direction === 'up' ? 'text-success' : trend?.direction === 'down' ? 'text-danger' : 'text-body-color';
 
     return (
-        <div className={`rounded-lg border border-stroke bg-white py-6 px-7 shadow-md dark:border-strokedark dark:bg-box-dark border-l-4 ${accentColor}`}>
-            <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-2 dark:bg-box-dark-2">
-                    {icon}
+        <Card className={`border-l-4 ${accentColor}`}>
+             <CardContent>
+                <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gray-2 dark:bg-box-dark-2">
+                        {icon}
+                    </div>
+                    <div>
+                        <span className="text-sm font-medium text-body-color">{title}</span>
+                        <h4 className="text-3xl font-bold text-black dark:text-white mt-1">{formatValue(currentValue)}</h4>
+                    </div>
                 </div>
-                <div>
-                    <span className="text-sm font-medium text-body-color">{title}</span>
-                    <h4 className="text-3xl font-bold text-black dark:text-white mt-1">{formatValue(currentValue)}</h4>
-                </div>
-            </div>
-             {trend && (
-                <div className={`mt-4 flex items-center gap-1 text-sm ${trendColor}`}>
-                    {trend.direction === 'up' && <TrendUpIcon />}
-                    {trend.direction === 'down' && <TrendDownIcon />}
-                    <span>{trend.value}</span>
-                    <span className="text-body-color dark:text-gray-300">vs previous period</span>
-                </div>
-            )}
-        </div>
+                 {trend && (
+                    <div className={`mt-4 flex items-center gap-1 text-sm ${trendColor}`}>
+                        {trend.direction === 'up' && <TrendUpIcon />}
+                        {trend.direction === 'down' && <TrendDownIcon />}
+                        <span>{trend.value}</span>
+                        <span className="text-body-color dark:text-gray-300">vs previous period</span>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 };
 
@@ -145,19 +148,19 @@ const DashboardPage: React.FC = () => {
 
     if (loading && !stats) {
         return (
-            <>
+            <div className="space-y-6">
                 <PageHeader title="Dashboard" />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
                     <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
                 </div>
-            </>
+            </div>
         );
     }
     
     if (error) return <div className="text-danger p-4 bg-danger/10 rounded">{error}</div>;
 
     return (
-        <>
+        <div className="space-y-6">
             <PageHeader title="Dashboard">
                 <div className="flex items-center bg-white dark:bg-box-dark rounded-md border border-stroke dark:border-strokedark">
                     {(Object.keys(dateRanges) as DateRangeOption[]).map(rangeKey => (
@@ -171,79 +174,79 @@ const DashboardPage: React.FC = () => {
                     ))}
                 </div>
             </PageHeader>
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-                    <StatCard 
-                        title="Total Students" 
-                        currentValue={stats?.stats.totalStudents ?? 0}
-                        previousValue={stats?.trends.totalStudents} 
-                        icon={<StudentsIcon />} 
-                        accentColor="border-primary"
-                    />
-                    <StatCard 
-                        title="Net Balance" 
-                        currentValue={stats?.stats.netBalance ?? 0}
-                        previousValue={stats?.trends.netBalance}
-                        formatAsCurrency
-                        icon={<TransactionsIcon />} 
-                        accentColor="border-success"
-                    />
-                    <StatCard 
-                        title="Active Students" 
-                        currentValue={stats?.stats.activeStudents ?? 0}
-                        previousValue={stats?.trends.activeStudents}
-                        icon={<StudentsIcon />} 
-                        accentColor="border-secondary"
-                    />
-                    <StatCard 
-                        title="Upcoming Filings" 
-                        currentValue={stats?.stats.upcomingFilings ?? 0} 
-                        icon={<FilingsIcon />} 
-                        accentColor="border-warning"
-                    />
-                </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
+                <StatCard 
+                    title="Total Students" 
+                    currentValue={stats?.stats.totalStudents ?? 0}
+                    previousValue={stats?.trends.totalStudents} 
+                    icon={<StudentsIcon />} 
+                    accentColor="border-primary"
+                />
+                <StatCard 
+                    title="Net Balance" 
+                    currentValue={stats?.stats.netBalance ?? 0}
+                    previousValue={stats?.trends.netBalance}
+                    formatAsCurrency
+                    icon={<TransactionsIcon />} 
+                    accentColor="border-success"
+                />
+                <StatCard 
+                    title="Active Students" 
+                    currentValue={stats?.stats.activeStudents ?? 0}
+                    previousValue={stats?.trends.activeStudents}
+                    icon={<StudentsIcon />} 
+                    accentColor="border-secondary"
+                />
+                <StatCard 
+                    title="Upcoming Filings" 
+                    currentValue={stats?.stats.upcomingFilings ?? 0} 
+                    icon={<FilingsIcon />} 
+                    accentColor="border-warning"
+                />
+            </div>
+            
+            <div className="grid grid-cols-12 gap-4 md:gap-6 2xl:gap-7.5">
+                <Card className="col-span-12 xl:col-span-8 min-h-[480px]">
+                    <CardHeader title="Income vs. Expense (Last 12 Months)" />
+                    <CardContent className="h-[calc(100%-4rem)]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stats?.monthlyBreakdown}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--stroke-color, #E2E8F0)" />
+                                <XAxis dataKey="month" tick={{ fill: 'var(--text-color-secondary, #64748B)', fontSize: 12 }} />
+                                <YAxis tick={{ fill: 'var(--text-color-secondary, #64748B)', fontSize: 12 }} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'var(--box-dark)', border: '1px solid var(--stroke-color)', borderRadius: '8px' }}
+                                    cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
+                                    formatter={(value) => `$${Number(value).toLocaleString()}`}
+                                />
+                                <Legend />
+                                <Bar dataKey="income" fill="#3C50E0" name="Income" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="expense" fill="#80CAEE" name="Expense" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
                 
-                <div className="grid grid-cols-12 gap-4 md:gap-6 2xl:gap-7.5">
-                    <div className="col-span-12 xl:col-span-8 rounded-lg border border-stroke bg-white p-6 shadow-md dark:border-strokedark dark:bg-box-dark flex flex-col min-h-[480px]">
-                        <h3 className="text-xl font-semibold mb-4 text-black dark:text-white flex-shrink-0">Income vs. Expense (Last 12 Months)</h3>
-                        <div className="flex-grow">
+                <div className="col-span-12 xl:col-span-4 flex flex-col gap-4 md:gap-6 2xl:gap-7.5">
+                    <Card className="flex-1">
+                        <CardHeader title="Student Status" />
+                        <CardContent className="h-[calc(100%-4rem)]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats?.monthlyBreakdown}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--stroke-color, #E2E8F0)" />
-                                    <XAxis dataKey="month" tick={{ fill: 'var(--text-color-secondary, #64748B)', fontSize: 12 }} />
-                                    <YAxis tick={{ fill: 'var(--text-color-secondary, #64748B)', fontSize: 12 }} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'var(--box-dark)', border: '1px solid var(--stroke-color)', borderRadius: '8px' }}
-                                        cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
-                                        formatter={(value) => `$${Number(value).toLocaleString()}`}
-                                    />
+                                <PieChart>
+                                    <Pie data={statusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                        {statusPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip formatter={(value) => `${value} students`} />
                                     <Legend />
-                                    <Bar dataKey="income" fill="#3C50E0" name="Income" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="expense" fill="#80CAEE" name="Expense" radius={[4, 4, 0, 0]} />
-                                </BarChart>
+                                </PieChart>
                             </ResponsiveContainer>
-                        </div>
-                    </div>
-                    
-                    <div className="col-span-12 xl:col-span-4 grid grid-rows-2 gap-4 md:gap-6 2xl:gap-7.5">
-                        <div className="row-span-1 rounded-lg border border-stroke bg-white p-6 shadow-md dark:border-strokedark dark:bg-box-dark flex flex-col">
-                            <h3 className="text-xl font-semibold mb-2 text-black dark:text-white flex-shrink-0">Student Status</h3>
-                            <div className="flex-grow w-full h-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={statusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                            {statusPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                                        </Pie>
-                                        <Tooltip formatter={(value) => `${value} students`} />
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
+                        </CardContent>
+                    </Card>
 
-                        <div className="row-span-1 rounded-lg border border-stroke bg-white p-6 shadow-md dark:border-strokedark dark:bg-box-dark flex flex-col">
-                            <h3 className="text-xl font-semibold mb-4 text-black dark:text-white flex-shrink-0">Recent Transactions</h3>
-                            <div className="space-y-4 flex-grow overflow-y-auto">
+                    <Card className="flex-1">
+                        <CardHeader title="Recent Transactions" />
+                        <CardContent className="overflow-y-auto">
+                            <div className="space-y-4">
                                 {recentTransactions.map(t => (
                                     <div key={t.id} className="flex items-center gap-4">
                                         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${t.type === TransactionType.INCOME ? 'bg-success/10' : 'bg-danger/10'}`}>
@@ -259,11 +262,11 @@ const DashboardPage: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

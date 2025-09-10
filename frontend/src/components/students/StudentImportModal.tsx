@@ -2,10 +2,9 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Student } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
-import { useDebugNotification } from '@/contexts/DebugNotificationContext.tsx';
 import { api } from '@/services/api.ts';
-import { ArrowDownIcon } from '../Icons.tsx';
 import { parseAndFormatDate } from '@/utils/dateUtils.ts';
+import Button from '@/components/ui/Button.tsx';
 
 interface StudentImportModalProps {
     existingStudents: Student[];
@@ -41,15 +40,22 @@ const ReviewUpdateSection: React.FC<{
     diffs: StudentDiff[];
     selections: Record<string, Record<string, boolean>>;
     onSelectionChange: (studentId: string, field: keyof Student, isSelected: boolean) => void;
-}> = ({ diffs, selections, onSelectionChange }) => {
-    const [openStudentId, setOpenStudentId] = useState<string | null>(null);
+    onSelectAllChange: (studentId: string, isSelected: boolean) => void;
+}> = ({ diffs, selections, onSelectionChange, onSelectAllChange }) => {
+    
     if (diffs.length === 0) return null;
+
+    const isAllSelectedForStudent = (diff: StudentDiff) => {
+        if (!selections[diff.studentId]) return false;
+        return diff.changes.every(change => selections[diff.studentId][change.field as string]);
+    };
+
     return (
         <div>
             <h4 className="font-semibold mb-2">Existing Students to be Updated ({diffs.length})</h4>
             <div className="max-h-60 overflow-y-auto border border-stroke dark:border-strokedark rounded-lg">
                 {diffs.map(diff => (
-                    <details key={diff.studentId} className="border-b border-stroke dark:border-strokedark last:border-b-0" onToggle={(e) => e.currentTarget.open ? setOpenStudentId(diff.studentId) : setOpenStudentId(null)}>
+                    <details key={diff.studentId} open={diffs.length <= 3} className="border-b border-stroke dark:border-strokedark last:border-b-0">
                         <summary className="p-2 cursor-pointer hover:bg-gray dark:hover:bg-box-dark-2 flex justify-between">
                             <span>{diff.firstName} {diff.lastName} ({diff.studentId})</span>
                             <span className="text-xs text-primary">{diff.changes.length} change{diff.changes.length === 1 ? '' : 's'} found</span>
@@ -61,7 +67,18 @@ const ReviewUpdateSection: React.FC<{
                                         <th className="p-2 text-left font-medium">Field</th>
                                         <th className="p-2 text-left font-medium">Old Value</th>
                                         <th className="p-2 text-left font-medium">New Value</th>
-                                        <th className="p-2 text-center font-medium">Update?</th>
+                                        <th className="p-2 text-center font-medium">
+                                            <div className="flex flex-col items-center">
+                                                <span>Update?</span>
+                                                <input
+                                                    type="checkbox"
+                                                    title="Select/Deselect All"
+                                                    className="form-checkbox h-3.5 w-3.5 rounded text-primary"
+                                                    checked={isAllSelectedForStudent(diff)}
+                                                    onChange={(e) => onSelectAllChange(diff.studentId, e.target.checked)}
+                                                />
+                                            </div>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -100,7 +117,13 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     const [importResult, setImportResult] = useState<{ createdCount: number; updatedCount: number; skippedCount: number; errors: string[] } | null>(null);
     const [updateSelections, setUpdateSelections] = useState<Record<string, Record<string, boolean>>>({});
     const { showToast } = useNotification();
-    const { logEvent } = useDebugNotification();
+
+    const stepTitles: Record<number, string> = {
+        1: "Step 1/4: Upload File",
+        2: "Step 2/4: Map Columns",
+        3: "Step 3/4: Review Changes",
+        4: "Step 4/4: Import Complete",
+    };
     
     const handleMappingChange = (header: string, field: string) => {
         setMapping(prev => ({
@@ -119,64 +142,87 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
         'gradeLevelBeforeEep', 'childResponsibilities', 'healthStatus', 'healthIssues',
         'interactionWithOthers', 'interactionIssues', 'childStory', 'otherNotes',
         'riskLevel', 'transportation', 'hasSponsorshipContract',
-        'dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate' // Add date fields for mapping
+        'dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'
     ];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
-            if (selectedFile.type.includes('spreadsheet') || selectedFile.type.includes('csv') || selectedFile.name.endsWith('.xls') || selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.csv')) {
+            const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+            const allowedMimeTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel', 'text/csv',
+            ];
+            const fileExtension = `.${selectedFile.name.split('.').pop()?.toLowerCase()}`;
+            
+            if (allowedExtensions.includes(fileExtension) || allowedMimeTypes.includes(selectedFile.type)) {
                 setFile(selectedFile);
             } else {
-                showToast('Please upload a valid Excel or CSV file.', 'error');
+                showToast(`Invalid file type. Please upload one of: ${allowedExtensions.join(', ')}`, 'error');
+                setFile(null);
+                e.target.value = '';
             }
         }
     };
     
     const parseFile = useCallback(() => {
         if (!file || !(window as any).XLSX) {
-            showToast('File processing library not available.', 'error');
-            return;
+            showToast('File processing library not available.', 'error'); return;
         };
+        setIsProcessing(true);
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const fileData = new Uint8Array(e.target!.result as ArrayBuffer);
                 const workbook = (window as any).XLSX.read(fileData, { type: 'array' });
+                if (!workbook.SheetNames?.length) {
+                    throw new Error("No sheets found in the workbook.");
+                }
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                const jsonData = (window as any).XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
-                if (!jsonData || jsonData.length === 0 || !Array.isArray(jsonData[0])) {
-                    showToast('The uploaded file is empty or invalid.', 'error'); return;
+                if (!worksheet) {
+                    throw new Error(`Could not read the first sheet ('${sheetName}').`);
                 }
+                const jsonData = (window as any).XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+                if (!jsonData?.[0]?.length) {
+                    throw new Error("The first sheet is empty or has no header row.");
+                }
+
                 const fileHeaders = (jsonData[0] as any[]).map(String);
                 const fileRows = jsonData.slice(1).map(row => {
                     const rowData: Record<string, any> = {};
                     fileHeaders.forEach((header, index) => { rowData[header] = (row as any[])[index]; });
                     return rowData;
                 });
+
                 setHeaders(fileHeaders);
                 setData(fileRows);
+                
                 const newMapping: Record<string, string> = {};
                 fileHeaders.forEach(header => {
                     const cleanHeader = header.toLowerCase().replace(/[\s_]/g, '');
-                    // Fix: Explicitly convert `sf` to a string. `keyof Student` can be inferred as
-                    // `string | number | symbol`, and `.toLowerCase()` is only available on strings.
-                    const matchedField = studentFields.find(sf => cleanHeader.includes(String(sf).toLowerCase()));
+                    const matchedField = studentFields.find(sf => cleanHeader.includes((sf as string).toLowerCase()));
                     if (matchedField) newMapping[header] = matchedField as string;
                 });
                 setMapping(newMapping);
                 setStep(2);
-            } catch(err) {
-                console.error("File parsing error:", err);
-                showToast('Error parsing the file. Please ensure it is a valid format.', 'error');
+            } catch(err: any) {
+                showToast(err.message || 'An error occurred while parsing the file.', 'error');
+            } finally {
+                setIsProcessing(false);
             }
+        };
+        reader.onerror = () => {
+            showToast('Could not read the selected file.', 'error');
+            setIsProcessing(false);
         };
         reader.readAsArrayBuffer(file);
     }, [file, showToast]);
 
     const mappedData = useMemo(() => {
-        const dateFields = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'];
+        const dateFields: (keyof Student)[] = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'];
+        const booleanFields: (keyof Student)[] = ['hasHousingSponsorship', 'hasBirthCertificate', 'hasSponsorshipContract'];
+        
         return data.map(row => {
             const newRow: Partial<Student> = {};
             Object.keys(mapping).forEach(header => {
@@ -184,12 +230,11 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                 if (field && row[header] !== undefined) { 
                     let value: any = row[header];
                      if (value === null || String(value).trim() === '') {
-                        (newRow as any)[field] = null;
-                        return;
+                        (newRow as any)[field] = null; return;
                     }
-                    if (dateFields.includes(field)) {
+                    if (dateFields.includes(String(field))) {
                         value = parseAndFormatDate(value);
-                    } else if (['hasHousingSponsorship', 'hasBirthCertificate', 'hasSponsorshipContract'].includes(field as string)) {
+                    } else if (booleanFields.includes(String(field))) {
                         const lowerVal = String(value).toLowerCase();
                         value = lowerVal === 'true' || lowerVal === 'yes' || lowerVal === '1';
                     }
@@ -213,16 +258,10 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                 const changes: Change[] = [];
                 (Object.keys(fileStudent) as (keyof Student)[]).forEach(field => {
                     if (field === 'studentId') return;
-                    
-                    const newValue = fileStudent[field];
-                    const oldValue = existingStudent[field];
-                    
+                    const newValue = fileStudent[field]; const oldValue = existingStudent[field];
                     const normNew = (newValue === null || newValue === undefined) ? '' : String(newValue);
                     const normOld = (oldValue === null || oldValue === undefined) ? '' : String(oldValue);
-
-                    if (normNew !== normOld) {
-                        changes.push({ field, oldValue, newValue });
-                    }
+                    if (normNew !== normOld) changes.push({ field, oldValue, newValue });
                 });
                 if (changes.length > 0) {
                     diffs.push({ studentId: fileStudent.studentId, firstName: existingStudent.firstName, lastName: existingStudent.lastName, changes });
@@ -246,18 +285,20 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     }, [updatedStudentsDiffs]);
     
     const handleSelectionChange = (studentId: string, field: keyof Student, isSelected: boolean) => {
-        setUpdateSelections(prev => ({
-            ...prev,
-            [studentId]: {
-                ...prev[studentId],
-                [field as string]: isSelected,
-            },
-        }));
+        setUpdateSelections(prev => ({ ...prev, [studentId]: { ...prev[studentId], [field as string]: isSelected }}));
+    };
+
+    const handleSelectAllChange = (studentId: string, isSelected: boolean) => {
+        setUpdateSelections(prev => {
+            const newSelectionsForStudent = { ...prev[studentId] };
+            const diff = updatedStudentsDiffs.find(d => d.studentId === studentId);
+            diff?.changes.forEach(change => { newSelectionsForStudent[change.field as string] = isSelected; });
+            return { ...prev, [studentId]: newSelectionsForStudent };
+        });
     };
     
     const handleFinalImport = async () => {
         const payload: Partial<Student>[] = [...newStudents];
-
         updatedStudentsDiffs.forEach(diff => {
             const studentUpdatePayload: Partial<Student> = { studentId: diff.studentId };
             let hasChanges = false;
@@ -267,45 +308,43 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                     hasChanges = true;
                 }
             });
-            if (hasChanges) {
-                payload.push(studentUpdatePayload);
-            }
+            if (hasChanges) payload.push(studentUpdatePayload);
         });
         
-        if (payload.length > 0) {
-            setIsProcessing(true);
-            logEvent(`Bulk import started for ${payload.length} students.`, 'info');
-            try {
-                const result = await api.addBulkStudents(payload);
-                setImportResult(result);
-                setStep(4);
-            } catch (error: any) {
-                showToast(error.message || 'An unknown error occurred during import.', 'error');
-                setImportResult({ createdCount: 0, updatedCount: 0, skippedCount: payload.length, errors: [error.message] });
-                setStep(4);
-            } finally {
-                setIsProcessing(false);
-            }
-        } else {
+        if (payload.length === 0) {
             showToast('No new students or approved changes to import.', 'info');
+            return;
+        }
+        
+        setIsProcessing(true);
+        try {
+            const result = await api.addBulkStudents(payload);
+            setImportResult(result);
+            setStep(4);
+        } catch (error: any) {
+            showToast(error.message || 'An unknown error occurred during import.', 'error');
+            setImportResult({ createdCount: 0, updatedCount: 0, skippedCount: payload.length, errors: [error.message] });
+            setStep(4);
+        } finally {
+            setIsProcessing(false);
         }
     };
     
     return (
-        <Modal isOpen={true} onClose={onFinished} title="Import Students">
+        <Modal isOpen={true} onClose={onFinished} title={`Import Students - ${stepTitles[step]}`}>
             {step === 1 && (
                 <div>
-                    <h3 className="font-semibold text-lg mb-2">Step 1: Upload File</h3>
                     <p className="text-body-color mb-4">Select an Excel (.xlsx, .xls) or CSV (.csv) file.</p>
                     <input type="file" onChange={handleFileChange} accept=".xlsx, .xls, .csv" className="w-full rounded border-[1.5px] border-stroke bg-gray-2 p-3 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white" />
-                    <div className="flex justify-end mt-4"><button onClick={parseFile} disabled={!file} className="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50">Next</button></div>
+                    <div className="flex justify-end mt-4">
+                        <Button onClick={parseFile} disabled={!file || isProcessing} isLoading={isProcessing}>Next</Button>
+                    </div>
                 </div>
             )}
             {step === 2 && (
                 <div>
-                    <h3 className="font-semibold text-lg mb-2">Step 2: Map Columns</h3>
-                    <p className="text-body-color mb-4">Match file columns to system fields.</p>
-                    <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto p-2 bg-gray-2 dark:bg-box-dark-2 rounded">
+                    <p className="text-body-color mb-4">Match file columns to system fields. The system will attempt to auto-map based on column headers.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto p-2 bg-gray-2 dark:bg-box-dark-2 rounded">
                         {headers.map(header => (
                             <div key={header} className="flex items-center gap-2">
                                 <span className="font-medium text-black dark:text-white flex-1 truncate" title={header}>{header}</span>
@@ -317,16 +356,14 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                         ))}
                     </div>
                     <div className="flex justify-between mt-4">
-                        <button onClick={() => setStep(1)} className="px-4 py-2 bg-gray dark:bg-box-dark-2 rounded-lg hover:opacity-90">Back</button>
-                        <button onClick={() => setStep(3)} className="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90">Next</button>
+                        <Button onClick={() => setStep(1)} variant="ghost">Back</Button>
+                        <Button onClick={() => setStep(3)}>Next</Button>
                     </div>
                 </div>
             )}
             {step === 3 && (
                 <div>
-                    <h3 className="font-semibold text-lg mb-2">Step 3: Compare and Review</h3>
                     <p className="text-body-color mb-4">Review all changes before importing. Uncheck any updates you do not want to apply.</p>
-                    
                     <div className="space-y-4">
                         {newStudents.length > 0 && (
                             <div>
@@ -336,20 +373,16 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                                 </ul>
                             </div>
                         )}
-                        <ReviewUpdateSection diffs={updatedStudentsDiffs} selections={updateSelections} onSelectionChange={handleSelectionChange} />
+                        <ReviewUpdateSection diffs={updatedStudentsDiffs} selections={updateSelections} onSelectionChange={handleSelectionChange} onSelectAllChange={handleSelectAllChange} />
                     </div>
-
                     <div className="flex justify-between mt-4">
-                        <button onClick={() => setStep(2)} className="px-4 py-2 bg-gray dark:bg-box-dark-2 rounded-lg hover:opacity-90">Back</button>
-                        <button onClick={handleFinalImport} disabled={isProcessing} className="px-4 py-2 bg-success text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-wait">
-                            {isProcessing ? 'Importing...' : 'Confirm & Import'}
-                        </button>
+                        <Button onClick={() => setStep(2)} variant="ghost" disabled={isProcessing}>Back</Button>
+                        <Button onClick={handleFinalImport} isLoading={isProcessing} variant="secondary">Confirm & Import</Button>
                     </div>
                 </div>
             )}
             {step === 4 && importResult && (
                 <div>
-                    <h3 className="font-semibold text-lg mb-2">Import Complete</h3>
                     <div className="space-y-2 text-black dark:text-white">
                         <p><span className="font-medium text-success">{importResult.createdCount}</span> new students created.</p>
                         <p><span className="font-medium text-primary">{importResult.updatedCount}</span> students updated.</p>
@@ -363,7 +396,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                             </ul>
                         </div>
                     )}
-                    <div className="flex justify-end mt-4"><button onClick={onFinished} className="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90">Close</button></div>
+                    <div className="flex justify-end mt-4"><Button onClick={onFinished}>Close</Button></div>
                 </div>
             )}
         </Modal>
