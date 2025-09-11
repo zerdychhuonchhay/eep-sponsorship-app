@@ -3,8 +3,20 @@ import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.t
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
+const logDebugEvent = (message: string, type: 'api_success' | 'api_error' | 'info', duration?: number) => {
+    window.dispatchEvent(new CustomEvent('debug-log', { detail: { message, type, duration } }));
+};
+
+class ApiError extends Error {
+    constructor(message: string, public status: number, public data: any) {
+        super(message);
+        this.name = 'ApiError';
+    }
+}
+
 const apiClient = async (endpoint: string, options: RequestInit = {}) => {
     const completeUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const startTime = Date.now();
 
     try {
         const response = await fetch(completeUrl, {
@@ -15,14 +27,10 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
                 ...options.headers,
             },
         });
+        
+        const duration = Date.now() - startTime;
 
         if (!response.ok) {
-            // Add specific handling for 405 Method Not Allowed error
-            if (response.status === 405) {
-                const detailedMessage = `API Error (405 - Method Not Allowed): The server endpoint for '${endpoint}' does not exist or is not configured to accept a ${options.method || 'GET'} request. Please ensure the backend API view/route is correctly implemented.`;
-                throw new Error(detailedMessage);
-            }
-
             let errorData;
             let errorMessage = `API request failed with status ${response.status}.`;
             try {
@@ -42,8 +50,13 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
                     }
                 }
             } catch (e) { /* response was not json */ }
-            throw new Error(errorMessage);
+            
+            const error = new ApiError(errorMessage, response.status, errorData);
+            logDebugEvent(`[${options.method || 'GET'}] ${endpoint} failed (${response.status}) - ${errorMessage}`, 'api_error', duration);
+            throw error;
         }
+        
+        logDebugEvent(`[${options.method || 'GET'}] ${endpoint} succeeded (${response.status})`, 'api_success', duration);
         
         if (response.status === 204) return null;
 
@@ -73,6 +86,10 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
         return convertKeysToCamel(fixUrlsInData(data));
 
     } catch (error: any) {
+        if (!(error instanceof ApiError)) {
+             const duration = Date.now() - startTime;
+             logDebugEvent(`Network Error: ${error.message} for [${options.method || 'GET'}] ${endpoint}`, 'api_error', duration);
+        }
         throw error;
     }
 };

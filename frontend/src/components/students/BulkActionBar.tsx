@@ -39,7 +39,6 @@ const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onUpdateSt
                         value={newStatus}
                         onChange={(e) => setNewStatus(e.target.value as StudentStatus)}
                     >
-                        {/* FIX: Explicitly cast enum value to string to resolve TypeScript inference issue. */}
                         {Object.values(StudentStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                     </FormSelect>
                     <Button onClick={handleApply} size="sm" isLoading={isSubmitting}>

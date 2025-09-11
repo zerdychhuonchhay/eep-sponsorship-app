@@ -6,7 +6,6 @@ import TransactionsPage from '@/pages/TransactionsPage.tsx';
 import FilingsPage from '@/pages/FilingsPage.tsx';
 import AcademicsPage from '@/pages/AcademicsPage.tsx';
 import TasksPage from '@/pages/TasksPage.tsx';
-import { NotificationProvider } from '@/contexts/NotificationContext.tsx';
 import { DataProvider } from '@/contexts/DataContext.tsx';
 import { UIProvider } from '@/contexts/UIContext.tsx';
 import Toast from '@/components/Toast.tsx';
@@ -14,11 +13,15 @@ import Header from '@/components/layout/Header.tsx';
 import Sidebar from '@/components/layout/Sidebar.tsx';
 import { SkeletonTable } from './components/SkeletonLoader.tsx';
 import AIAssistant from './components/AIAssistant.tsx';
+import { GlobalNotificationProvider } from './contexts/GlobalNotificationProvider.tsx';
+import DebugEventLogger from './components/debug/DebugEventLogger.tsx';
+import { ThemeProvider } from './contexts/ThemeContext.tsx';
 
 const AuditLogPage = React.lazy(() => import('@/pages/AuditLogPage.tsx'));
 const SponsorsPage = React.lazy(() => import('@/pages/SponsorsPage.tsx'));
 const SponsorDetailPage = React.lazy(() => import('@/pages/SponsorDetailPage.tsx'));
 const ReportsPage = React.lazy(() => import('@/pages/ReportsPage.tsx'));
+const SettingsPage = React.lazy(() => import('@/pages/SettingsPage.tsx'));
 
 const AppContent: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
@@ -57,6 +60,11 @@ const AppContent: React.FC = () => {
                                     <AuditLogPage />
                                 </React.Suspense>
                             } />
+                             <Route path="/settings" element={
+                                <React.Suspense fallback={<SkeletonTable rows={5} cols={1} />}>
+                                    <SettingsPage />
+                                </React.Suspense>
+                            } />
                         </Routes>
                     </div>
                 </main>
@@ -68,14 +76,17 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
     <HashRouter>
-        <UIProvider>
-            <DataProvider>
-                <NotificationProvider>
-                    <AppContent />
-                    <Toast />
-                </NotificationProvider>
-            </DataProvider>
-        </UIProvider>
+        <ThemeProvider>
+            <UIProvider>
+                <DataProvider>
+                    <GlobalNotificationProvider>
+                        <AppContent />
+                        <Toast />
+                        <DebugEventLogger />
+                    </GlobalNotificationProvider>
+                </DataProvider>
+            </UIProvider>
+        </ThemeProvider>
     </HashRouter>
 );
 

@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+// FIX: Removed the triple-slash directive which was causing a "Cannot find type definition file for 'vitest'" error. The import from 'vitest/config' is sufficient for typing the configuration object.
 // FIX: Import `defineConfig` from `vitest/config` to include type definitions for the `test` property.
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'

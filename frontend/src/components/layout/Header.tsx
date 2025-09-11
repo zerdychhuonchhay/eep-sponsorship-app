@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon } from '@/components/Icons.tsx';
+import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon, BugIcon } from '@/components/Icons.tsx';
+import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
+import { useTheme } from '@/contexts/ThemeContext.tsx';
 
 interface HeaderProps {
     isSidebarOpen: boolean;
@@ -8,24 +10,24 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
-    const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+    const { theme, setTheme } = useTheme();
+    const isDarkMode = theme === 'dark';
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isDebugOpen, setIsDebugOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [isDarkMode]);
+    const debugRef = useRef<HTMLLIElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsProfileOpen(false);
+            }
+            if (debugRef.current && !debugRef.current.contains(event.target as Node)) {
+                // Check if the click was on the trigger button itself
+                const trigger = (event.target as HTMLElement).closest('button');
+                if (!trigger || trigger.id !== 'debug-trigger') {
+                     setIsDebugOpen(false);
+                }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -54,9 +56,15 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
                 <div className="flex items-center gap-3 2xsm:gap-7">
                      <ul className="flex items-center gap-2 2xsm:gap-4">
                         <li>
-                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="text-black dark:text-white">
+                            <button onClick={() => setTheme(isDarkMode ? 'light' : 'dark')} className="text-black dark:text-white">
                                 {isDarkMode ? <SunIcon /> : <MoonIcon />}
                             </button>
+                        </li>
+                        <li className="relative" ref={debugRef}>
+                            <button id="debug-trigger" onClick={() => setIsDebugOpen(p => !p)} className="text-black dark:text-white">
+                                <BugIcon />
+                            </button>
+                            <NotificationCenter isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} />
                         </li>
                      </ul>
                      

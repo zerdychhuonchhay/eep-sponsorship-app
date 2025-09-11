@@ -21,19 +21,68 @@ export const exportToCsv = <T extends Record<string, any>>(
         throw new Error('SheetJS library (XLSX) is not available.');
     }
     
-    const headerKeys = Object.keys(headers) as (keyof T)[];
-    const headerValues = headerKeys.map(key => headers[key]);
+    const dataWithHeaderNames = data.map(row => {
+        const newRow: { [key: string]: any } = {};
+        for (const key in headers) {
+            if (Object.prototype.hasOwnProperty.call(row, key)) {
+                newRow[headers[key]] = row[key];
+            }
+        }
+        return newRow;
+    });
 
-    const rows = data.map(row => 
-        headerKeys.map(key => row[key] ?? '')
-    );
-
-    const worksheet = window.XLSX.utils.aoa_to_sheet([headerValues, ...rows]);
+    const worksheet = window.XLSX.utils.json_to_sheet(dataWithHeaderNames);
     const workbook = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
     
     window.XLSX.writeFile(workbook, fileName);
 };
+
+/**
+ * Exports financial data to CSV with a prepended summary.
+ * @param data The array of transaction data objects.
+ * @param headers A mapping of object keys to display names for the CSV header.
+ * @param summary An object containing summary information.
+ * @param fileName The name of the file to download.
+ */
+export const exportFinancialCsvWithSummary = (
+    data: any[],
+    headers: Record<string, string>,
+    summary: { title: string, range: string, income: string, expense: string, net: string },
+    fileName: string
+) => {
+    if (typeof window.XLSX === 'undefined') {
+        throw new Error('SheetJS library (XLSX) is not available.');
+    }
+
+    const summaryData = [
+        { Column1: summary.title },
+        { Column1: summary.range },
+        { Column1: summary.income },
+        { Column1: summary.expense },
+        { Column1: summary.net },
+        {}, // Spacer
+    ];
+
+    const worksheet = window.XLSX.utils.json_to_sheet(summaryData, { header: [" "], skipHeader: true });
+    
+    const dataWithHeaderNames = data.map(row => {
+        const newRow: { [key: string]: any } = {};
+        for (const key in headers) {
+            if (Object.prototype.hasOwnProperty.call(row, key)) {
+                newRow[headers[key]] = row[key];
+            }
+        }
+        return newRow;
+    });
+
+    window.XLSX.utils.sheet_add_json(worksheet, dataWithHeaderNames, { origin: -1 }); // -1 appends to the end
+
+    const workbook = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, 'Financial Report');
+    window.XLSX.writeFile(workbook, fileName);
+};
+
 
 /**
  * Exports an array of objects to a PDF file using a tabular format.

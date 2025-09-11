@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, CloseIcon, AuditIcon, SponsorIcon, AcademicsIcon } from '@/components/Icons.tsx';
+import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, CloseIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon } from '@/components/Icons.tsx';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -27,6 +27,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                 { path: '/filings', label: 'Filings', icon: <FilingsIcon /> },
                 { path: '/sponsors', label: 'Sponsors', icon: <SponsorIcon /> },
                 { path: '/audit', label: 'Audit Log', icon: <AuditIcon /> },
+            ]
+        },
+        {
+            title: 'PREFERENCES',
+            items: [
+                { path: '/settings', label: 'Settings', icon: <SettingsIcon /> },
             ]
         }
     ];
