@@ -16,16 +16,19 @@ import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 type ReportFormData = Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>;
 
 const AcademicsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AcademicReport> | null>(null);
+    const [filterOptionsData, setFilterOptionsData] = useState<{ years: string[], grades: string[] }>({ years: [], grades: [] });
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalState, setModalState] = useState<'add' | 'edit' | null>(null);
     const [selectedReport, setSelectedReport] = useState<AcademicReport | null>(null);
     const { showToast } = useNotification();
+    const { canCreate, canUpdate, canDelete } = usePermissions('academics');
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
@@ -35,22 +38,21 @@ const AcademicsPage: React.FC = () => {
         initialFilters: { year: '', grade: '', status: '' }
     });
     
-    // Note: unique years/grades should ideally come from backend or be calculated from a separate, non-paginated source.
-    // This is a simple client-side implementation for now.
-    const uniqueYears = ['2024', '2023', '2022']; // Example
-    const uniqueGrades = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']; // Example
-
     const filterOptions: FilterOption[] = [
-        { id: 'year', label: 'Year', options: uniqueYears.map(y => ({ value: y, label: y })) },
-        { id: 'grade', label: 'Grade', options: uniqueGrades.map(g => ({ value: g, label: `Grade ${g}`})) },
+        { id: 'year', label: 'Year', options: filterOptionsData.years.map(y => ({ value: y, label: y })) },
+        { id: 'grade', label: 'Grade', options: filterOptionsData.grades.map(g => ({ value: g, label: `Grade ${g}`})) },
         { id: 'status', label: 'Status', options: [{value: 'Pass', label: 'Pass'}, {value: 'Fail', label: 'Fail'}] },
     ];
 
     const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
-            const reportsData = await api.getAllAcademicReports(apiQueryString);
+            const [reportsData, optionsData] = await Promise.all([
+                api.getAllAcademicReports(apiQueryString),
+                api.getAcademicFilterOptions()
+            ]);
             setPaginatedData(reportsData);
+            setFilterOptionsData(optionsData);
         } catch (error: any) {
             showToast(error.message || 'Failed to load academic data.', 'error');
         } finally {
@@ -109,9 +111,11 @@ const AcademicsPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title="Academics">
-                <Button onClick={() => { setSelectedReport(null); setModalState('add'); }} icon={<PlusIcon />}>
-                    Add Report
-                </Button>
+                {canCreate && (
+                    <Button onClick={() => { setSelectedReport(null); setModalState('add'); }} icon={<PlusIcon />}>
+                        Add Report
+                    </Button>
+                )}
             </PageHeader>
            
             <Card>
@@ -141,23 +145,30 @@ const AcademicsPage: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {allReports.length > 0 ? allReports.map(report => (
-                                     <tr key={report.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                        <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{report.studentName}</td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.reportPeriod}</td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.gradeLevel}</td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage.toFixed(1)}%</td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                            <Badge type={report.passFailStatus} />
-                                        </td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                            <ActionDropdown items={[
-                                                { label: 'Edit', icon: <EditIcon />, onClick: () => { setSelectedReport(report); setModalState('edit'); } },
-                                                { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' },
-                                            ]} />
-                                        </td>
-                                    </tr>
-                                )) : (
+                                {allReports.length > 0 ? allReports.map(report => {
+                                    const actionItems = [];
+                                    if (canUpdate) {
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
+                                    }
+                                    if (canDelete) {
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
+                                    }
+
+                                    return (
+                                        <tr key={report.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                            <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{report.studentName}</td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.reportPeriod}</td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.gradeLevel}</td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage.toFixed(1)}%</td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                <Badge type={report.passFailStatus} />
+                                            </td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
                                     <tr>
                                         <td colSpan={6}>
                                             <EmptyState title="No Academic Reports Found" />

@@ -10,6 +10,49 @@ export type SortConfig<T> = {
     order: 'asc' | 'desc';
 };
 
+// --- START: RBAC Types ---
+export interface PermissionSet {
+    create: boolean;
+    read: boolean;
+    update: boolean;
+    delete: boolean;
+}
+
+export type Permissions = Record<string, PermissionSet>; // e.g., { students: PermissionSet, transactions: PermissionSet }
+
+export interface Role {
+    id: number;
+    name: string;
+    permissions?: Permissions;
+}
+// --- END: RBAC Types ---
+
+
+export interface User {
+    id: number;
+    username: string;
+    email: string;
+    isAdmin: boolean;
+    role: string; // Changed from UserRole
+    permissions: Permissions; // Detailed permissions for the user's role
+}
+
+// New type for user management page
+export enum UserStatus {
+    ACTIVE = 'Active',
+    INACTIVE = 'Inactive',
+}
+
+export interface AppUser {
+    id: number;
+    username: string;
+    email: string;
+    role: string; // Changed from UserRole
+    status: UserStatus;
+    lastLogin: string | null;
+}
+
+
 export type StudentLookup = Pick<Student, 'studentId' | 'firstName' | 'lastName'>;
 export type SponsorLookup = Pick<Sponsor, 'id' | 'name'>;
 
@@ -128,6 +171,7 @@ export interface Student {
     childResponsibilities: string;
     healthStatus: HealthStatus;
     healthIssues: string;
+
     interactionWithOthers: InteractionStatus;
     interactionIssues: string;
     childStory: string;
@@ -202,21 +246,6 @@ export enum TransactionType {
     INCOME = 'Income',
     EXPENSE = 'Expense',
 }
-
-export const TRANSACTION_CATEGORIES = [
-    'Donation',
-    'Grant',
-    'School Fees',
-    'Utilities',
-    'Salaries',
-    'Rent',
-    'Supplies',
-    'Hot Lunches',
-    'Gifts',
-    'Transportation',
-    'Other Income',
-    'Other Expense',
-];
 
 export interface Transaction {
     id: string;

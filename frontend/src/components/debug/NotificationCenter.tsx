@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useDebugNotification, DebugNotification, DebugNotificationType } from '@/contexts/DebugNotificationContext.tsx';
 import { CopyIcon, ErrorIcon, SuccessIcon } from '@/components/Icons.tsx';
 
@@ -8,8 +8,18 @@ interface NotificationCenterProps {
 }
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
-    const { notifications, clearNotifications } = useDebugNotification();
+    const { notifications, clearNotifications, markAllAsRead } = useDebugNotification();
     const [showAll, setShowAll] = useState(false);
+    const prevIsOpen = useRef(isOpen);
+
+    useEffect(() => {
+        // When the panel transitions from open to closed, mark all notifications as read.
+        if (prevIsOpen.current && !isOpen) {
+            markAllAsRead();
+        }
+        prevIsOpen.current = isOpen;
+    }, [isOpen, markAllAsRead]);
+
 
     const typeClasses: Record<DebugNotificationType, { bg: string, text: string, icon: React.ReactNode }> = {
         api_success: { bg: 'bg-success/10', text: 'text-success', icon: <SuccessIcon /> },

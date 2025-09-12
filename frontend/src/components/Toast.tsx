@@ -6,10 +6,10 @@ const Toast: React.FC = () => {
     const { toast, hideToast } = useNotification();
 
     useEffect(() => {
-        if (toast) {
+        if (toast && toast.type === 'success') {
             const timer = setTimeout(() => {
                 hideToast();
-            }, 5000); // Auto-hide after 5 seconds
+            }, 5000); // Auto-hide success messages after 5 seconds
             return () => clearTimeout(timer);
         }
     }, [toast, hideToast]);
@@ -31,7 +31,7 @@ const Toast: React.FC = () => {
                 <Icon />
             </div>
             <span>{toast.message}</span>
-            <button onClick={hideToast} className="ml-6 font-bold opacity-70 hover:opacity-100">&times;</button>
+            <button onClick={hideToast} className="ml-6 font-bold opacity-70 hover:opacity-100" aria-label="Close">&times;</button>
         </div>
     );
 };

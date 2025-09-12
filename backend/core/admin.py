@@ -9,6 +9,7 @@ from .models import (
     GovernmentFiling,
     Task,
     Sponsor,
+    RoleProfile,
 )
 
 class StudentAdmin(admin.ModelAdmin):
@@ -33,3 +34,4 @@ admin.site.register(FollowUpRecord)
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(GovernmentFiling, GovernmentFilingAdmin)
 admin.site.register(Task)
+admin.site.register(RoleProfile)

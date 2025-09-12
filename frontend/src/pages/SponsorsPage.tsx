@@ -14,6 +14,7 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import SponsorForm from '@/components/sponsors/SponsorForm.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 const SponsorsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Sponsor> | null>(null);
@@ -23,6 +24,7 @@ const SponsorsPage: React.FC = () => {
     const { showToast } = useNotification();
     const navigate = useNavigate();
     const { refetchSponsorLookup } = useData();
+    const { canCreate } = usePermissions('sponsors');
 
     const { 
         sortConfig, currentPage, apiQueryString, handleSort, setCurrentPage 
@@ -76,9 +78,11 @@ const SponsorsPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title="Sponsors">
-                <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
-                    Add Sponsor
-                </Button>
+                {canCreate && (
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                        Add Sponsor
+                    </Button>
+                )}
             </PageHeader>
            
             <Card>
@@ -101,10 +105,13 @@ const SponsorsPage: React.FC = () => {
                                 {sponsors.length > 0 ? sponsors.map((sponsor) => (
                                     <tr 
                                         key={sponsor.id} 
-                                        className="hover:bg-gray-2 dark:hover:bg-box-dark-2 cursor-pointer"
-                                        onClick={() => navigate(`/sponsors/${sponsor.id}`)}
+                                        className="hover:bg-gray-2 dark:hover:bg-box-dark-2"
                                     >
-                                        <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{sponsor.name}</td>
+                                        <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
+                                            <button onClick={() => navigate(`/sponsors/${sponsor.id}`)} className="font-medium text-primary hover:underline text-left">
+                                                {sponsor.name}
+                                            </button>
+                                        </td>
                                         <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{sponsor.email}</td>
                                         <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(sponsor.sponsorshipStartDate).toLocaleDateString()}</td>
                                         <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{sponsor.sponsoredStudentCount}</td>

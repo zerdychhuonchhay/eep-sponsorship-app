@@ -102,13 +102,13 @@ export const FormSubSection: React.FC<{ title: string; children: React.ReactNode
 interface YesNoNASelectProps extends SelectProps {}
 export const YesNoNASelect: React.FC<YesNoNASelectProps> = (props) => (
     <FormSelect {...props}>
-        {Object.values(YesNo).map(v => <option key={v} value={v}>{v}</option>)}
+        {Object.values(YesNo).map((v: YesNo) => <option key={v} value={v}>{v}</option>)}
     </FormSelect>
 );
 
 interface WellbeingSelectProps extends SelectProps {}
 export const WellbeingSelect: React.FC<WellbeingSelectProps> = (props) => (
     <FormSelect {...props}>
-        {Object.values(WellbeingStatus).map(v => <option key={v} value={v}>{v}</option>)}
+        {Object.values(WellbeingStatus).map((v: WellbeingStatus) => <option key={v} value={v}>{v}</option>)}
     </FormSelect>
 );

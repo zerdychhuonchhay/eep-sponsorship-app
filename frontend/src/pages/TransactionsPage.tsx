@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
-import { Transaction, TransactionType, TRANSACTION_CATEGORIES, PaginatedResponse, StudentLookup } from '../types.ts';
+import { Transaction, TransactionType, PaginatedResponse, StudentLookup } from '../types.ts';
 import Modal from '../components/Modal.tsx';
 import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
@@ -17,14 +17,16 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 const TransactionForm: React.FC<{ 
     onSave: (transaction: Omit<Transaction, 'id'> | Transaction) => void; 
     onCancel: () => void; 
     students: StudentLookup[],
+    categories: string[],
     initialData?: Transaction | null;
     isSubmitting: boolean;
-}> = ({ onSave, onCancel, students, initialData, isSubmitting }) => {
+}> = ({ onSave, onCancel, students, categories, initialData, isSubmitting }) => {
     const isEdit = !!initialData;
     
     const [formData, setFormData] = useState(() => {
@@ -37,7 +39,7 @@ const TransactionForm: React.FC<{
             location: '',
             amount: 0,
             type: TransactionType.EXPENSE,
-            category: TRANSACTION_CATEGORIES[3], // Default to a common expense
+            category: categories.length > 3 ? categories[3] : '', // Default to a common expense
             studentId: ''
         };
     });
@@ -65,7 +67,7 @@ const TransactionForm: React.FC<{
                 <FormInput label="Location" id="location" type="text" name="location" placeholder="Location" value={formData.location} onChange={handleChange} />
                 <FormInput label="Amount" id="amount" type="number" step="0.01" name="amount" placeholder="0.00" value={formData.amount} onChange={handleChange} required />
                 <FormSelect label="Category" id="category" name="category" value={formData.category} onChange={handleChange} required>
-                    {TRANSACTION_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </FormSelect>
             </div>
             <FormSelect label="Associated Student (Optional)" id="student" name="studentId" value={formData.studentId || ''} onChange={handleChange}>
@@ -83,11 +85,13 @@ const TransactionForm: React.FC<{
 const TransactionsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Transaction> | null>(null);
     const { studentLookup: students } = useData();
+    const [categories, setCategories] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const { showToast } = useNotification();
+    const { canCreate, canUpdate, canDelete } = usePermissions('transactions');
     
     const { 
         sortConfig, currentPage, filters, apiQueryString,
@@ -99,14 +103,18 @@ const TransactionsPage: React.FC = () => {
     
     const filterOptions: FilterOption[] = [
         { id: 'type', label: 'Type', options: Object.values(TransactionType).map(t => ({ value: t, label: t })) },
-        { id: 'category', label: 'Category', options: TRANSACTION_CATEGORIES.map(c => ({ value: c, label: c })) }
+        { id: 'category', label: 'Category', options: categories.map(c => ({ value: c, label: c })) }
     ];
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const transData = await api.getTransactions(apiQueryString);
+            const [transData, filterOptionsData] = await Promise.all([
+                api.getTransactions(apiQueryString),
+                api.getTransactionFilterOptions()
+            ]);
             setPaginatedData(transData);
+            setCategories(filterOptionsData.categories);
         } catch (error: any) {
             showToast(error.message || 'Failed to load transaction data.', 'error');
         } finally {
@@ -165,9 +173,11 @@ const TransactionsPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title="Transactions">
-                <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
-                    Log Transaction
-                </Button>
+                {canCreate && (
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                        Log Transaction
+                    </Button>
+                )}
             </PageHeader>
            
             <Card>
@@ -199,6 +209,14 @@ const TransactionsPage: React.FC = () => {
                             <tbody>
                                 {transactions.length > 0 ? transactions.map((t) => {
                                     const student = students.find(s => s.studentId === t.studentId);
+                                    const actionItems = [];
+                                    if (canUpdate) {
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => setEditingTransaction(t) });
+                                    }
+                                    if (canDelete) {
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(t.id), className: 'text-danger' });
+                                    }
+
                                     return (
                                         <tr key={t.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
                                             <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{new Date(t.date).toLocaleDateString()}</td>
@@ -218,10 +236,7 @@ const TransactionsPage: React.FC = () => {
                                                 ${Number(t.amount).toFixed(2)}
                                             </td>
                                             <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                                <ActionDropdown items={[
-                                                    { label: 'Edit', icon: <EditIcon />, onClick: () => setEditingTransaction(t) },
-                                                    { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(t.id), className: 'text-danger' },
-                                                ]} />
+                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
                                             </td>
                                         </tr>
                                     );
@@ -246,6 +261,7 @@ const TransactionsPage: React.FC = () => {
                     onSave={handleSave} 
                     onCancel={() => { setIsAdding(false); setEditingTransaction(null); }} 
                     students={students}
+                    categories={categories}
                     initialData={editingTransaction}
                     isSubmitting={isSubmitting}
                 />
