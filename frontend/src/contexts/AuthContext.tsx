@@ -8,6 +8,7 @@ interface AuthContextType {
     login: (username: string, password: string) => Promise<void>;
     logout: () => void;
     isLoading: boolean;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +35,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             refreshTimeoutId.current = null;
         }
     };
+
+    const logout = useCallback(() => {
+        setUser(null);
+        clearRefreshTokenTimer();
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        navigate('/login');
+    }, [navigate]);
+
+    const refreshUser = useCallback(async () => {
+        try {
+            const userData = await api.getCurrentUser();
+            setUser(userData);
+        } catch (error) {
+            console.error("Failed to refresh user data", error);
+            logout(); // Log out if we can't refresh user data
+        }
+    }, [logout]);
+
 
     const scheduleTokenRefresh = useCallback((accessToken: string) => {
         clearRefreshTokenTimer();
@@ -63,7 +83,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             }, timeoutDuration);
         }
-    }, []);
+    }, [logout]);
 
     const initAuth = useCallback(async () => {
         const token = localStorage.getItem('accessToken');
@@ -98,16 +118,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         navigate('/');
     };
 
-    const logout = () => {
-        setUser(null);
-        clearRefreshTokenTimer();
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        navigate('/login');
-    };
-
     return (
-        <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, login, logout, isLoading, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

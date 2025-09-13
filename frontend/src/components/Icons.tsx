@@ -49,8 +49,12 @@ export const SettingsIcon: React.FC<IconProps> = ({ className }) => (
 
 export const UsersIcon: React.FC<IconProps> = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.281-1.266-.743-1.688M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.281-1.266.743-1.688M12 12a4 4 0 100-8 4 4 0 000 8zm0 0c1.887 0 3.62.76 4.874 2.016M12 12c-1.887 0-3.62.76-4.874 2.016" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.281-1.266-.743-1.688M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.281-1.266.743-1.688M12 12a4 4 0 100-8 4 4 0 000 8zm0 0c1.887 0 3.62.76 4.874 2.016" />
     </svg>
+);
+
+export const ProfileIcon: React.FC<IconProps> = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
 );
 
 export const DocumentAddIcon: React.FC<IconProps> = ({ className }) => (

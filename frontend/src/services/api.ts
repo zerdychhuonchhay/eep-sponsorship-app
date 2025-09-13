@@ -241,6 +241,18 @@ export const api = {
         }
         return userData;
     },
+    updateUserProfile: async (data: Partial<Pick<User, 'username' | 'email'>>): Promise<User> => {
+        return apiClient('/user/me/', {
+            method: 'PATCH',
+            body: JSON.stringify(convertKeysToSnake(data)),
+        });
+    },
+    changePassword: async (data: any): Promise<{ detail: string }> => {
+        return apiClient('/user/change-password/', {
+            method: 'POST',
+            body: JSON.stringify(convertKeysToSnake(data)),
+        });
+    },
     forgotPassword: async (email: string): Promise<{ message: string }> => {
         console.log(`Simulating password reset request for ${email}`);
         return Promise.resolve({ message: "If an account with this email exists, a password reset link has been sent." });
