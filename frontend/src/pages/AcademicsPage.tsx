@@ -112,7 +112,7 @@ const AcademicsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Academics">
                 {canCreate && (
-                    <Button onClick={() => { setSelectedReport(null); setModalState('add'); }} icon={<PlusIcon />}>
+                    <Button onClick={() => { setSelectedReport(null); setModalState('add'); }} icon={<PlusIcon className="w-5 h-5" />}>
                         Add Report
                     </Button>
                 )}
@@ -137,7 +137,7 @@ const AcademicsPage: React.FC = () => {
                                         <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
                                             <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
                                                 {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}
@@ -148,10 +148,10 @@ const AcademicsPage: React.FC = () => {
                                 {allReports.length > 0 ? allReports.map(report => {
                                     const actionItems = [];
                                     if (canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
                                     }
                                     if (canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
                                     }
 
                                     return (

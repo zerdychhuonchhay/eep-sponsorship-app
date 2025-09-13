@@ -61,7 +61,7 @@ const AdvancedFilter: React.FC<AdvancedFilterProps> = ({ filterOptions, currentF
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-2 rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-box-dark py-2 px-4 font-medium text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2"
             >
-                <FilterIcon />
+                <FilterIcon className="w-5 h-5" />
                 <span>Filter</span>
             </button>
             {isOpen && (

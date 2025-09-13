@@ -160,7 +160,7 @@ const FilingsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Government Filings">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
                         New Filing
                     </Button>
                 )}
@@ -185,7 +185,7 @@ const FilingsPage: React.FC = () => {
                                         <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
                                             <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
                                                 {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}
@@ -196,10 +196,10 @@ const FilingsPage: React.FC = () => {
                                 {filings.length > 0 ? filings.map((f) => {
                                     const actionItems = [];
                                     if(canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => setSelectedFiling(f) });
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
                                     }
                                     if(canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(f.id), className: 'text-danger' });
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
                                     }
                                     return (
                                         <tr key={f.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">

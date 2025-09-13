@@ -22,9 +22,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
 
 
     const typeClasses: Record<DebugNotificationType, { bg: string, text: string, icon: React.ReactNode }> = {
-        api_success: { bg: 'bg-success/10', text: 'text-success', icon: <SuccessIcon /> },
-        api_error: { bg: 'bg-danger/10', text: 'text-danger', icon: <ErrorIcon /> },
-        error: { bg: 'bg-danger/10', text: 'text-danger', icon: <ErrorIcon /> },
+        api_success: { bg: 'bg-success/10', text: 'text-success', icon: <SuccessIcon className="w-5 h-5" /> },
+        api_error: { bg: 'bg-danger/10', text: 'text-danger', icon: <ErrorIcon className="w-5 h-5" /> },
+        error: { bg: 'bg-danger/10', text: 'text-danger', icon: <ErrorIcon className="w-5 h-5" /> },
         info: { bg: 'bg-primary/10', text: 'text-primary', icon: 'ℹ️' },
     };
 
@@ -72,7 +72,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                             </div>
                              {(notif.type === 'api_error' || notif.type === 'error') && (
                                 <button onClick={() => handleCopy(notif)} className="p-1 text-body-color hover:text-primary" title="Copy for debug">
-                                    <CopyIcon />
+                                    <CopyIcon className="w-4 h-4" />
                                 </button>
                             )}
                         </div>

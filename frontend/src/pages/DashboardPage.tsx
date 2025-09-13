@@ -99,8 +99,8 @@ const StatCard: React.FC<{
                 </div>
                  {trend && (
                     <div className={`mt-4 flex items-center gap-1 text-sm ${trendColor}`}>
-                        {trend.direction === 'up' && <TrendUpIcon />}
-                        {trend.direction === 'down' && <TrendDownIcon />}
+                        {trend.direction === 'up' && <TrendUpIcon className="w-4 h-4" />}
+                        {trend.direction === 'down' && <TrendDownIcon className="w-4 h-4" />}
                         <span>{trend.value}</span>
                         <span className="text-body-color dark:text-gray-300">vs previous period</span>
                     </div>

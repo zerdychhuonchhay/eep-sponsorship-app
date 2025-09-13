@@ -136,7 +136,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Academic Reports</h3>
-                        {canCreateAcademics && <Button onClick={() => setModal('add_report')} icon={<DocumentAddIcon />} size="sm">Add Report</Button>}
+                        {canCreateAcademics && <Button onClick={() => setModal('add_report')} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">Add Report</Button>}
                     </div>
                     {student.academicReports && student.academicReports.length > 0 ? (
                         <div className="overflow-x-auto">
@@ -174,7 +174,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Follow-up History</h3>
-                        {canCreateAcademics && <Button onClick={() => { setEditingFollowUp(null); setModal('add_follow_up'); }} icon={<DocumentAddIcon />} size="sm">New Follow-up</Button>}
+                        {canCreateAcademics && <Button onClick={() => { setEditingFollowUp(null); setModal('add_follow_up'); }} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">New Follow-up</Button>}
                     </div>
                     <div className="space-y-2">
                         {student.followUpRecords && student.followUpRecords.length > 0 ? (
@@ -187,7 +187,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                                         className="w-full p-4 text-left flex justify-between items-center bg-gray-2 dark:bg-box-dark-2 hover:bg-gray/80"
                                     >
                                         <span className="font-semibold text-black dark:text-white">Follow-up from {formatDateForDisplay(record.dateOfFollowUp)}</span>
-                                        <span>{openFollowUpId === record.id ? <ArrowUpIcon /> : <ArrowDownIcon />}</span>
+                                        <span>{openFollowUpId === record.id ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />}</span>
                                     </button>
                                     {openFollowUpId === record.id && <FollowUpRecordView record={record} onEdit={(record) => { setEditingFollowUp(record); setModal('edit_follow_up'); }} onDownload={onDownloadFollowUp} isGeneratingPdf={isGeneratingPdf} isCurrentPdfTarget={record.id === recordForPdf?.id} />}
                                 </div>
@@ -206,8 +206,8 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <button onClick={onBack} className="text-primary hover:underline font-medium">← Back to Student List</button>
                  <div className="flex gap-2">
-                     {canUpdate && <Button onClick={() => onEdit(student)} icon={<EditIcon />}>Edit</Button>}
-                     {canDelete && <Button onClick={() => onDelete(student.studentId)} variant="danger" icon={<TrashIcon />}>Delete</Button>}
+                     {canUpdate && <Button onClick={() => onEdit(student)} icon={<EditIcon className="w-5 h-5" />}>Edit</Button>}
+                     {canDelete && <Button onClick={() => onDelete(student.studentId)} variant="danger" icon={<TrashIcon className="w-5 h-5" />}>Delete</Button>}
                  </div>
             </div>
 
