@@ -227,7 +227,6 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
         const requiredFields: (keyof Student)[] = ['studentId', 'firstName', 'lastName'];
 
         dataToValidate.forEach((student, index) => {
-            let hasError = false;
             for (const field of requiredFields) {
                 if (student[field] === null || student[field] === undefined || String(student[field]).trim() === '') {
                     issues.push({
@@ -236,7 +235,6 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                         studentName: `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'N/A',
                         error: `Missing required field: ${String(field).replace(/([A-Z])/g, ' $1')}`
                     });
-                    hasError = true;
                 }
             }
             // All rows are considered "valid" to proceed, errors are just informational
