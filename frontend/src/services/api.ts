@@ -95,7 +95,11 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
                     if (!refreshResponse.ok) {
                         logoutUser(); // Refresh token failed, log out
                         processQueue(new Error('Session expired.'));
-                        throw new ApiError('Session expired. Please log in again.', 401, null);
+                        let errorMessage = 'Session expired. Please log in again.';
+                        if (refreshResponse.status >= 500) {
+                            errorMessage = 'A server error occurred while refreshing your session. Please log in again.';
+                        }
+                        throw new ApiError(errorMessage, 401, null);
                     }
 
                     const { access } = await refreshResponse.json();
