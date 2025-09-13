@@ -24,6 +24,13 @@ type StudentDiff = {
     changes: Change[];
 };
 
+type ValidationError = {
+    rowNumber: number;
+    studentId: string;
+    studentName: string;
+    error: string;
+}
+
 const valueToString = (value: any, field: keyof Student): string => {
     if (value === null || value === undefined) return 'Empty';
     if (['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'].includes(field as string)) {
@@ -111,48 +118,35 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     const [step, setStep] = useState(1);
     const [file, setFile] = useState<File | null>(null);
     const [headers, setHeaders] = useState<string[]>([]);
-    const [data, setData] = useState<Record<string, any>[]>([]);
+    const [rawData, setRawData] = useState<Record<string, any>[]>([]);
     const [mapping, setMapping] = useState<Record<string, string>>({});
     const [isProcessing, setIsProcessing] = useState(false);
     const [importResult, setImportResult] = useState<{ createdCount: number; updatedCount: number; skippedCount: number; errors: string[] } | null>(null);
     const [updateSelections, setUpdateSelections] = useState<Record<string, Record<string, boolean>>>({});
     const { showToast } = useNotification();
+    const [validationIssues, setValidationIssues] = useState<ValidationError[]>([]);
+    const [validatedData, setValidatedData] = useState<Partial<Student>[]>([]);
+
 
     const stepTitles: Record<number, string> = {
-        1: "Step 1/4: Upload File",
-        2: "Step 2/4: Map Columns",
-        3: "Step 3/4: Review Changes",
-        4: "Step 4/4: Import Complete",
+        1: "Step 1/5: Upload File",
+        2: "Step 2/5: Map Columns",
+        3: "Step 3/5: Validate Data",
+        4: "Step 4/5: Review Changes",
+        5: "Step 5/5: Import Complete",
     };
     
     const handleMappingChange = (header: string, field: string) => {
-        setMapping(prev => ({
-            ...prev,
-            [header]: field
-        }));
+        setMapping(prev => ({ ...prev, [header]: field }));
     };
 
-    const studentFields: (keyof Student)[] = [
-        'studentId', 'firstName', 'lastName', 'gender', 'school',
-        'currentGrade', 'studentStatus', 'sponsorshipStatus',
-        'hasHousingSponsorship', 'sponsorName', 'hasBirthCertificate',
-        'siblingsCount', 'householdMembersCount', 'city', 'villageSlum', 'guardianName',
-        'guardianContactInfo', 'homeLocation', 'annualIncome', 'guardianIfNotParents',
-        'parentSupportLevel', 'closestPrivateSchool', 'currentlyInSchool', 'previousSchooling',
-        'gradeLevelBeforeEep', 'childResponsibilities', 'healthStatus', 'healthIssues',
-        'interactionWithOthers', 'interactionIssues', 'childStory', 'otherNotes',
-        'riskLevel', 'transportation', 'hasSponsorshipContract',
-        'dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'
-    ];
+    const studentFields: (keyof Student)[] = [ 'studentId', 'firstName', 'lastName', 'gender', 'school', 'currentGrade', 'studentStatus', 'sponsorshipStatus', 'hasHousingSponsorship', 'sponsorName', 'hasBirthCertificate', 'siblingsCount', 'householdMembersCount', 'city', 'villageSlum', 'guardianName', 'guardianContactInfo', 'homeLocation', 'annualIncome', 'guardianIfNotParents', 'parentSupportLevel', 'closestPrivateSchool', 'currentlyInSchool', 'previousSchooling', 'gradeLevelBeforeEep', 'childResponsibilities', 'healthStatus', 'healthIssues', 'interactionWithOthers', 'interactionIssues', 'childStory', 'otherNotes', 'riskLevel', 'transportation', 'hasSponsorshipContract', 'dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate' ];
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             const allowedExtensions = ['.xlsx', '.xls', '.csv'];
-            const allowedMimeTypes = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.ms-excel', 'text/csv',
-            ];
+            const allowedMimeTypes = [ 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv', ];
             const fileExtension = `.${selectedFile.name.split('.').pop()?.toLowerCase()}`;
             
             if (allowedExtensions.includes(fileExtension) || allowedMimeTypes.includes(selectedFile.type)) {
@@ -166,38 +160,27 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     };
     
     const parseFile = useCallback(() => {
-        if (!file || !(window as any).XLSX) {
-            showToast('File processing library not available.', 'error'); return;
-        };
+        if (!file || !(window as any).XLSX) { showToast('File processing library not available.', 'error'); return; };
         setIsProcessing(true);
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const fileData = new Uint8Array(e.target!.result as ArrayBuffer);
                 const workbook = (window as any).XLSX.read(fileData, { type: 'array' });
-                if (!workbook.SheetNames?.length) {
-                    throw new Error("No sheets found in the workbook.");
-                }
+                if (!workbook.SheetNames?.length) { throw new Error("No sheets found in the workbook."); }
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                if (!worksheet) {
-                    throw new Error(`Could not read the first sheet ('${sheetName}').`);
-                }
+                if (!worksheet) { throw new Error(`Could not read the first sheet ('${sheetName}').`); }
                 const jsonData = (window as any).XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
-                if (!jsonData?.[0]?.length) {
-                    throw new Error("The first sheet is empty or has no header row.");
-                }
-
+                if (!jsonData?.[0]?.length) { throw new Error("The first sheet is empty or has no header row."); }
                 const fileHeaders = (jsonData[0] as any[]).map(String);
                 const fileRows = jsonData.slice(1).map((row: any[]) => {
                     const rowData: Record<string, any> = {};
                     fileHeaders.forEach((header, index) => { rowData[header] = row[index]; });
                     return rowData;
                 });
-
                 setHeaders(fileHeaders);
-                setData(fileRows);
-                
+                setRawData(fileRows);
                 const newMapping: Record<string, string> = {};
                 fileHeaders.forEach(header => {
                     const cleanHeader = header.toLowerCase().replace(/[\s_]/g, '');
@@ -206,16 +189,10 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                 });
                 setMapping(newMapping);
                 setStep(2);
-            } catch(err: any) {
-                showToast(err.message || 'An error occurred while parsing the file.', 'error');
-            } finally {
-                setIsProcessing(false);
-            }
+            } catch(err: any) { showToast(err.message || 'An error occurred while parsing the file.', 'error');
+            } finally { setIsProcessing(false); }
         };
-        reader.onerror = () => {
-            showToast('Could not read the selected file.', 'error');
-            setIsProcessing(false);
-        };
+        reader.onerror = () => { showToast('Could not read the selected file.', 'error'); setIsProcessing(false); };
         reader.readAsArrayBuffer(file);
     }, [file, showToast]);
 
@@ -223,20 +200,15 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
         const dateFields: string[] = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'];
         const booleanFields: string[] = ['hasHousingSponsorship', 'hasBirthCertificate', 'hasSponsorshipContract'];
         
-        return data.map(row => {
+        return rawData.map(row => {
             const newRow: Partial<Student> = {};
             Object.keys(mapping).forEach(header => {
                 const field = mapping[header] as keyof Student;
                 if (field && row[header] !== undefined) { 
                     let value: any = row[header];
-                     if (value === null || String(value).trim() === '') {
-                        (newRow as any)[field] = null; return;
-                    }
-                    // FIX: Explicitly cast 'field' to a string to satisfy the 'includes' method signature.
-                    if (dateFields.includes(String(field))) {
-                        value = parseAndFormatDate(value);
-                    // FIX: Explicitly cast 'field' to a string to satisfy the 'includes' method signature.
-                    } else if (booleanFields.includes(String(field))) {
+                     if (value === null || String(value).trim() === '') { (newRow as any)[field] = null; return; }
+                    if (dateFields.includes(String(field))) { value = parseAndFormatDate(value); }
+                    else if (booleanFields.includes(String(field))) {
                         const lowerVal = String(value).toLowerCase();
                         value = lowerVal === 'true' || lowerVal === 'yes' || lowerVal === '1';
                     }
@@ -246,14 +218,42 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
             });
             return newRow;
         }).filter(row => row.studentId && String(row.studentId).trim() !== '');
-    }, [data, mapping]);
+    }, [rawData, mapping]);
+
+    const handleValidation = useCallback((dataToValidate: Partial<Student>[]) => {
+        const issues: ValidationError[] = [];
+        const validRows: Partial<Student>[] = [];
+        // Only require the absolute minimum for a record to be useful
+        const requiredFields: (keyof Student)[] = ['studentId', 'firstName', 'lastName'];
+
+        dataToValidate.forEach((student, index) => {
+            let hasError = false;
+            for (const field of requiredFields) {
+                if (student[field] === null || student[field] === undefined || String(student[field]).trim() === '') {
+                    issues.push({
+                        rowNumber: index + 2, // +2 for 1-based index and header row
+                        studentId: student.studentId || 'N/A',
+                        studentName: `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'N/A',
+                        error: `Missing required field: ${String(field).replace(/([A-Z])/g, ' $1')}`
+                    });
+                    hasError = true;
+                }
+            }
+            // All rows are considered "valid" to proceed, errors are just informational
+            validRows.push(student);
+        });
+
+        setValidationIssues(issues);
+        setValidatedData(validRows);
+        setStep(3);
+    }, []);
 
     const { newStudents, updatedStudentsDiffs } = useMemo(() => {
         const existingStudentsMap = new Map(existingStudents.map(s => [s.studentId, s]));
         const newStudents: Partial<Student>[] = [];
         const diffs: StudentDiff[] = [];
 
-        mappedData.forEach(fileStudent => {
+        validatedData.forEach(fileStudent => {
             if (!fileStudent.studentId) return;
             const existingStudent = existingStudentsMap.get(fileStudent.studentId);
             if (existingStudent) {
@@ -273,7 +273,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
             }
         });
         return { newStudents, updatedStudentsDiffs: diffs };
-    }, [mappedData, existingStudents]);
+    }, [validatedData, existingStudents]);
 
     useEffect(() => {
         const initialSelections: Record<string, Record<string, boolean>> = {};
@@ -300,7 +300,22 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     };
     
     const handleFinalImport = async () => {
-        const payload: Partial<Student>[] = [...newStudents];
+        const today = new Date().toISOString().split('T')[0];
+
+        const processStudent = (student: Partial<Student>): Partial<Student> => {
+            const processed = { ...student };
+            if (!processed.dateOfBirth) {
+                processed.dateOfBirth = '1900-01-01'; // Assign placeholder
+            }
+            if (!processed.eepEnrollDate) {
+                processed.eepEnrollDate = today; // Assign today as placeholder
+            }
+            return processed;
+        };
+
+        const studentsToCreate = newStudents.map(processStudent);
+        const studentsToUpdate: Partial<Student>[] = [];
+
         updatedStudentsDiffs.forEach(diff => {
             const studentUpdatePayload: Partial<Student> = { studentId: diff.studentId };
             let hasChanges = false;
@@ -310,8 +325,13 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                     hasChanges = true;
                 }
             });
-            if (hasChanges) payload.push(studentUpdatePayload);
+            if (hasChanges) studentsToUpdate.push(studentUpdatePayload);
         });
+        
+        // Process updates to add placeholders if necessary
+        const processedUpdates = studentsToUpdate.map(processStudent);
+
+        const payload = [...studentsToCreate, ...processedUpdates];
         
         if (payload.length === 0) {
             showToast('No new students or approved changes to import.', 'info');
@@ -322,16 +342,27 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
         try {
             const result = await api.addBulkStudents(payload);
             setImportResult(result);
-            setStep(4);
+            setStep(5);
         } catch (error: any) {
             showToast(error.message || 'An unknown error occurred during import.', 'error');
             setImportResult({ createdCount: 0, updatedCount: 0, skippedCount: payload.length, errors: [error.message] });
-            setStep(4);
+            setStep(5);
         } finally {
             setIsProcessing(false);
         }
     };
     
+    const parseBackendError = (error: string): string => {
+        const match = error.match(/(\w+): null value in column "(\w+)"/);
+        if (match) {
+            const studentId = match[1];
+            const field = match[2].replace(/_([a-z])/g, g => g[1].toUpperCase());
+            return `Student ${studentId}: Failed - '${field}' is a required field.`;
+        }
+        return error;
+    };
+
+
     return (
         <Modal isOpen={true} onClose={onFinished} title={`Import Students - ${stepTitles[step]}`}>
             {step === 1 && (
@@ -359,13 +390,55 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                     </div>
                     <div className="flex justify-between mt-4">
                         <Button onClick={() => setStep(1)} variant="ghost">Back</Button>
-                        <Button onClick={() => setStep(3)}>Next</Button>
+                        <Button onClick={() => handleValidation(mappedData)}>Next</Button>
                     </div>
                 </div>
             )}
             {step === 3 && (
+                 <div>
+                    <p className="text-body-color mb-4">
+                        Validation complete. {validatedData.length} rows are ready to be reviewed.
+                        {validationIssues.length > 0 && ` ${validationIssues.length} rows have missing required fields (ID, First Name, Last Name) and will be skipped.`}
+                    </p>
+                    {validationIssues.length > 0 && (
+                        <div>
+                            <h4 className="font-semibold text-danger mb-2">Rows with Issues (will be skipped)</h4>
+                             <div className="max-h-60 overflow-y-auto border border-stroke dark:border-strokedark rounded-lg">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-2 dark:bg-box-dark-2 sticky top-0">
+                                        <tr>
+                                            <th className="p-2 text-left font-medium">Row</th>
+                                            <th className="p-2 text-left font-medium">Student</th>
+                                            <th className="p-2 text-left font-medium">Error</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {validationIssues.map((issue, index) => (
+                                            <tr key={index} className="border-b border-stroke dark:border-strokedark last:border-b-0">
+                                                <td className="p-2">{issue.rowNumber}</td>
+                                                <td className="p-2">{issue.studentName} ({issue.studentId})</td>
+                                                <td className="p-2">{issue.error}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex justify-between mt-4">
+                        <Button onClick={() => setStep(1)} variant="ghost">Back & Re-upload</Button>
+                        <Button onClick={() => setStep(4)} disabled={validatedData.length === 0}>
+                            {`Continue to Review ${validatedData.length} row(s)`}
+                        </Button>
+                    </div>
+                </div>
+            )}
+            {step === 4 && (
                 <div>
                     <p className="text-body-color mb-4">Review all changes before importing. Uncheck any updates you do not want to apply.</p>
+                     <div className="text-sm text-body-color bg-gray-2 dark:bg-box-dark-2 p-3 rounded-md mb-4 border border-stroke dark:border-strokedark">
+                        <strong>Note:</strong> Rows with missing 'Date of Birth' or 'EEP Enroll Date' will be imported with placeholder dates (e.g., 1900-01-01). You can update these records later from the student's profile.
+                    </div>
                     <div className="space-y-4">
                         {newStudents.length > 0 && (
                             <div>
@@ -378,12 +451,12 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                         <ReviewUpdateSection diffs={updatedStudentsDiffs} selections={updateSelections} onSelectionChange={handleSelectionChange} onSelectAllChange={handleSelectAllChange} />
                     </div>
                     <div className="flex justify-between mt-4">
-                        <Button onClick={() => setStep(2)} variant="ghost" disabled={isProcessing}>Back</Button>
+                        <Button onClick={() => setStep(3)} variant="ghost" disabled={isProcessing}>Back</Button>
                         <Button onClick={handleFinalImport} isLoading={isProcessing} variant="secondary">Confirm & Import</Button>
                     </div>
                 </div>
             )}
-            {step === 4 && importResult && (
+            {step === 5 && importResult && (
                 <div>
                     <div className="space-y-2 text-black dark:text-white">
                         <p><span className="font-medium text-success">{importResult.createdCount}</span> new students created.</p>
@@ -394,7 +467,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                         <div className="mt-4">
                             <h4 className="font-semibold text-danger mb-2">Errors:</h4>
                             <ul className="list-disc list-inside bg-gray-2 dark:bg-box-dark-2 p-3 rounded-lg max-h-40 overflow-y-auto text-sm text-black dark:text-white">
-                                {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                                {importResult.errors.map((err, i) => <li key={i}>{parseBackendError(err)}</li>)}
                             </ul>
                         </div>
                     )}
