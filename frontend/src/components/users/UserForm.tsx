@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { AppUser, UserStatus } from '@/types.ts';
-import { FormInput, FormSelect } from '@/components/forms/FormControls.tsx';
+import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
+import Select from '@/components/ui/Select.tsx'; // Import the new custom Select
 
 interface UserFormProps {
     user?: AppUser | null;
@@ -33,6 +34,8 @@ const UserForm: React.FC<UserFormProps> = ({ user, currentUserId, onInvite, onUp
     };
 
     const availableRoles = roles.filter(r => r.name !== 'Administrator');
+    const roleOptions = availableRoles.map(r => ({ value: r.name, label: r.name }));
+    const statusOptions = Object.values(UserStatus).map(s => ({ value: s, label: s }));
 
     return (
         <div>
@@ -52,30 +55,24 @@ const UserForm: React.FC<UserFormProps> = ({ user, currentUserId, onInvite, onUp
                     placeholder="user@extremelove.com"
                 />
                 <div>
-                    <FormSelect
+                    <Select
                         label="Assign Role"
-                        id="role"
-                        name="role"
+                        options={roleOptions}
                         value={role}
-                        onChange={(e) => setRole(e.target.value)}
+                        onChange={setRole}
                         disabled={isEditingSelf || isSubmitting}
-                    >
-                        {availableRoles.map((r) => <option key={r.id} value={r.name}>{r.name}</option>)}
-                    </FormSelect>
+                    />
                     {isEditingSelf && <p className="text-xs text-body-color mt-1">You cannot change your own role.</p>}
                 </div>
                  {isEdit && (
                     <div>
-                        <FormSelect
+                        <Select
                             label="Status"
-                            id="status"
-                            name="status"
+                            options={statusOptions}
                             value={status}
-                            onChange={(e) => setStatus(e.target.value as UserStatus)}
+                            onChange={(val) => setStatus(val as UserStatus)}
                             disabled={isEditingSelf || isSubmitting}
-                        >
-                            {Object.values(UserStatus).map((s: UserStatus) => <option key={s} value={s}>{s}</option>)}
-                        </FormSelect>
+                        />
                         {isEditingSelf && <p className="text-xs text-body-color mt-1">You cannot change your own status.</p>}
                     </div>
                  )}

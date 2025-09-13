@@ -79,7 +79,7 @@ const SponsorsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Sponsors">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
                         Add Sponsor
                     </Button>
                 )}
@@ -95,7 +95,7 @@ const SponsorsPage: React.FC = () => {
                                         <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
                                             <button className="flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key as keyof Sponsor)}>
                                                 {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}

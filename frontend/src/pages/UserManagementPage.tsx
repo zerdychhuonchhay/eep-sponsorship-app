@@ -117,7 +117,7 @@ const UserManagementPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Manage Users">
                 {canCreate && (
-                    <Button onClick={() => setIsInviting(true)} icon={<PlusIcon />}>
+                    <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />}>
                         Invite User
                     </Button>
                 )}
@@ -133,7 +133,7 @@ const UserManagementPage: React.FC = () => {
                                         <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
                                             <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
                                                 {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}
@@ -146,10 +146,10 @@ const UserManagementPage: React.FC = () => {
                                     const actionItems: { label: string; icon: React.ReactNode; onClick: () => void; className?: string }[] = [];
 
                                     if(canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => setEditingUser(user) });
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
                                     }
                                     if (!isCurrentUser && canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
                                     }
 
                                     return (

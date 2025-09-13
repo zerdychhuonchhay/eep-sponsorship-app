@@ -103,8 +103,8 @@ const SponsorDetailPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title={sponsor.name}>
-                {canUpdate && <Button onClick={() => setIsEditing(true)} variant="secondary" icon={<EditIcon />}>Edit Sponsor</Button>}
-                {canDelete && <Button onClick={handleDeleteSponsor} variant="danger" icon={<TrashIcon />}>Delete Sponsor</Button>}
+                {canUpdate && <Button onClick={() => setIsEditing(true)} variant="secondary" icon={<EditIcon className="w-5 h-5" />}>Edit Sponsor</Button>}
+                {canDelete && <Button onClick={handleDeleteSponsor} variant="danger" icon={<TrashIcon className="w-5 h-5" />}>Delete Sponsor</Button>}
             </PageHeader>
             
             <Card>

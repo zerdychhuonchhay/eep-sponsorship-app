@@ -154,7 +154,7 @@ const PermissionsManager: React.FC = () => {
                         Define what users in each role can see and do.
                     </p>
                 </div>
-                <Button onClick={() => setModalState({ type: 'add' })} icon={<PlusIcon />} size="sm">
+                <Button onClick={() => setModalState({ type: 'add' })} icon={<PlusIcon className="w-5 h-5" />} size="sm">
                     Add Role
                 </Button>
             </div>
@@ -174,9 +174,9 @@ const PermissionsManager: React.FC = () => {
                         >
                             <span className="font-semibold text-black dark:text-white">{role.name}</span>
                             <div className="flex items-center gap-2">
-                                <Button onClick={(e) => { e.stopPropagation(); setModalState({ type: 'edit', role }); }} icon={<EditIcon />} size="sm" variant="ghost" />
-                                <Button onClick={(e) => { e.stopPropagation(); setDeletingRole(role); }} icon={<TrashIcon />} size="sm" variant="ghost" className="text-danger" />
-                                <span>{expandedRoleId === role.id ? <ArrowUpIcon /> : <ArrowDownIcon />}</span>
+                                <Button onClick={(e) => { e.stopPropagation(); setModalState({ type: 'edit', role }); }} icon={<EditIcon className="w-4 h-4" />} size="sm" variant="ghost" />
+                                <Button onClick={(e) => { e.stopPropagation(); setDeletingRole(role); }} icon={<TrashIcon className="w-4 h-4" />} size="sm" variant="ghost" className="text-danger" />
+                                <span>{expandedRoleId === role.id ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />}</span>
                             </div>
                         </div>
 
