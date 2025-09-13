@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, ChevronDoubleLeftIcon } from '@/components/Icons.tsx';
+import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, ChevronDoubleLeftIcon, ProfileIcon } from '@/components/Icons.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 
@@ -100,6 +100,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                 { path: '/reports', label: 'Reports', icon: <ReportsIcon className="w-6 h-6 flex-shrink-0" />, permission: canReadReports },
                 { path: '/audit', label: 'Audit Log', icon: <AuditIcon className="w-6 h-6 flex-shrink-0" />, permission: canReadAudit },
                 { path: '/users', label: 'Manage Users', icon: <UsersIcon className="w-6 h-6 flex-shrink-0" />, permission: canReadUsers },
+                { path: '/profile', label: 'My Profile', icon: <ProfileIcon className="w-6 h-6 flex-shrink-0" />, permission: true },
                 { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-6 h-6 flex-shrink-0" />, permission: true },
             ]
         },

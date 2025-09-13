@@ -28,6 +28,7 @@ const SponsorDetailPage = React.lazy(() => import('@/pages/SponsorDetailPage.tsx
 const ReportsPage = React.lazy(() => import('@/pages/ReportsPage.tsx'));
 const SettingsPage = React.lazy(() => import('@/pages/SettingsPage.tsx'));
 const UserManagementPage = React.lazy(() => import('@/pages/UserManagementPage.tsx'));
+const ProfilePage = React.lazy(() => import('@/pages/ProfilePage.tsx'));
 
 const AppContent: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
@@ -77,6 +78,11 @@ const AppContent: React.FC = () => {
                              <Route path="settings" element={
                                 <React.Suspense fallback={<SkeletonTable rows={5} cols={1} />}>
                                     <SettingsPage />
+                                </React.Suspense>
+                            } />
+                            <Route path="profile" element={
+                                <React.Suspense fallback={<SkeletonTable rows={5} cols={1} />}>
+                                    <ProfilePage />
                                 </React.Suspense>
                             } />
                         </Routes>
