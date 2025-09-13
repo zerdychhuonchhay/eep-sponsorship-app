@@ -11,11 +11,14 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.51.5",
     "react-router-dom": "^6.23.0",
     "recharts": "^2.12.7",
-    "serve": "^14.2.5"
+    "serve": "^14.2.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@testing-library/react": "^15.0.6",
