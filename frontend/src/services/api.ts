@@ -1,7 +1,11 @@
 import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not defined. Please check your .env file.");
+}
 
 const logDebugEvent = (message: string, type: 'api_success' | 'api_error' | 'info', duration?: number) => {
     window.dispatchEvent(new CustomEvent('debug-log', { detail: { message, type, duration } }));
