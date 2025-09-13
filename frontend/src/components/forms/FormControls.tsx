@@ -1,5 +1,7 @@
 import React from 'react';
+import { Controller } from 'react-hook-form';
 import { WellbeingStatus, YesNo } from '../../types.ts';
+import CustomSelect from '../ui/Select.tsx'; // Assuming the custom Select is exported as default
 
 interface FormControlProps {
     label: string;
@@ -48,6 +50,35 @@ export const FormSelect: React.FC<SelectProps> = ({ id, label, className, childr
         {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
 );
+
+// New ControlledSelect for custom accessible dropdown
+interface ControlledSelectProps {
+    control: any;
+    name: string;
+    label: string;
+    options: { value: string; label: string }[];
+    disabled?: boolean;
+    error?: string;
+}
+export const ControlledSelect: React.FC<ControlledSelectProps> = ({ control, name, label, options, disabled, error }) => (
+    <div>
+        <Controller
+            control={control}
+            name={name}
+            render={({ field }) => (
+                <CustomSelect
+                    label={label}
+                    options={options}
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                />
+            )}
+        />
+        {error && <p className="mt-1 text-sm text-danger">{error}</p>}
+    </div>
+);
+
 
 interface TextAreaProps extends FormControlProps, React.TextareaHTMLAttributes<HTMLTextAreaElement> {
     id: string;

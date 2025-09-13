@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Sponsor } from '@/types.ts';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
+import { sponsorSchema, SponsorFormData } from '@/schemas/sponsorSchema.ts';
 
 interface SponsorFormProps {
-    onSave: (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'> | Omit<Sponsor, 'sponsoredStudentCount'>) => void; 
+    onSave: (sponsor: SponsorFormData | (SponsorFormData & { id: string })) => void; 
     onCancel: () => void; 
     initialData?: Sponsor | null;
     isSubmitting: boolean;
@@ -13,60 +16,46 @@ interface SponsorFormProps {
 const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData, isSubmitting }) => {
     const isEdit = !!initialData;
     
-    const [formData, setFormData] = useState(() => {
-        if (isEdit && initialData) {
-            return { 
-                ...initialData, 
-                sponsorshipStartDate: new Date(initialData.sponsorshipStartDate).toISOString().split('T')[0] 
-            };
+    const { register, handleSubmit, formState: { errors } } = useForm<SponsorFormData>({
+        resolver: zodResolver(sponsorSchema),
+        defaultValues: {
+            name: initialData?.name || '',
+            email: initialData?.email || '',
+            sponsorshipStartDate: initialData ? new Date(initialData.sponsorshipStartDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         }
-        return {
-            name: '',
-            email: '',
-            sponsorshipStartDate: new Date().toISOString().split('T')[0],
-        };
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(formData);
+    const onSubmit = (data: SponsorFormData) => {
+        onSave(isEdit && initialData ? { ...data, id: initialData.id } : data);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <FormInput 
                 label="Sponsor Name" 
                 id="name" 
                 type="text" 
-                name="name" 
                 placeholder="Full name of the sponsor" 
-                value={formData.name} 
-                onChange={handleChange} 
-                required 
+                {...register('name')}
+                required
+                error={errors.name?.message as string}
             />
             <FormInput 
                 label="Email" 
                 id="email" 
                 type="email" 
-                name="email" 
-                placeholder="sponsor@example.com" 
-                value={formData.email} 
-                onChange={handleChange} 
-                required 
+                placeholder="sponsor@example.com"
+                {...register('email')}
+                required
+                error={errors.email?.message as string}
             />
             <FormInput 
                 label="Sponsorship Start Date" 
                 id="sponsorshipStartDate" 
                 type="date" 
-                name="sponsorshipStartDate" 
-                value={formData.sponsorshipStartDate} 
-                onChange={handleChange} 
-                required 
+                {...register('sponsorshipStartDate')}
+                required
+                error={errors.sponsorshipStartDate?.message as string}
             />
             <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>

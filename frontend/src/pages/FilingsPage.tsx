@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../services/api.ts';
 import { GovernmentFiling, FilingStatus, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
@@ -17,55 +19,55 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
+import { filingSchema, FilingFormData } from '@/schemas/filingSchema.ts';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
-    onSave: (filing: any) => void; 
+    onSave: (filing: FilingFormData & { id?: string }) => void;
     onCancel: () => void;
     isSubmitting: boolean;
 }> = ({ filing, onSave, onCancel, isSubmitting }) => {
     const isEdit = !!filing;
     
-    const [formData, setFormData] = useState(() => {
-         return isEdit && filing ? 
-            { ...filing, dueDate: new Date(filing.dueDate).toISOString().split('T')[0], submissionDate: filing.submissionDate ? new Date(filing.submissionDate).toISOString().split('T')[0] : '' } 
-            : 
-            { documentName: '', authority: '', dueDate: new Date().toISOString().split('T')[0], submissionDate: '', status: FilingStatus.PENDING, attachedFile: undefined };
-    });
-    const [file, setFile] = useState<File | null>(null);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ 
-            ...prev, 
-            [name]: value, 
-            status: (name === 'submissionDate' && value) || (name === 'status' && value === FilingStatus.SUBMITTED) ? FilingStatus.SUBMITTED : FilingStatus.PENDING 
-        }));
-    };
-    
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(e.target.files) {
-            setFile(e.target.files[0]);
+    const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FilingFormData>({
+        resolver: zodResolver(filingSchema),
+        defaultValues: {
+            documentName: filing?.documentName || '',
+            authority: filing?.authority || '',
+            dueDate: filing ? new Date(filing.dueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            submissionDate: filing?.submissionDate ? new Date(filing.submissionDate).toISOString().split('T')[0] : '',
+            status: filing?.status || FilingStatus.PENDING,
+            attachedFile: undefined
         }
-    };
+    });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave({...formData, attached_file: file || formData.attachedFile });
+    const submissionDate = watch('submissionDate');
+    const status = watch('status');
+
+    useEffect(() => {
+        if (submissionDate && status !== FilingStatus.SUBMITTED) {
+            setValue('status', FilingStatus.SUBMITTED);
+        } else if (!submissionDate && status === FilingStatus.SUBMITTED) {
+            setValue('status', FilingStatus.PENDING);
+        }
+    }, [submissionDate, status, setValue]);
+
+    const onSubmit = (data: FilingFormData) => {
+        onSave(isEdit && filing ? { ...data, id: filing.id } : data);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <FormInput label="Document Name" type="text" id="documentName" name="documentName" value={formData.documentName} onChange={handleChange} required />
-            <FormInput label="Authority" type="text" id="authority" name="authority" value={formData.authority} onChange={handleChange} required />
-            <FormInput label="Due Date" type="date" id="dueDate" name="dueDate" value={formData.dueDate} onChange={handleChange} required />
-            <FormSelect label="Status" id="status" name="status" value={formData.status} onChange={handleChange}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <FormInput label="Document Name" type="text" id="documentName" {...register('documentName')} required error={errors.documentName?.message as string} />
+            <FormInput label="Authority" type="text" id="authority" {...register('authority')} required error={errors.authority?.message as string} />
+            <FormInput label="Due Date" type="date" id="dueDate" {...register('dueDate')} required error={errors.dueDate?.message as string} />
+            <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message as string}>
                 {Object.values(FilingStatus).map((s: FilingStatus) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
-            <FormInput label="Submission Date" type="date" id="submissionDate" name="submissionDate" value={formData.submissionDate || ''} onChange={handleChange} />
+            <FormInput label="Submission Date" type="date" id="submissionDate" {...register('submissionDate')} error={errors.submissionDate?.message as string} />
             <div>
-                <FormInput label="Attach File" type="file" id="attached_file" name="attached_file" onChange={handleFileChange} />
-                {formData.attachedFile && typeof formData.attachedFile === 'string' && <p className="text-xs mt-1 text-body-color dark:text-gray-300">Current file: {formData.attachedFile}</p>}
+                <FormInput label="Attach File" type="file" id="attached_file" {...register('attachedFile')} error={errors.attachedFile?.message as string} />
+                {filing?.attachedFile && typeof filing.attachedFile === 'string' && <p className="text-xs mt-1 text-body-color dark:text-gray-300">Current file: <a href={filing.attachedFile} target="_blank" rel="noopener noreferrer" className="text-primary underline">{filing.attachedFile.split('/').pop()}</a></p>}
             </div>
             <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
@@ -112,14 +114,20 @@ const FilingsPage: React.FC = () => {
         fetchFilings();
     }, [fetchFilings]);
     
-    const handleSave = async (filingData: GovernmentFiling | Omit<GovernmentFiling, 'id'>) => {
+    const handleSave = async (formData: FilingFormData & { id?: string }) => {
         setIsSubmitting(true);
         try {
-            if ('id' in filingData) { // Update
-                await api.updateFiling(filingData);
+            const file = formData.attachedFile instanceof FileList ? formData.attachedFile[0] : undefined;
+            const dataToSubmit = {
+                ...formData,
+                attached_file: file || (typeof formData.attachedFile === 'string' ? formData.attachedFile : undefined),
+            };
+
+            if (dataToSubmit.id) {
+                await api.updateFiling(dataToSubmit as GovernmentFiling & { attached_file?: File | string });
                 showToast('Filing updated successfully!', 'success');
-            } else { // Create
-                await api.addFiling(filingData);
+            } else {
+                await api.addFiling(dataToSubmit);
                 showToast('Filing added successfully!', 'success');
             }
             setSelectedFiling(null);
