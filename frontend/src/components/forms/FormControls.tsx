@@ -9,15 +9,13 @@ interface FormControlProps {
 
 interface InputProps extends FormControlProps, React.InputHTMLAttributes<HTMLInputElement> {
     id: string;
-    name: string;
     error?: string;
 }
-export const FormInput: React.FC<InputProps> = ({ id, name, label, className, error, ...props }) => (
+export const FormInput: React.FC<InputProps> = ({ id, label, className, error, ...props }) => (
     <div className={className}>
         <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>
         <input
             id={id}
-            name={name}
             {...props}
             className={`w-full rounded-lg border-[1.5px] bg-transparent py-3 px-5 font-medium outline-none transition disabled:cursor-not-allowed disabled:bg-whiter dark:bg-form-input ${
                 error
@@ -31,51 +29,60 @@ export const FormInput: React.FC<InputProps> = ({ id, name, label, className, er
 
 interface SelectProps extends FormControlProps, React.SelectHTMLAttributes<HTMLSelectElement> {
     id: string;
-    name: string;
+    error?: string;
 }
-export const FormSelect: React.FC<SelectProps> = ({ id, name, label, className, children, ...props }) => (
+export const FormSelect: React.FC<SelectProps> = ({ id, label, className, children, error, ...props }) => (
      <div className={className}>
         <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>
         <select
             id={id}
-            name={name}
             {...props}
-            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-not-allowed disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+            className={`w-full rounded-lg border-[1.5px] bg-transparent py-3 px-5 font-medium outline-none transition disabled:cursor-not-allowed disabled:bg-whiter dark:bg-form-input ${
+                error
+                    ? 'border-danger focus:border-danger'
+                    : 'border-stroke dark:border-form-strokedark focus:border-primary active:border-primary dark:focus:border-primary'
+            }`}
         >
             {children}
         </select>
+        {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
 );
 
 interface TextAreaProps extends FormControlProps, React.TextareaHTMLAttributes<HTMLTextAreaElement> {
     id: string;
-    name: string;
+    error?: string;
 }
-export const FormTextArea: React.FC<TextAreaProps> = ({ id, name, label, className, ...props }) => (
+export const FormTextArea: React.FC<TextAreaProps> = ({ id, label, className, error, ...props }) => (
     <div className={className}>
         <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>
         <textarea
             id={id}
-            name={name}
             rows={3}
             {...props}
-            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-not-allowed disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+            className={`w-full rounded-lg border-[1.5px] bg-transparent py-3 px-5 font-medium outline-none transition disabled:cursor-not-allowed disabled:bg-whiter dark:bg-form-input ${
+                error
+                    ? 'border-danger focus:border-danger'
+                    : 'border-stroke dark:border-form-strokedark focus:border-primary active:border-primary dark:focus:border-primary'
+            }`}
         ></textarea>
+         {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
 );
 
-interface CheckboxProps extends Omit<InputProps, 'type' | 'error'> {}
-export const FormCheckbox: React.FC<CheckboxProps> = ({ id, name, label, className, ...props }) => (
+interface CheckboxProps extends Omit<InputProps, 'type'> {}
+export const FormCheckbox: React.FC<CheckboxProps> = ({ id, label, className, error, ...props }) => (
     <div className={className}>
         <label htmlFor={id} className="flex cursor-pointer items-center">
             <div className="relative pt-0.5">
-                <input type="checkbox" id={id} name={name} className="sr-only" {...props} />
+                <input type="checkbox" id={id} className="sr-only" {...props} />
                 <div className={`mr-4 flex h-5 w-5 items-center justify-center rounded border ${props.checked ? 'border-primary bg-primary' : 'border-gray-400'}`}>
                     <span className={`h-2.5 w-2.5 rounded-sm ${props.checked && 'bg-white'}`}></span>
                 </div>
             </div>
             {label}
         </label>
+        {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
 );
 
