@@ -1,24 +1,30 @@
+# backend/core/views.py
+
 from datetime import date, timedelta
 from dateutil.parser import parse as parse_date
 from django.db.models import Sum, Count, Q
 from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import api_view, action
-from rest_framework.response import Response
+from django.contrib.auth.models import User, Group
+from rest_framework import viewsets, status, filters, generics, permissions
+from rest_framework.decorators import api_view, action, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response    
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import (
     Student, AcademicReport, FollowUpRecord, Transaction, 
-    GovernmentFiling, Task, StudentStatus, AuditLog, Sponsor
+    GovernmentFiling, Task, StudentStatus, AuditLog, Sponsor, RoleProfile
 )
 from .serializers import (
     StudentSerializer, AcademicReportSerializer, FollowUpRecordSerializer,
     TransactionSerializer, GovernmentFilingSerializer, TaskSerializer,
     StudentLookupSerializer, StudentListSerializer, AuditLogSerializer, 
-    SponsorSerializer, SponsorLookupSerializer
+    SponsorSerializer, SponsorLookupSerializer, UserRegistrationSerializer, 
+    UserSerializer, InviteUserSerializer, RoleSerializer, GroupSerializer
 )
 from .pagination import StandardResultsSetPagination
 from . import ai_assistant
+from .permissions import HasModulePermission
 
 # --- Audit Logging Mixin ---
 class AuditLoggingMixin:
@@ -66,7 +72,20 @@ class AuditLoggingMixin:
 
 
 # --- ViewSets ---
+
+class GroupViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for viewing and managing user groups (roles).
+    The 'Administrator' group is protected and cannot be modified via this API.
+    """
+    queryset = Group.objects.all().exclude(name='Administrator').order_by('name')
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAdminUser] # Only Admins can manage roles
 class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'students'
+    
     queryset = Student.objects.select_related('sponsor').prefetch_related('academic_reports', 'follow_up_records').order_by('first_name', 'last_name')
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = StandardResultsSetPagination
@@ -75,9 +94,7 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     ordering_fields = ['first_name', 'last_name', 'student_id', 'date_of_birth', 'student_status', 'sponsorship_status']
     
     def get_serializer_class(self):
-        if self.action == 'list':
-            return StudentListSerializer
-        if self.action == 'get_all':
+        if self.action == 'list' or self.action == 'get_all':
             return StudentListSerializer
         return StudentSerializer
 
@@ -192,6 +209,10 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SponsorViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'sponsors'
+
     serializer_class = SponsorSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
@@ -210,6 +231,10 @@ class SponsorViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class AcademicReportViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'academics'
+
     queryset = AcademicReport.objects.select_related('student').all()
     serializer_class = AcademicReportSerializer
     pagination_class = StandardResultsSetPagination
@@ -223,11 +248,19 @@ class AcademicReportViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return queryset
 
 class FollowUpRecordViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'academics'
+
     queryset = FollowUpRecord.objects.select_related('student').all()
     serializer_class = FollowUpRecordSerializer
     pagination_class = StandardResultsSetPagination
 
 class TransactionViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'transactions'
+
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
     pagination_class = StandardResultsSetPagination
@@ -240,17 +273,11 @@ class TransactionViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         if category := self.request.query_params.get('category'): queryset = queryset.filter(category=category)
         return queryset
 
-    # --- NEW ACTION FOR FINANCIAL REPORT ---
     @action(detail=False, methods=['get'], url_path='all', pagination_class=None)
     def get_all(self, request):
-        """
-        Returns a list of all transactions within a date range for reporting.
-        """
         start_date_str = request.query_params.get('start')
         end_date_str = request.query_params.get('end')
-        
         queryset = self.get_queryset().order_by('date')
-        
         if start_date_str and end_date_str:
             try:
                 start_date = parse_date(start_date_str).date()
@@ -258,11 +285,14 @@ class TransactionViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
                 queryset = queryset.filter(date__range=[start_date, end_date])
             except (ValueError, TypeError):
                 return Response({'error': 'Invalid date format provided.'}, status=status.HTTP_400_BAD_REQUEST)
-
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 class GovernmentFilingViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'filings'
+
     queryset = GovernmentFiling.objects.all()
     serializer_class = GovernmentFilingSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -271,6 +301,10 @@ class GovernmentFilingViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     ordering_fields = ['document_name', 'authority', 'due_date', 'status']
 
 class TaskViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'tasks'
+
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     pagination_class = StandardResultsSetPagination
@@ -283,6 +317,10 @@ class TaskViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return queryset
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'audit'
+
     queryset = AuditLog.objects.select_related('content_type').all()
     serializer_class = AuditLogSerializer
     pagination_class = StandardResultsSetPagination
@@ -301,12 +339,79 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
                 return AuditLog.objects.none() 
         return queryset
 
-# --- Dashboard Views ---
+class UserRegistrationView(generics.CreateAPIView):
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [permissions.AllowAny]
+
+class RoleViewSet(viewsets.ModelViewSet):
+    queryset = RoleProfile.objects.select_related('group').all()
+    serializer_class = RoleSerializer
+    permission_classes = [permissions.IsAdminUser]
+    lookup_field = 'group__name'
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+class UserViewSet(viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
+    permission_classes = [HasModulePermission]
+    module_name = 'users'
+
+    serializer_class = UserSerializer
+    
+    def get_queryset(self):
+        return User.objects.all().order_by('username')
+    
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        role_name = request.data.get('role')
+        status_name = request.data.get('status')
+        try:
+            with transaction.atomic():
+                if role_name:
+                    new_role = Group.objects.get(name=role_name)
+                    user.groups.clear()
+                    user.groups.add(new_role)
+                if status_name:
+                    user.is_active = (status_name == 'Active')
+                user.save()
+        except Group.DoesNotExist:
+            return Response({'error': f"Role '{role_name}' does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        serializer = self.get_serializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='invite')
+    def invite_user(self, request):
+        serializer = InviteUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        email = serializer.validated_data['email']
+        role_name = serializer.validated_data['role']
+        username = email.split('@')[0]
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    is_active=False
+                )
+                user.set_unusable_password()
+                user.save()
+                role_group = Group.objects.get(name=role_name)
+                user.groups.add(role_group)
+        except Group.DoesNotExist:
+            return Response({'error': f"Role '{role_name}' does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'message': f'Invitation created for {email}. The user must be activated.'}, status=status.HTTP_201_CREATED)
+
+# --- Dashboard & Other API Views ---
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def dashboard_stats(request):
     end_date_str = request.query_params.get('end_date')
     start_date_str = request.query_params.get('start_date')
-
     try:
         end_date = parse_date(end_date_str).date() if end_date_str else date.today()
         start_date = parse_date(start_date_str).date() if start_date_str else end_date - timedelta(days=29)
@@ -365,25 +470,29 @@ def dashboard_stats(request):
     })
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def recent_transactions(request):
     recent = Transaction.objects.all().order_by('-date')[:5]
     serializer = TransactionSerializer(recent, many=True)
     return Response(serializer.data)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def query_ai_assistant(request):
     prompt = request.data.get('prompt')
     history = request.data.get('history', [])
-
     if not prompt:
         return Response({'error': 'A prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
     try:
         response_text = ai_assistant.query_assistant(prompt, history)
         return Response({'response': response_text})
     except Exception as e:
         print(f"Error in AI assistant view: {e}")
-        return Response(
-            {'error': 'An internal error occurred while processing your request.'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({'error': 'An internal error occurred while processing your request.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    user = request.user
+    serializer = UserSerializer(user)
+    return Response(serializer.data)

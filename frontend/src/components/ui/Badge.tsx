@@ -6,7 +6,7 @@ interface BadgeProps {
 }
 
 const badgeStyles: Record<string, string> = {
-    // StudentStatus
+    // StudentStatus & UserStatus
     'Active': 'bg-success/10 text-success',
     'Inactive': 'bg-gray-400/20 text-gray-400',
     'Pending Qualification': 'bg-warning/10 text-warning',
@@ -34,6 +34,10 @@ const badgeStyles: Record<string, string> = {
     'CREATE': 'bg-success/10 text-success',
     'UPDATE': 'bg-secondary/10 text-secondary',
     'DELETE': 'bg-danger/10 text-danger',
+    // UserRole
+    'Administrator': 'bg-danger/10 text-danger',
+    'Manager': 'bg-primary/10 text-primary',
+    'Viewer': 'bg-gray-400/20 text-gray-400',
 };
 
 const Badge: React.FC<BadgeProps> = ({ type, className }) => {

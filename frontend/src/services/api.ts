@@ -1,4 +1,4 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
@@ -14,9 +14,48 @@ class ApiError extends Error {
     }
 }
 
+// Helper to centralize logout logic
+const logoutUser = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    window.location.hash = '/login';
+};
+
+
+let isRefreshing = false;
+let failedRequestQueue: ((token: string) => void)[] = [];
+
+const processQueue = (error: Error | null, token: string | null = null) => {
+    failedRequestQueue.forEach(promise => {
+        if (error) {
+            // FIX: The `promise` function expects a string, but is being passed a rejected Promise to propagate the error.
+            // This is a valid pattern (resolving with a rejected promise rejects the outer promise), but the TypeScript types are too strict.
+            // Casting to `any` resolves the type error while maintaining the intended runtime behavior.
+            (promise as any)(Promise.reject(error));
+        } else {
+            promise(token!);
+        }
+    });
+    failedRequestQueue = [];
+};
+
 const apiClient = async (endpoint: string, options: RequestInit = {}) => {
     const completeUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
     const startTime = Date.now();
+    let token = localStorage.getItem('accessToken');
+
+    // If a token refresh is in progress, wait for it to complete
+    if (isRefreshing) {
+        return new Promise<string>((resolve) => {
+            failedRequestQueue.push(newToken => resolve(newToken));
+        }).then(newToken => {
+             const newOptions = { ...options };
+             if (newOptions.headers) {
+                (newOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
+             }
+             return apiClient(endpoint, newOptions);
+        });
+    }
 
     try {
         const response = await fetch(completeUrl, {
@@ -24,6 +63,7 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
             headers: {
                 'Accept': 'application/json',
                 ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...options.headers,
             },
         });
@@ -31,6 +71,45 @@ const apiClient = async (endpoint: string, options: RequestInit = {}) => {
         const duration = Date.now() - startTime;
 
         if (!response.ok) {
+            // --- REFRESH TOKEN LOGIC ---
+            if (response.status === 401 && !completeUrl.includes('/token/')) {
+                const refreshToken = localStorage.getItem('refreshToken');
+                if (!refreshToken) {
+                    logoutUser();
+                    throw new ApiError('Session expired. Please log in again.', 401, null);
+                }
+                
+                isRefreshing = true;
+
+                try {
+                    const refreshResponse = await fetch(`${API_BASE_URL}/token/refresh/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh: refreshToken }),
+                    });
+
+                    if (!refreshResponse.ok) {
+                        logoutUser(); // Refresh token failed, log out
+                        processQueue(new Error('Session expired.'));
+                        throw new ApiError('Session expired. Please log in again.', 401, null);
+                    }
+
+                    const { access } = await refreshResponse.json();
+                    localStorage.setItem('accessToken', access);
+                    processQueue(null, access);
+
+                    // Retry the original request with the new token
+                    return apiClient(endpoint, options);
+
+                } catch (e) {
+                    logoutUser(); // Network error or other issue during refresh
+                    processQueue(e as Error);
+                    throw e;
+                } finally {
+                    isRefreshing = false;
+                }
+            }
+            
             let errorData;
             let errorMessage = `API request failed with status ${response.status}.`;
             try {
@@ -106,6 +185,96 @@ const prepareStudentData = (studentData: any) => {
 };
 
 export const api = {
+    // Auth Endpoints
+    login: async (username: string, password: string): Promise<{ accessToken: string, refreshToken: string }> => {
+        const response = await apiClient('/token/', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+        // The backend returns access and refresh tokens with snake_case.
+        return { accessToken: response.access, refreshToken: response.refresh };
+    },
+    refreshToken: async (): Promise<{ accessToken: string }> => {
+        const currentRefreshToken = localStorage.getItem('refreshToken');
+        if (!currentRefreshToken) {
+            throw new ApiError('No refresh token available.', 401, null);
+        }
+
+        const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: currentRefreshToken }),
+        });
+
+        if (!response.ok) {
+            // This is critical. If the refresh token itself fails, we must log out.
+            logoutUser();
+            const errorData = await response.json();
+            throw new ApiError(errorData.detail || 'Session expired.', response.status, errorData);
+        }
+        
+        const data = await response.json();
+        return { accessToken: data.access };
+    },
+    signup: async (username: string, email: string, password: string): Promise<{ message: string }> => {
+        return apiClient('/register/', {
+            method: 'POST',
+            body: JSON.stringify({ username, email, password, password2: password }),
+        });
+    },
+    getCurrentUser: async (): Promise<User> => {
+        const userData = await apiClient('/user/me/');
+        if (userData.isAdmin && !userData.role) {
+            userData.role = 'Administrator';
+        }
+        if (!userData.permissions) {
+             console.warn("User permissions not provided by backend. UI will be restricted.");
+             userData.permissions = {};
+        }
+        return userData;
+    },
+    forgotPassword: async (email: string): Promise<{ message: string }> => {
+        console.log(`Simulating password reset request for ${email}`);
+        return Promise.resolve({ message: "If an account with this email exists, a password reset link has been sent." });
+    },
+    
+    // User & Role Management Endpoints
+    getUsers: async (queryString: string): Promise<PaginatedResponse<AppUser>> => {
+        const responseData = await apiClient(`/users/?${queryString}`);
+        if (Array.isArray(responseData)) {
+            return { count: responseData.length, next: null, previous: null, results: responseData, };
+        }
+        return responseData;
+    },
+    inviteUser: async (email: string, role: string): Promise<{ message: string }> => {
+        return apiClient('/users/invite/', {
+            method: 'POST',
+            body: JSON.stringify(convertKeysToSnake({ email, role })),
+        });
+    },
+    updateUser: async (userId: number, data: Partial<Pick<AppUser, 'role' | 'status'>>): Promise<AppUser> => {
+        return apiClient(`/users/${userId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(convertKeysToSnake(data))
+        });
+    },
+    deleteUser: async (userId: number) => apiClient(`/users/${userId}/`, { method: 'DELETE' }),
+    
+    // New Group/Role Management
+    getGroups: async (): Promise<Pick<Role, 'id' | 'name'>[]> => apiClient('/groups/'),
+    addGroup: async (name: string): Promise<Role> => apiClient('/groups/', { method: 'POST', body: JSON.stringify({ name }) }),
+    updateGroup: async (id: number, name: string): Promise<Role> => apiClient(`/groups/${id}/`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+    deleteGroup: async (id: number) => apiClient(`/groups/${id}/`, { method: 'DELETE' }),
+    
+    // Permissions Management
+    getRolePermissions: async (): Promise<Role[]> => apiClient('/roles/'),
+    updateRolePermissions: async (roleName: string, permissions: Permissions): Promise<Role> => {
+        return apiClient(`/roles/${roleName}/`, {
+            method: 'PATCH',
+            body: JSON.stringify({ permissions: permissions })
+        });
+    },
+
     getDashboardStats: async (dateRange?: { start: string, end: string }) => {
         const params = new URLSearchParams();
         if (dateRange) {
@@ -129,6 +298,27 @@ export const api = {
     getStudentLookup: async (): Promise<StudentLookup[]> => apiClient('/students/lookup/'),
     getSponsorLookup: async (): Promise<SponsorLookup[]> => apiClient('/sponsors/lookup/'),
     
+    // DYNAMIC FILTER OPTIONS
+    getTransactionFilterOptions: async (): Promise<{ categories: string[] }> => {
+        // This is a simulated endpoint. In a real app, this would hit the backend.
+        // For now, it returns a static list similar to the old constant.
+        console.log("Simulating API call to fetch transaction filter options.");
+        const categories = [
+            'Donation', 'Grant', 'School Fees', 'Utilities', 'Salaries',
+            'Rent', 'Supplies', 'Hot Lunches', 'Gifts', 'Transportation',
+            'Other Income', 'Other Expense',
+        ].sort();
+        return Promise.resolve({ categories });
+    },
+    getAcademicFilterOptions: async (): Promise<{ years: string[], grades: string[] }> => {
+        // This is a simulated endpoint. In a real app, this would hit the backend.
+        console.log("Simulating API call to fetch academic filter options.");
+        const currentYear = new Date().getFullYear();
+        const years = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+        const grades = Array.from({ length: 12 }, (_, i) => String(i + 1));
+        return Promise.resolve({ years, grades });
+    },
+
     // Student Endpoints
     getAllStudentsForReport: async (filters: Record<string, string> = {}): Promise<Student[]> => {
         const params = new URLSearchParams(filters);

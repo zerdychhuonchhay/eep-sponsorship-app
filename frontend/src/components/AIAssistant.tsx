@@ -176,7 +176,7 @@ const AIAssistant: React.FC = () => {
                                 <h2 className="text-lg font-semibold text-black dark:text-white">AI Assistant</h2>
                             </div>
                             <button onClick={() => setIsOpen(false)} className="p-1 rounded-full hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                <CloseIcon />
+                                <CloseIcon className="w-6 h-6" />
                             </button>
                         </header>
                         <main className="flex-1 overflow-y-auto p-4 space-y-4">

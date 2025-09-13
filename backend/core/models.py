@@ -1,10 +1,13 @@
-# [your_django_app]/models.py
+# backend/core/models.py
 
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import Group
+from django.db.models.signals import post_save, pre_delete
+from django.dispatch import receiver
 
 # --- Choices Enums ---
 
@@ -82,7 +85,6 @@ class Student(models.Model):
     student_status = models.CharField(max_length=50, choices=StudentStatus.choices, default=StudentStatus.PENDING_QUALIFICATION)
     sponsorship_status = models.CharField(max_length=50, choices=SponsorshipStatus.choices, default=SponsorshipStatus.UNSPONSORED)
     has_housing_sponsorship = models.BooleanField(default=False)
-    # UPDATED: Changed from CharField to a proper database relationship
     sponsor = models.ForeignKey(Sponsor, on_delete=models.SET_NULL, null=True, blank=True, related_name='sponsored_students')
     application_date = models.DateField(default=timezone.now)
     has_birth_certificate = models.BooleanField(default=False)
@@ -129,8 +131,8 @@ class AcademicReport(models.Model):
 
 class FollowUpRecord(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='follow_up_records', to_field='student_id')
-    child_name = models.CharField(max_length=255, default='') 
-    child_current_age = models.PositiveIntegerField(default=0)
+    child_name = models.CharField(max_length=255, blank=True) 
+    child_current_age = models.PositiveIntegerField()
     date_of_follow_up = models.DateField()
     location = models.CharField(max_length=255)
     parent_guardian = models.CharField(max_length=255, blank=True)
@@ -225,3 +227,21 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f'{self.action} on {self.object_repr} by {self.user_identifier} at {self.timestamp}'
+    
+class RoleProfile(models.Model):
+    """
+    Extends the default Django Group to store a JSON field with detailed permissions.
+    """
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='roleprofile')
+    # Default permissions grant read-only access to key modules for a new role
+    permissions = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f"Permissions for {self.group.name}"
+    
+# --- ADD THIS SIGNAL AT THE END OF THE FILE ---
+# This signal automatically creates a RoleProfile every time a new Group is created in Django.
+@receiver(post_save, sender=Group)
+def create_or_update_role_profile(sender, instance, created, **kwargs):
+    if created:
+        RoleProfile.objects.create(group=instance)

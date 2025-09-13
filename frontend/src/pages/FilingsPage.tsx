@@ -16,6 +16,7 @@ import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
@@ -59,7 +60,7 @@ const FilingForm: React.FC<{
             <FormInput label="Authority" type="text" id="authority" name="authority" value={formData.authority} onChange={handleChange} required />
             <FormInput label="Due Date" type="date" id="dueDate" name="dueDate" value={formData.dueDate} onChange={handleChange} required />
             <FormSelect label="Status" id="status" name="status" value={formData.status} onChange={handleChange}>
-                {Object.values(FilingStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                {Object.values(FilingStatus).map((s: FilingStatus) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
             <FormInput label="Submission Date" type="date" id="submissionDate" name="submissionDate" value={formData.submissionDate || ''} onChange={handleChange} />
             <div>
@@ -81,6 +82,7 @@ const FilingsPage: React.FC = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [selectedFiling, setSelectedFiling] = useState<GovernmentFiling | null>(null);
     const { showToast } = useNotification();
+    const { canCreate, canUpdate, canDelete } = usePermissions('filings');
     
     const {
         sortConfig, currentPage, apiQueryString, filters,
@@ -157,9 +159,11 @@ const FilingsPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title="Government Filings">
-                <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
-                    New Filing
-                </Button>
+                {canCreate && (
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                        New Filing
+                    </Button>
+                )}
             </PageHeader>
             
             <Card>
@@ -189,22 +193,28 @@ const FilingsPage: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filings.length > 0 ? filings.map((f) => (
-                                    <tr key={f.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                        <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{f.documentName}</td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{f.authority}</td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(f.dueDate).toLocaleDateString()}</td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                            <Badge type={f.status} />
-                                        </td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                            <ActionDropdown items={[
-                                                { label: 'Edit', icon: <EditIcon />, onClick: () => setSelectedFiling(f) },
-                                                { label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(f.id), className: 'text-danger' },
-                                            ]} />
-                                        </td>
-                                    </tr>
-                                )) : (
+                                {filings.length > 0 ? filings.map((f) => {
+                                    const actionItems = [];
+                                    if(canUpdate) {
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => setSelectedFiling(f) });
+                                    }
+                                    if(canDelete) {
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(f.id), className: 'text-danger' });
+                                    }
+                                    return (
+                                        <tr key={f.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                            <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{f.documentName}</td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{f.authority}</td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(f.dueDate).toLocaleDateString()}</td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                <Badge type={f.status} />
+                                            </td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
                                     <tr>
                                         <td colSpan={5}>
                                             <EmptyState title="No Filings Found" />

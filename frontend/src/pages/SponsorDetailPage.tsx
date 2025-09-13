@@ -16,12 +16,14 @@ import EmptyState from '@/components/EmptyState.tsx';
 import Badge from '@/components/ui/Badge.tsx';
 import Pagination from '@/components/Pagination.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 const SponsorDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { showToast } = useNotification();
     const { refetchSponsorLookup } = useData();
+    const { canUpdate, canDelete } = usePermissions('sponsors');
     
     const [sponsor, setSponsor] = useState<Sponsor | null>(null);
     const [sponsoredStudents, setSponsoredStudents] = useState<PaginatedResponse<Student> | null>(null);
@@ -101,8 +103,8 @@ const SponsorDetailPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title={sponsor.name}>
-                <Button onClick={() => setIsEditing(true)} variant="secondary" icon={<EditIcon />}>Edit Sponsor</Button>
-                <Button onClick={handleDeleteSponsor} variant="danger" icon={<TrashIcon />}>Delete Sponsor</Button>
+                {canUpdate && <Button onClick={() => setIsEditing(true)} variant="secondary" icon={<EditIcon />}>Edit Sponsor</Button>}
+                {canDelete && <Button onClick={handleDeleteSponsor} variant="danger" icon={<TrashIcon />}>Delete Sponsor</Button>}
             </PageHeader>
             
             <Card>

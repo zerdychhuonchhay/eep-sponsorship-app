@@ -118,15 +118,22 @@ const AuditLogPage: React.FC = () => {
                                 {logs.length > 0 ? logs.map((log) => (
                                     <tr 
                                         key={log.id} 
-                                        className={`hover:bg-gray-2 dark:hover:bg-box-dark-2 ${log.action === 'UPDATE' ? 'cursor-pointer' : ''}`}
-                                        onClick={() => log.action === 'UPDATE' && setSelectedLog(log)}
+                                        className="hover:bg-gray-2 dark:hover:bg-box-dark-2"
                                     >
                                         <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(log.timestamp).toLocaleString()}</td>
                                         <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{log.userIdentifier}</td>
                                         <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={log.action} /></td>
                                         <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
-                                            <p className="font-medium">{log.objectRepr}</p>
-                                            <p className="text-sm text-body-color dark:text-gray-400 capitalize">{log.contentType.replace('report', ' report')}</p>
+                                            <div>
+                                                {log.action === 'UPDATE' && log.changes ? (
+                                                     <button onClick={() => setSelectedLog(log)} className="font-medium text-primary hover:underline text-left">
+                                                        {log.objectRepr}
+                                                    </button>
+                                                ) : (
+                                                    <p className="font-medium">{log.objectRepr}</p>
+                                                )}
+                                                <p className="text-sm text-body-color dark:text-gray-400 capitalize">{log.contentType.replace('report', ' report')}</p>
+                                            </div>
                                         </td>
                                         <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark text-sm italic">{renderChangesSummary(log)}</td>
                                     </tr>

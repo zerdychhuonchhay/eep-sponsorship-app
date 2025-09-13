@@ -12,6 +12,7 @@ import { calculateAge, formatDateForDisplay } from '@/utils/dateUtils.ts';
 import Button from '@/components/ui/Button.tsx';
 import Badge from '../ui/Badge.tsx';
 import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 interface StudentDetailViewProps {
     student: Student;
@@ -48,6 +49,8 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
     const [editingFollowUp, setEditingFollowUp] = useState<FollowUpRecord | null>(null);
     const [openFollowUpId, setOpenFollowUpId] = useState<string | null>(null);
     const { showToast } = useNotification();
+    const { canUpdate, canDelete } = usePermissions('students');
+    const { canCreate: canCreateAcademics } = usePermissions('academics');
 
     const handleSaveAcademicReport = async (reportData: Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>) => {
         setIsSaving(true);
@@ -133,7 +136,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Academic Reports</h3>
-                        <Button onClick={() => setModal('add_report')} icon={<DocumentAddIcon />} size="sm">Add Report</Button>
+                        {canCreateAcademics && <Button onClick={() => setModal('add_report')} icon={<DocumentAddIcon />} size="sm">Add Report</Button>}
                     </div>
                     {student.academicReports && student.academicReports.length > 0 ? (
                         <div className="overflow-x-auto">
@@ -171,7 +174,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Follow-up History</h3>
-                        <Button onClick={() => { setEditingFollowUp(null); setModal('add_follow_up'); }} icon={<DocumentAddIcon />} size="sm">New Follow-up</Button>
+                        {canCreateAcademics && <Button onClick={() => { setEditingFollowUp(null); setModal('add_follow_up'); }} icon={<DocumentAddIcon />} size="sm">New Follow-up</Button>}
                     </div>
                     <div className="space-y-2">
                         {student.followUpRecords && student.followUpRecords.length > 0 ? (
@@ -203,8 +206,8 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <button onClick={onBack} className="text-primary hover:underline font-medium">← Back to Student List</button>
                  <div className="flex gap-2">
-                     <Button onClick={() => onEdit(student)} icon={<EditIcon />}>Edit</Button>
-                    <Button onClick={() => onDelete(student.studentId)} variant="danger" icon={<TrashIcon />}>Delete</Button>
+                     {canUpdate && <Button onClick={() => onEdit(student)} icon={<EditIcon />}>Edit</Button>}
+                     {canDelete && <Button onClick={() => onDelete(student.studentId)} variant="danger" icon={<TrashIcon />}>Delete</Button>}
                  </div>
             </div>
 

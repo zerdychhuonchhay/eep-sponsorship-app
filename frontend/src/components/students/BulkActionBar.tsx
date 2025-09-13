@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StudentStatus } from '@/types.ts';
 import Button from '@/components/ui/Button.tsx';
 import { FormSelect } from '@/components/forms/FormControls.tsx';
+import { useUI } from '@/contexts/UIContext.tsx';
 
 interface BulkActionBarProps {
     selectedCount: number;
@@ -12,6 +13,7 @@ interface BulkActionBarProps {
 const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onUpdateStatus, onClearSelection }) => {
     const [newStatus, setNewStatus] = useState<StudentStatus>(StudentStatus.ACTIVE);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { isSidebarCollapsed } = useUI();
 
     if (selectedCount === 0) {
         return null;
@@ -24,7 +26,7 @@ const BulkActionBar: React.FC<BulkActionBarProps> = ({ selectedCount, onUpdateSt
     };
 
     return (
-        <div className="fixed bottom-0 left-0 lg:left-72 right-0 z-20 bg-white dark:bg-box-dark shadow-[0_-2px_5px_rgba(0,0,0,0.1)] p-4 transition-transform duration-300">
+        <div className={`fixed bottom-0 right-0 z-20 bg-white dark:bg-box-dark shadow-[0_-2px_5px_rgba(0,0,0,0.1)] p-4 transition-all duration-300 ease-linear ${isSidebarCollapsed ? 'lg:left-20' : 'lg:left-72'}`}>
             <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
                 <div className="flex items-center gap-4">
                     <span className="font-semibold text-black dark:text-white">{selectedCount} student{selectedCount > 1 ? 's' : ''} selected</span>

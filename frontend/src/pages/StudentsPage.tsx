@@ -22,6 +22,7 @@ import { Card, CardContent } from '@/components/ui/Card.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 import BulkActionBar from '@/components/students/BulkActionBar.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
@@ -49,6 +50,7 @@ const StudentsPage: React.FC = () => {
     const { showToast } = useNotification();
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const { setIsBulkActionBarVisible } = useUI();
+    const { canCreate, canUpdate } = usePermissions('students');
 
     const {
         sortConfig, currentPage, searchTerm, filters, apiQueryString,
@@ -84,12 +86,12 @@ const StudentsPage: React.FC = () => {
     }, [fetchData]);
     
     useEffect(() => {
-        setIsBulkActionBarVisible(selectedStudentIds.size > 0);
+        setIsBulkActionBarVisible(selectedStudentIds.size > 0 && canUpdate);
         
         return () => {
             setIsBulkActionBarVisible(false);
         };
-    }, [selectedStudentIds.size, setIsBulkActionBarVisible]);
+    }, [selectedStudentIds.size, setIsBulkActionBarVisible, canUpdate]);
 
 
     useEffect(() => {
@@ -100,7 +102,7 @@ const StudentsPage: React.FC = () => {
     const handleSaveStudent = async (studentData: any) => {
         setIsSubmitting(true);
         try {
-            if (editingStudent) {
+            if (editingStudent?.studentId) {
                 await api.updateStudent({ ...studentData, studentId: editingStudent.studentId });
                 showToast('Student updated successfully!', 'success');
             } else {
@@ -201,7 +203,7 @@ const StudentsPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
-                {!selectedStudent && (
+                {!selectedStudent && canCreate && (
                     <>
                         <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon />}>
                             Import
@@ -252,7 +254,7 @@ const StudentsPage: React.FC = () => {
                                     <EmptyState 
                                         title="No Students in System"
                                         message="Get started by adding your first student or importing a list."
-                                        action={
+                                        action={ canCreate && (
                                             <div className="flex justify-center gap-4">
                                                 <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon />}>
                                                     Add Student
@@ -261,7 +263,7 @@ const StudentsPage: React.FC = () => {
                                                     Import Students
                                                 </Button>
                                             </div>
-                                        }
+                                        )}
                                     />
                                 </div>
                             ) : (
@@ -271,7 +273,7 @@ const StudentsPage: React.FC = () => {
                                             <thead>
                                                 <tr className="bg-gray-2 dark:bg-box-dark-2">
                                                     <th className="py-4 px-4 font-medium text-black dark:text-white">
-                                                         <input type="checkbox" className="form-checkbox" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />
+                                                         {canUpdate && <input type="checkbox" className="form-checkbox" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />}
                                                     </th>
                                                     {[
                                                         { key: 'firstName', label: 'Name' },
@@ -294,26 +296,30 @@ const StudentsPage: React.FC = () => {
                                                 {studentsList.length > 0 ? studentsList.map((s) => (
                                                     <tr key={s.studentId} className={`hover:bg-gray-2 dark:hover:bg-box-dark-2 ${selectedStudentIds.has(s.studentId) ? 'bg-primary/10' : ''}`}>
                                                         <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                            <input type="checkbox" className="form-checkbox" checked={selectedStudentIds.has(s.studentId)} onChange={(e) => handleSelectStudent(s.studentId, e.target.checked)} />
+                                                            {canUpdate && <input type="checkbox" className="form-checkbox" checked={selectedStudentIds.has(s.studentId)} onChange={(e) => handleSelectStudent(s.studentId, e.target.checked)} />}
                                                         </td>
-                                                        <td className="py-5 px-4 flex items-center gap-3 border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(s)}>
-                                                            {s.profilePhoto ? (
-                                                                <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-10 h-10 rounded-full object-cover"/>
-                                                            ) : (
-                                                                <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
-                                                                    <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                            <div className="flex items-center gap-3">
+                                                                {s.profilePhoto ? (
+                                                                    <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-10 h-10 rounded-full object-cover"/>
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                                                        <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <button onClick={() => setSelectedStudent(s)} className="font-medium text-black dark:text-white hover:text-primary text-left">
+                                                                        {s.firstName} {s.lastName}
+                                                                    </button>
+                                                                    <p className="text-sm text-body-color dark:text-gray-300">{s.gender}</p>
                                                                 </div>
-                                                            )}
-                                                            <div>
-                                                                <p className="font-medium text-black dark:text-white">{s.firstName} {s.lastName}</p>
-                                                                <p className="text-sm text-body-color dark:text-gray-300">{s.gender}</p>
                                                             </div>
                                                         </td>
-                                                        <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(s)}>{s.studentId}</td>
-                                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(s)}>{calculateAge(s.dateOfBirth)}</td>
-                                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(s)}><Badge type={s.studentStatus} /></td>
-                                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(s)}><Badge type={s.sponsorshipStatus} /></td>
-                                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(s)}>{s.sponsorName || 'N/A'}</td>
+                                                        <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{s.studentId}</td>
+                                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{calculateAge(s.dateOfBirth)}</td>
+                                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={s.studentStatus} /></td>
+                                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={s.sponsorshipStatus} /></td>
+                                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{s.sponsorName || 'N/A'}</td>
                                                     </tr>
                                                 )) : (
                                                     <tr>
@@ -329,37 +335,37 @@ const StudentsPage: React.FC = () => {
                                             {studentsList.length > 0 ? studentsList.map((s) => (
                                                 <div key={s.studentId} className={`bg-white dark:bg-box-dark rounded-lg p-4 border border-stroke dark:border-strokedark shadow-sm relative ${selectedStudentIds.has(s.studentId) ? 'ring-2 ring-primary' : ''}`}>
                                                     <div className="absolute top-2 right-2">
-                                                        <input type="checkbox" className="form-checkbox h-5 w-5" checked={selectedStudentIds.has(s.studentId)} onChange={(e) => handleSelectStudent(s.studentId, e.target.checked)} />
+                                                        {canUpdate && <input type="checkbox" className="form-checkbox h-5 w-5" checked={selectedStudentIds.has(s.studentId)} onChange={(e) => handleSelectStudent(s.studentId, e.target.checked)} />}
                                                     </div>
-                                                    <div onClick={() => setSelectedStudent(s)} className="cursor-pointer">
-                                                        <div className="flex items-center gap-4 mb-3">
-                                                            {s.profilePhoto ? (
-                                                                <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-12 h-12 rounded-full object-cover"/>
-                                                            ) : (
-                                                                <div className="w-12 h-12 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center flex-shrink-0">
-                                                                    <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                                                                </div>
-                                                            )}
-                                                            <div>
-                                                                <p className="font-bold text-lg text-black dark:text-white truncate">{s.firstName} {s.lastName}</p>
-                                                                <p className="text-sm text-body-color dark:text-gray-300">{s.studentId}</p>
+                                                    <div className="flex items-center gap-4 mb-3">
+                                                        {s.profilePhoto ? (
+                                                            <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-12 h-12 rounded-full object-cover"/>
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center flex-shrink-0">
+                                                                <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                                                             </div>
+                                                        )}
+                                                        <div>
+                                                            <button onClick={() => setSelectedStudent(s)} className="font-bold text-lg text-black dark:text-white truncate text-left hover:text-primary">
+                                                                {s.firstName} {s.lastName}
+                                                            </button>
+                                                            <p className="text-sm text-body-color dark:text-gray-300">{s.studentId}</p>
                                                         </div>
-                                                        <p className="text-sm text-body-color dark:text-gray-300 mb-2">Sponsor: <span className="font-medium text-black dark:text-white">{s.sponsorName || 'N/A'}</span></p>
-                                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pt-3 border-t border-stroke dark:border-strokedark">
-                                                            <div>
-                                                                <p className="text-body-color dark:text-gray-300">Age: {calculateAge(s.dateOfBirth)}</p>
-                                                                <p className="text-body-color dark:text-gray-300">Gender: {s.gender}</p>
+                                                    </div>
+                                                    <p className="text-sm text-body-color dark:text-gray-300 mb-2">Sponsor: <span className="font-medium text-black dark:text-white">{s.sponsorName || 'N/A'}</span></p>
+                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm pt-3 border-t border-stroke dark:border-strokedark">
+                                                        <div>
+                                                            <p className="text-body-color dark:text-gray-300">Age: {calculateAge(s.dateOfBirth)}</p>
+                                                            <p className="text-body-color dark:text-gray-300">Gender: {s.gender}</p>
+                                                        </div>
+                                                        <div className="space-y-1.5 flex flex-col items-start">
+                                                           <div className="flex items-center gap-1">
+                                                                <span className="text-body-color dark:text-gray-300 text-xs">Status:</span>
+                                                                <Badge type={s.studentStatus} />
                                                             </div>
-                                                            <div className="space-y-1.5 flex flex-col items-start">
-                                                               <div className="flex items-center gap-1">
-                                                                    <span className="text-body-color dark:text-gray-300 text-xs">Status:</span>
-                                                                    <Badge type={s.studentStatus} />
-                                                                </div>
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-body-color dark:text-gray-300 text-xs">Sponsor:</span>
-                                                                    <Badge type={s.sponsorshipStatus} />
-                                                                </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-body-color dark:text-gray-300 text-xs">Sponsor:</span>
+                                                                <Badge type={s.sponsorshipStatus} />
                                                             </div>
                                                         </div>
                                                     </div>

@@ -1,0 +1,5 @@
+{
+  "name": "NGO Sponsorship Dashboard",
+  "description": "A modern dashboard for managing student sponsorships, transactions, and administrative filings for an NGO. It provides a user-friendly interface to track student progress, manage finances, and stay compliant.",
+  "requestFramePermissions": []
+}
