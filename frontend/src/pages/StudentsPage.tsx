@@ -205,10 +205,10 @@ const StudentsPage: React.FC = () => {
             <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
                 {!selectedStudent && canCreate && (
                     <>
-                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon />}>
+                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>
                             Import
                         </Button>
-                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon />}>
+                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>
                             Add Student
                         </Button>
                     </>
@@ -233,7 +233,7 @@ const StudentsPage: React.FC = () => {
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                                 <div className="relative w-full sm:w-1/2 md:w-1/3">
                                    <input type="text" placeholder="Search students..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-5 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"/>
-                                   <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-body-color" />
+                                   <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-body-color w-5 h-5" />
                                 </div>
                                  <AdvancedFilter
                                     filterOptions={filterOptions}
@@ -256,10 +256,10 @@ const StudentsPage: React.FC = () => {
                                         message="Get started by adding your first student or importing a list."
                                         action={ canCreate && (
                                             <div className="flex justify-center gap-4">
-                                                <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon />}>
+                                                <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>
                                                     Add Student
                                                 </Button>
-                                                <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon />}>
+                                                <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>
                                                     Import Students
                                                 </Button>
                                             </div>
@@ -286,7 +286,7 @@ const StudentsPage: React.FC = () => {
                                                         <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
                                                             <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key as keyof Student)}>
                                                                 {label}
-                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                                             </button>
                                                         </th>
                                                     ))}

@@ -19,9 +19,9 @@ const Toast: React.FC = () => {
     }
 
     const typeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
-        success: { bg: 'bg-success', icon: <SuccessIcon /> },
-        error: { bg: 'bg-danger', icon: <ErrorIcon /> },
-        info: { bg: 'bg-primary', icon: <SuccessIcon /> }, // Using SuccessIcon for info as well for visual consistency
+        success: { bg: 'bg-success', icon: <SuccessIcon className="w-6 h-6" /> },
+        error: { bg: 'bg-danger', icon: <ErrorIcon className="w-6 h-6" /> },
+        info: { bg: 'bg-primary', icon: <SuccessIcon className="w-6 h-6" /> }, // Using SuccessIcon for info as well for visual consistency
     };
 
     const styles = typeStyles[toast.type] || typeStyles.info;

@@ -178,7 +178,7 @@ const TasksPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Tasks">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
                         Add Task
                     </Button>
                 )}
@@ -203,7 +203,7 @@ const TasksPage: React.FC = () => {
                                         <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
                                             <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
                                                 {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}
@@ -214,10 +214,10 @@ const TasksPage: React.FC = () => {
                                 {tasks.length > 0 ? tasks.map((task) => {
                                     const actionItems = [];
                                     if (canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => setEditingTask(task) });
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
                                     }
                                     if (canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' });
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' });
                                     }
 
                                     return (

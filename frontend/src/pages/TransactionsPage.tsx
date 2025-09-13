@@ -174,7 +174,7 @@ const TransactionsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Transactions">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
+                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
                         Log Transaction
                     </Button>
                 )}
@@ -199,7 +199,7 @@ const TransactionsPage: React.FC = () => {
                                         <th key={key as string} className={`py-4 px-4 font-medium text-black dark:text-white ${key === 'amount' ? 'text-right' : ''}`}>
                                             <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
                                                 {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}
@@ -211,10 +211,10 @@ const TransactionsPage: React.FC = () => {
                                     const student = students.find(s => s.studentId === t.studentId);
                                     const actionItems = [];
                                     if (canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon />, onClick: () => setEditingTransaction(t) });
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
                                     }
                                     if (canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon />, onClick: () => handleDelete(t.id), className: 'text-danger' });
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
                                     }
 
                                     return (

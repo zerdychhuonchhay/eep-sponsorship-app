@@ -108,7 +108,7 @@ const AuditLogPage: React.FC = () => {
                                         <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
                                             <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key === 'objectRepr' ? 'object_repr' : key)}>
                                                 {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon /> : <ArrowDownIcon />)}
+                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                             </button>
                                         </th>
                                     ))}

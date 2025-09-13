@@ -197,7 +197,7 @@ const ReportsPage: React.FC = () => {
                             <Button
                                 onClick={() => handleStudentDownload('csv')}
                                 isLoading={isStudentLoading}
-                                icon={<DownloadIcon />}
+                                icon={<DownloadIcon className="w-4 h-4" />}
                                 size="sm"
                                 variant="secondary"
                             >
@@ -206,7 +206,7 @@ const ReportsPage: React.FC = () => {
                              <Button
                                 onClick={() => handleStudentDownload('pdf')}
                                 isLoading={isStudentLoading}
-                                icon={<DownloadIcon />}
+                                icon={<DownloadIcon className="w-4 h-4" />}
                                 size="sm"
                                 variant="secondary"
                             >
@@ -230,7 +230,7 @@ const ReportsPage: React.FC = () => {
                             <Button
                                 onClick={() => handleFinancialDownload('csv')}
                                 isLoading={isFinancialLoading}
-                                icon={<DownloadIcon />}
+                                icon={<DownloadIcon className="w-4 h-4" />}
                                 size="sm"
                                 variant="secondary"
                             >
@@ -239,7 +239,7 @@ const ReportsPage: React.FC = () => {
                              <Button
                                 onClick={() => handleFinancialDownload('pdf')}
                                 isLoading={isFinancialLoading}
-                                icon={<DownloadIcon />}
+                                icon={<DownloadIcon className="w-4 h-4" />}
                                 size="sm"
                                 variant="secondary"
                             >
