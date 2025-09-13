@@ -35,6 +35,7 @@ export interface User {
     isAdmin: boolean;
     role: string; // Changed from UserRole
     permissions: Permissions; // Detailed permissions for the user's role
+    profilePhoto?: string;
 }
 
 // New type for user management page

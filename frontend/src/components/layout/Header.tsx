@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon, BugIcon, ProfileIcon } from '@/components/Icons.tsx';
+import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon, BugIcon, ProfileIcon, UserIcon } from '@/components/Icons.tsx';
 import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
 import { useTheme } from '@/contexts/ThemeContext.tsx';
 import { useAuth } from '@/contexts/AuthContext.tsx';
@@ -82,7 +82,13 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
                                 <span className="block text-sm font-medium text-black dark:text-white">{user?.username || 'User'}</span>
                                 <span className="block text-xs text-body-color dark:text-gray-300">{user?.role || 'Viewer'}</span>
                             </span>
-                            <img src="https://picsum.photos/40/40" alt="Admin" className="w-10 h-10 rounded-full" />
+                            {user?.profilePhoto ? (
+                                <img src={user.profilePhoto} alt="User" className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                    <UserIcon className="w-6 h-6 text-gray-400" />
+                                </div>
+                            )}
                             <ArrowDownIcon className={`w-4 h-4 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
                         </button>
                         {isProfileOpen && (

@@ -241,10 +241,10 @@ export const api = {
         }
         return userData;
     },
-    updateUserProfile: async (data: Partial<Pick<User, 'username' | 'email'>>): Promise<User> => {
+    updateUserProfile: async (data: FormData): Promise<User> => {
         return apiClient('/user/me/', {
             method: 'PATCH',
-            body: JSON.stringify(convertKeysToSnake(data)),
+            body: data,
         });
     },
     changePassword: async (data: any): Promise<{ detail: string }> => {
