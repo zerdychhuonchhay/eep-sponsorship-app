@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AppUser, UserStatus } from '@/types.ts';
-import { FormInput } from '@/components/forms/FormControls.tsx';
+import { FormInput, ControlledSelect } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
-import Select from '@/components/ui/Select.tsx'; // Import the new custom Select
+import { userSchema, UserFormData } from '@/schemas/userSchema.ts';
 
 interface UserFormProps {
     user?: AppUser | null;
@@ -18,60 +20,64 @@ const UserForm: React.FC<UserFormProps> = ({ user, currentUserId, onInvite, onUp
     const isEdit = !!user;
     const isEditingSelf = isEdit && user.id === currentUserId;
     const { roles } = useData();
-    
-    const [email, setEmail] = useState('');
-    // Default to the first available role if not editing, or the user's current role
-    const [role, setRole] = useState<string>(user?.role || (roles.length > 0 ? roles[0].name : ''));
-    const [status, setStatus] = useState<UserStatus>(user?.status || UserStatus.ACTIVE);
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (isEdit && user) {
-            onUpdate(user.id, { role, status });
-        } else {
-            onInvite(email, role);
-        }
-    };
 
     const availableRoles = roles.filter(r => r.name !== 'Administrator');
     const roleOptions = availableRoles.map(r => ({ value: r.name, label: r.name }));
     const statusOptions = Object.values(UserStatus).map(s => ({ value: s, label: s }));
+
+    const { register, handleSubmit, control, formState: { errors } } = useForm<UserFormData>({
+        resolver: zodResolver(userSchema(isEdit)),
+        defaultValues: {
+            email: user?.email || '',
+            role: user?.role || (roleOptions.length > 0 ? roleOptions[0].value : ''),
+            status: user?.status || UserStatus.ACTIVE,
+        }
+    });
+
+    const onSubmit = (data: UserFormData) => {
+        if (isEdit && user) {
+            onUpdate(user.id, { role: data.role, status: data.status as UserStatus });
+        } else {
+            onInvite(data.email, data.role);
+        }
+    };
 
     return (
         <div>
              <h3 className="text-xl font-semibold text-black dark:text-white mb-4">
                 {isEdit ? `Edit User: ${user.username}` : 'Invite New User'}
             </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <FormInput
                     label="Email Address"
                     id="email"
-                    name="email"
                     type="email"
-                    value={isEdit ? user.email : email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    {...register('email')}
                     required
                     disabled={isEdit}
                     placeholder="user@extremelove.com"
+                    error={errors.email?.message as string}
                 />
                 <div>
-                    <Select
+                    <ControlledSelect
                         label="Assign Role"
+                        control={control}
+                        name="role"
                         options={roleOptions}
-                        value={role}
-                        onChange={setRole}
                         disabled={isEditingSelf || isSubmitting}
+                        error={errors.role?.message as string}
                     />
                     {isEditingSelf && <p className="text-xs text-body-color mt-1">You cannot change your own role.</p>}
                 </div>
                  {isEdit && (
                     <div>
-                        <Select
+                        <ControlledSelect
                             label="Status"
+                            control={control}
+                            name="status"
                             options={statusOptions}
-                            value={status}
-                            onChange={(val) => setStatus(val as UserStatus)}
                             disabled={isEditingSelf || isSubmitting}
+                            error={errors.status?.message as string}
                         />
                         {isEditingSelf && <p className="text-xs text-body-color mt-1">You cannot change your own status.</p>}
                     </div>

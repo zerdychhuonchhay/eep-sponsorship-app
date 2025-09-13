@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AcademicReport } from '../types.ts';
 import { FormInput, FormSelect, FormTextArea } from './forms/FormControls.tsx';
 import Button from './ui/Button.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
-
-type ReportFormData = Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>;
+import { academicReportSchema, AcademicReportFormData } from '@/schemas/academicReportSchema.ts';
 
 interface AcademicReportFormProps {
-    onSave: (data: ReportFormData, studentId: string) => void;
+    onSave: (data: AcademicReportFormData, studentId: string) => void;
     onCancel: () => void;
     initialData?: AcademicReport | null;
     studentId?: string; // Pre-selected student ID
@@ -24,52 +25,57 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
     const isEdit = !!initialData;
     const { studentLookup: students } = useData();
     
-    const [studentId, setStudentId] = useState(preselectedStudentId || initialData?.studentId || '');
-    const [formData, setFormData] = useState<ReportFormData>({
-        reportPeriod: initialData?.reportPeriod || '',
-        gradeLevel: initialData?.gradeLevel || '',
-        subjectsAndGrades: initialData?.subjectsAndGrades || '',
-        overallAverage: initialData?.overallAverage || 0,
-        passFailStatus: initialData?.passFailStatus || 'Pass',
-        teacherComments: initialData?.teacherComments || ''
+    const { register, handleSubmit, formState: { errors } } = useForm<AcademicReportFormData>({
+        resolver: zodResolver(academicReportSchema),
+        defaultValues: {
+            studentId: preselectedStudentId || initialData?.studentId || '',
+            reportPeriod: initialData?.reportPeriod || '',
+            gradeLevel: initialData?.gradeLevel || '',
+            subjectsAndGrades: initialData?.subjectsAndGrades || '',
+            overallAverage: initialData?.overallAverage || undefined,
+            passFailStatus: initialData?.passFailStatus || 'Pass',
+            teacherComments: initialData?.teacherComments || ''
+        }
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: name === 'overallAverage' ? parseFloat(value) || 0 : value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!studentId) {
+    const onSubmit = (data: AcademicReportFormData) => {
+        if (!data.studentId) {
+             // This should ideally be caught by validation, but as a safeguard:
             alert('Please select a student.');
             return;
         }
-        onSave(formData, studentId);
+        onSave(data, data.studentId);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
              <div>
-                <FormSelect label="Student" id="student_id" name="student_id" value={studentId} onChange={e => setStudentId(e.target.value)} required disabled={isEdit || !!preselectedStudentId}>
+                <FormSelect 
+                    label="Student" 
+                    id="studentId" 
+                    {...register('studentId')} 
+                    required 
+                    disabled={isEdit || !!preselectedStudentId}
+                    error={errors.studentId?.message as string}
+                >
                     <option value="">-- Select Student --</option>
                     {students.map(s => <option key={s.studentId} value={s.studentId}>{s.firstName} {s.lastName} ({s.studentId})</option>)}
                 </FormSelect>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput label="Report Period (e.g., Term 1 2024)" id="reportPeriod" name="reportPeriod" value={formData.reportPeriod} onChange={handleChange} required />
-                <FormInput label="Grade Level" id="gradeLevel" name="gradeLevel" value={formData.gradeLevel} onChange={handleChange} required />
-                <FormInput label="Overall Average" id="overallAverage" name="overallAverage" type="number" step="0.1" value={formData.overallAverage} onChange={handleChange} />
-                <FormSelect label="Pass/Fail Status" id="passFailStatus" name="passFailStatus" value={formData.passFailStatus} onChange={handleChange}>
+                <FormInput label="Report Period (e.g., Term 1 2024)" id="reportPeriod" {...register('reportPeriod')} required error={errors.reportPeriod?.message as string} />
+                <FormInput label="Grade Level" id="gradeLevel" {...register('gradeLevel')} required error={errors.gradeLevel?.message as string} />
+                <FormInput label="Overall Average" id="overallAverage" type="number" step="0.1" {...register('overallAverage')} error={errors.overallAverage?.message as string} />
+                <FormSelect label="Pass/Fail Status" id="passFailStatus" {...register('passFailStatus')} error={errors.passFailStatus?.message as string}>
                     <option value="Pass">Pass</option>
                     <option value="Fail">Fail</option>
                 </FormSelect>
             </div>
             <div>
-                <FormTextArea label="Subjects & Grades" id="subjectsAndGrades" name="subjectsAndGrades" value={formData.subjectsAndGrades} onChange={handleChange} placeholder="e.g., Math: A, Science: B+" />
+                <FormTextArea label="Subjects & Grades" id="subjectsAndGrades" placeholder="e.g., Math: A, Science: B+" {...register('subjectsAndGrades')} error={errors.subjectsAndGrades?.message as string} />
             </div>
             <div>
-                <FormTextArea label="Teacher Comments" id="teacherComments" name="teacherComments" value={formData.teacherComments} onChange={handleChange} />
+                <FormTextArea label="Teacher Comments" id="teacherComments" {...register('teacherComments')} error={errors.teacherComments?.message as string} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
