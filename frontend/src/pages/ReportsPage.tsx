@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState } from 'react';
 import { api } from '@/services/api.ts';
 import { StudentStatus, SponsorshipStatus, TransactionType } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';

@@ -43,7 +43,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
     failedRequestQueue = [];
 };
 
-const apiClient = async (endpoint: string, options: RequestInit = {}) => {
+const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
     const completeUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
     const startTime = Date.now();
     let token = localStorage.getItem('accessToken');
