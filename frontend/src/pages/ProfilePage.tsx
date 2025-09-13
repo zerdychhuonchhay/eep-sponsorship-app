@@ -6,6 +6,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
 import { api } from '@/services/api.ts';
+import { UserIcon } from '@/components/Icons.tsx';
 
 const ProfilePage: React.FC = () => {
     const { user, refreshUser } = useAuth();
@@ -13,6 +14,8 @@ const ProfilePage: React.FC = () => {
     
     // State for profile information
     const [profileData, setProfileData] = useState({ username: '', email: '' });
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
 
     // State for password change
@@ -30,12 +33,26 @@ const ProfilePage: React.FC = () => {
                 username: user.username,
                 email: user.email,
             });
+            setPhotoPreview(user.profilePhoto || null);
         }
     }, [user]);
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setProfileData({ ...profileData, [e.target.name]: e.target.value });
     };
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setPhotoFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
 
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
@@ -44,14 +61,23 @@ const ProfilePage: React.FC = () => {
     const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsProfileSubmitting(true);
+        
+        const formData = new FormData();
+        formData.append('username', profileData.username);
+        formData.append('email', profileData.email);
+        if (photoFile) {
+            formData.append('profile_photo', photoFile);
+        }
+
         try {
-            await api.updateUserProfile(profileData);
+            await api.updateUserProfile(formData);
             await refreshUser();
             showToast('Profile updated successfully!', 'success');
         } catch (error: any) {
             showToast(error.message || 'Failed to update profile.', 'error');
         } finally {
             setIsProfileSubmitting(false);
+            setPhotoFile(null);
         }
     };
 
@@ -93,6 +119,23 @@ const ProfilePage: React.FC = () => {
                     <CardContent>
                         <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Profile Information</h3>
                         <form onSubmit={handleProfileSubmit} className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                {photoPreview ? (
+                                    <img src={photoPreview} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                        <UserIcon className="w-10 h-10 text-gray-500" />
+                                    </div>
+                                )}
+                                <FormInput
+                                    label="Change Profile Photo"
+                                    id="profilePhoto"
+                                    name="profilePhoto"
+                                    type="file"
+                                    onChange={handlePhotoChange}
+                                    accept="image/*"
+                                />
+                            </div>
                             <FormInput
                                 label="Username"
                                 id="username"
