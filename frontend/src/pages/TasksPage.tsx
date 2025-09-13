@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../services/api.ts';
 import { Task, TaskStatus, TaskPriority, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
@@ -17,8 +19,7 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
-
-type TaskFormData = Omit<Task, 'id'>;
+import { taskSchema, TaskFormData } from '@/schemas/taskSchema.ts';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
@@ -28,34 +29,27 @@ const TaskForm: React.FC<{
 }> = ({ onSave, onCancel, initialData, isSubmitting }) => {
     const isEdit = !!initialData;
     
-    const [formData, setFormData] = useState<TaskFormData>(() => ({
-        title: initialData?.title || '',
-        description: initialData?.description || '',
-        dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
-        priority: initialData?.priority || TaskPriority.MEDIUM,
-        status: initialData?.status || TaskStatus.TO_DO,
-    }));
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(formData);
-    };
+    const { register, handleSubmit, formState: { errors } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskSchema),
+        defaultValues: {
+            title: initialData?.title || '',
+            description: initialData?.description || '',
+            dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
+            priority: initialData?.priority || TaskPriority.MEDIUM,
+            status: initialData?.status || TaskStatus.TO_DO,
+        }
+    });
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <FormInput label="Title" id="title" type="text" name="title" value={formData.title} onChange={handleChange} required />
-            <FormTextArea label="Description" id="description" name="description" value={formData.description} onChange={handleChange} />
+        <form onSubmit={handleSubmit(onSave)} className="space-y-4">
+            <FormInput label="Title" id="title" type="text" {...register('title')} required error={errors.title?.message as string} />
+            <FormTextArea label="Description" id="description" {...register('description')} error={errors.description?.message as string} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormInput label="Due Date" id="dueDate" type="date" name="dueDate" value={formData.dueDate} onChange={handleChange} required />
-                <FormSelect label="Priority" id="priority" name="priority" value={formData.priority} onChange={handleChange}>
+                <FormInput label="Due Date" id="dueDate" type="date" {...register('dueDate')} required error={errors.dueDate?.message as string} />
+                <FormSelect label="Priority" id="priority" {...register('priority')} error={errors.priority?.message as string}>
                     {Object.values(TaskPriority).map((p: string) => <option key={p} value={p}>{p}</option>)}
                 </FormSelect>
-                <FormSelect label="Status" id="status" name="status" value={formData.status} onChange={handleChange}>
+                <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message as string}>
                     {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
             </div>
