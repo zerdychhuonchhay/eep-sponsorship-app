@@ -64,7 +64,11 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # This allows the admin panel to work correctly on your live domain
-CSRF_TRUSTED_ORIGINS = ['https://eep-sponsorship-app-production.up.railway.app']
+CSRF_TRUSTED_ORIGINS_STR = os.getenv('CSRF_TRUSTED_ORIGINS')
+if CSRF_TRUSTED_ORIGINS_STR:
+    CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS_STR.split(',')
+else:
+    CSRF_TRUSTED_ORIGINS = []
 
 ROOT_URLCONF = 'ngo_project.urls'
 
