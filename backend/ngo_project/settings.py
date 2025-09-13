@@ -57,11 +57,17 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 
 # This allows your local development environment to connect when you run it locally
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS_STR = os.getenv('CORS_ALLOWED_ORIGINS')
+if CORS_ALLOWED_ORIGINS_STR:
+    CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS_STR.split(',')
+else:
+    # Default for local development
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ]
 
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+CORS_ALLOW_CREDENTIALS = True
 
 # This allows the admin panel to work correctly on your live domain
 CSRF_TRUSTED_ORIGINS_STR = os.getenv('CSRF_TRUSTED_ORIGINS')
