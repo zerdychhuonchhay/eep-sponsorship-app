@@ -1,6 +1,6 @@
 # backend/ngo_project/settings.py
 
-import os
+import os, dj_database_url
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
@@ -97,10 +97,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ngo_project.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        # This will use the DATABASE_URL from the environment on Railway
+        # If it doesn't exist (like on your local machine), it uses the default value
+        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}"
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
