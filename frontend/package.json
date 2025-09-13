@@ -15,7 +15,7 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.23.0",
     "recharts": "^2.12.7",
-    "serve": "^14.2.3"
+    "serve": "^14.2.5"
   },
   "devDependencies": {
     "@testing-library/react": "^15.0.6",
