@@ -16,11 +16,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-secret-key-here'
 DEBUG = True
 
 # This allows your live Railway domain to be accessed.
-ALLOWED_HOSTS = [
-    'eep-sponsorship-app-production.up.railway.app',
-    '127.0.0.1',
-    'localhost',
-    ]
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS')
+if ALLOWED_HOSTS_STR:
+    ALLOWED_HOSTS = ALLOWED_HOSTS_STR.split(',')
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # --- Application definition ---
 INSTALLED_APPS = [
@@ -58,6 +58,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 
 # This allows your local development environment to connect when you run it locally
 CORS_ALLOWED_ORIGINS = [
+
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
