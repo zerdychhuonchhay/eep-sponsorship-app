@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
-type ToastType = 'success' | 'error';
+type ToastType = 'success' | 'error' | 'info';
 
 interface ToastMessage {
     message: string;

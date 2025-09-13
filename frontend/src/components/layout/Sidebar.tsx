@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, ChevronDoubleLeftIcon } from '@/components/Icons.tsx';
-import { useAuth, usePermissions } from '@/contexts/AuthContext.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 
 interface SidebarProps {
@@ -51,7 +51,6 @@ const NavLinkItem: React.FC<{ item: any; isCollapsed: boolean }> = ({ item, isCo
 
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
-    const { user } = useAuth();
     const { isSidebarCollapsed, toggleSidebar } = useUI();
     const sidebar = useRef<any>(null);
 

@@ -43,11 +43,8 @@ export const usePdfGenerator = (printableRef: React.RefObject<HTMLDivElement>) =
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
             
-            const pdfWidth = pdf.internal.pageSize.getWidth();
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
-            const pdfHeight = pdfWidth / ratio;
             
             let position = 0;
             let heightLeft = canvasHeight;

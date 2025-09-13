@@ -5,7 +5,7 @@ import { CloseIcon } from './Icons.tsx';
 interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
-    title: string;
+    title?: string;
     children: React.ReactNode;
 }
 
@@ -38,7 +38,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
                 <div className="flex items-start justify-between p-5 border-b border-stroke dark:border-strokedark rounded-t">
                     <h3 className="text-xl font-semibold text-black dark:text-white">{title}</h3>
                     <button onClick={onClose} className="p-1 ml-auto text-black dark:text-white hover:opacity-75">
-                        <CloseIcon />
+                        <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
                 <div className="relative p-6 flex-auto max-h-[70vh] overflow-y-auto">

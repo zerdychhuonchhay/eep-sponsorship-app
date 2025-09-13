@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AcademicReport, StudentLookup } from '../types.ts';
+import { AcademicReport } from '../types.ts';
 import { FormInput, FormSelect, FormTextArea } from './forms/FormControls.tsx';
 import Button from './ui/Button.tsx';
 import { useData } from '@/contexts/DataContext.tsx';

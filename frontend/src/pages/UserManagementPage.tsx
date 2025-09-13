@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/services/api.ts';
-import { AppUser, PaginatedResponse, UserStatus } from '@/types.ts';
+import { AppUser, PaginatedResponse } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import { SkeletonTable } from '@/components/SkeletonLoader.tsx';

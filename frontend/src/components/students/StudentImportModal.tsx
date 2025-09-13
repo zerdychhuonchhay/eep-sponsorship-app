@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Student } from '@/types.ts';
+import { Student, StudentLookup } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { api } from '@/services/api.ts';
@@ -7,7 +7,7 @@ import { parseAndFormatDate } from '@/utils/dateUtils.ts';
 import Button from '@/components/ui/Button.tsx';
 
 interface StudentImportModalProps {
-    existingStudents: Student[];
+    existingStudents: StudentLookup[];
     onFinished: () => void;
 }
 
@@ -111,7 +111,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     const [step, setStep] = useState(1);
     const [file, setFile] = useState<File | null>(null);
     const [headers, setHeaders] = useState<string[]>([]);
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState<Record<string, any>[]>([]);
     const [mapping, setMapping] = useState<Record<string, string>>({});
     const [isProcessing, setIsProcessing] = useState(false);
     const [importResult, setImportResult] = useState<{ createdCount: number; updatedCount: number; skippedCount: number; errors: string[] } | null>(null);
@@ -189,9 +189,9 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                 }
 
                 const fileHeaders = (jsonData[0] as any[]).map(String);
-                const fileRows = jsonData.slice(1).map(row => {
+                const fileRows = jsonData.slice(1).map((row: any[]) => {
                     const rowData: Record<string, any> = {};
-                    fileHeaders.forEach((header, index) => { rowData[header] = (row as any[])[index]; });
+                    fileHeaders.forEach((header, index) => { rowData[header] = row[index]; });
                     return rowData;
                 });
 
@@ -220,8 +220,8 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     }, [file, showToast]);
 
     const mappedData = useMemo(() => {
-        const dateFields: (keyof Student)[] = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'];
-        const booleanFields: (keyof Student)[] = ['hasHousingSponsorship', 'hasBirthCertificate', 'hasSponsorshipContract'];
+        const dateFields: string[] = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'];
+        const booleanFields: string[] = ['hasHousingSponsorship', 'hasBirthCertificate', 'hasSponsorshipContract'];
         
         return data.map(row => {
             const newRow: Partial<Student> = {};
@@ -232,8 +232,10 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                      if (value === null || String(value).trim() === '') {
                         (newRow as any)[field] = null; return;
                     }
+                    // FIX: Explicitly cast 'field' to a string to satisfy the 'includes' method signature.
                     if (dateFields.includes(String(field))) {
                         value = parseAndFormatDate(value);
+                    // FIX: Explicitly cast 'field' to a string to satisfy the 'includes' method signature.
                     } else if (booleanFields.includes(String(field))) {
                         const lowerVal = String(value).toLowerCase();
                         value = lowerVal === 'true' || lowerVal === 'yes' || lowerVal === '1';
@@ -258,7 +260,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                 const changes: Change[] = [];
                 (Object.keys(fileStudent) as (keyof Student)[]).forEach(field => {
                     if (field === 'studentId') return;
-                    const newValue = fileStudent[field]; const oldValue = existingStudent[field];
+                    const newValue = fileStudent[field]; const oldValue = (existingStudent as any)[field];
                     const normNew = (newValue === null || newValue === undefined) ? '' : String(newValue);
                     const normOld = (oldValue === null || oldValue === undefined) ? '' : String(oldValue);
                     if (normNew !== normOld) changes.push({ field, oldValue, newValue });

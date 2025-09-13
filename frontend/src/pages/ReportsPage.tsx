@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { api } from '@/services/api.ts';
-import { StudentStatus, SponsorshipStatus, Transaction, TransactionType } from '@/types.ts';
+import { StudentStatus, SponsorshipStatus, TransactionType } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import PageHeader from '@/components/layout/PageHeader.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
@@ -180,15 +180,15 @@ const ReportsPage: React.FC = () => {
                             Download a list of students. Use the filters to create a specific report.
                         </p>
                         <div className="space-y-4 mb-4">
-                            <FormSelect label="Status" name="student_status" value={studentFilters.student_status} onChange={handleStudentFilterChange}>
+                            <FormSelect id="student_status_filter" label="Status" name="student_status" value={studentFilters.student_status} onChange={handleStudentFilterChange}>
                                 <option value="">All Statuses</option>
                                 {Object.values(StudentStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                             </FormSelect>
-                            <FormSelect label="Sponsorship" name="sponsorship_status" value={studentFilters.sponsorship_status} onChange={handleStudentFilterChange}>
+                            <FormSelect id="sponsorship_status_filter" label="Sponsorship" name="sponsorship_status" value={studentFilters.sponsorship_status} onChange={handleStudentFilterChange}>
                                 <option value="">All Sponsorships</option>
                                 {Object.values(SponsorshipStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                             </FormSelect>
-                            <FormSelect label="Sponsor" name="sponsor" value={studentFilters.sponsor} onChange={handleStudentFilterChange}>
+                            <FormSelect id="sponsor_filter" label="Sponsor" name="sponsor" value={studentFilters.sponsor} onChange={handleStudentFilterChange}>
                                 <option value="">All Sponsors</option>
                                 {sponsorLookup.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
                             </FormSelect>
@@ -223,8 +223,8 @@ const ReportsPage: React.FC = () => {
                             Download a list of all transactions within a specific date range.
                         </p>
                         <div className="space-y-4 mb-4">
-                            <FormInput label="Start Date" name="start" type="date" value={financialFilters.start} onChange={handleFinancialFilterChange} />
-                            <FormInput label="End Date" name="end" type="date" value={financialFilters.end} onChange={handleFinancialFilterChange} />
+                            <FormInput id="start_date_filter" label="Start Date" name="start" type="date" value={financialFilters.start} onChange={handleFinancialFilterChange} />
+                            <FormInput id="end_date_filter" label="End Date" name="end" type="date" value={financialFilters.end} onChange={handleFinancialFilterChange} />
                         </div>
                         <div className="flex gap-2">
                             <Button

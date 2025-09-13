@@ -179,7 +179,7 @@ const DashboardPage: React.FC = () => {
                     title="Total Students" 
                     currentValue={stats?.stats.totalStudents ?? 0}
                     previousValue={stats?.trends.totalStudents} 
-                    icon={<StudentsIcon />} 
+                    icon={<StudentsIcon className="w-6 h-6" />} 
                     accentColor="border-primary"
                 />
                 <StatCard 
@@ -187,20 +187,20 @@ const DashboardPage: React.FC = () => {
                     currentValue={stats?.stats.netBalance ?? 0}
                     previousValue={stats?.trends.netBalance}
                     formatAsCurrency
-                    icon={<TransactionsIcon />} 
+                    icon={<TransactionsIcon className="w-6 h-6" />} 
                     accentColor="border-success"
                 />
                 <StatCard 
                     title="Active Students" 
                     currentValue={stats?.stats.activeStudents ?? 0}
                     previousValue={stats?.trends.activeStudents}
-                    icon={<StudentsIcon />} 
+                    icon={<StudentsIcon className="w-6 h-6" />} 
                     accentColor="border-secondary"
                 />
                 <StatCard 
                     title="Upcoming Filings" 
                     currentValue={stats?.stats.upcomingFilings ?? 0} 
-                    icon={<FilingsIcon />} 
+                    icon={<FilingsIcon className="w-6 h-6" />} 
                     accentColor="border-warning"
                 />
             </div>
@@ -234,7 +234,7 @@ const DashboardPage: React.FC = () => {
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={statusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                        {statusPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                                        {statusPieData.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                                     </Pie>
                                     <Tooltip formatter={(value) => `${value} students`} />
                                     <Legend />
