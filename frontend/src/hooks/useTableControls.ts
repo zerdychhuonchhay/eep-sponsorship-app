@@ -54,9 +54,22 @@ export const useTableControls = <T>({ initialSortConfig, initialFilters = {} }: 
         const params = new URLSearchParams();
         params.append('page', String(currentPage));
         if (sortConfig.key) {
-            const orderPrefix = sortConfig.order === 'desc' ? '-' : '';
+            let orderPrefix = sortConfig.order === 'desc' ? '-' : '';
             const camelToSnake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-            const orderingKey = sortConfig.key === 'studentName' ? 'student__first_name' : camelToSnake(String(sortConfig.key));
+            let orderingKey;
+
+            if (sortConfig.key === 'age') {
+                orderingKey = 'date_of_birth';
+                // To sort by age ascending (youngest first), we need to sort date_of_birth descending (newest first).
+                // To sort by age descending (oldest first), we need to sort date_of_birth ascending (oldest first).
+                // So we flip the sort order for the backend.
+                orderPrefix = sortConfig.order === 'asc' ? '-' : '';
+            } else if (sortConfig.key === 'studentName') {
+                orderingKey = 'student__first_name';
+            } else {
+                orderingKey = camelToSnake(String(sortConfig.key));
+            }
+            
             params.append('ordering', `${orderPrefix}${orderingKey}`);
         }
         if (searchTerm) {
