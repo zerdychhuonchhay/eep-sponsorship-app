@@ -1,5 +1,6 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, StudentStatus, SponsorshipStatus, Gender } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
+import { GoogleGenAI, Type } from "@google/genai";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -190,6 +191,67 @@ const prepareStudentData = (studentData: any) => {
         data.outOfProgramDate = null;
     }
     return data;
+};
+
+const queryAIAssistantForStudentFilters = async (query: string): Promise<any> => {
+    const ai = new GoogleGenAI({apiKey: process.env.API_KEY!});
+
+    const responseSchema = {
+        type: Type.OBJECT,
+        properties: {
+            search: {
+                type: Type.STRING,
+                description: 'A general search term for student names or IDs. For example, if the query is "find jane smith", this should be "jane smith".'
+            },
+            student_status: {
+                type: Type.STRING,
+                description: `Filter by student status. Possible values are: '${Object.values(StudentStatus).join("', '")}'.`
+            },
+            sponsorship_status: {
+                type: Type.STRING,
+                description: `Filter by sponsorship status. Possible values are: '${Object.values(SponsorshipStatus).join("', '")}'.`
+            },
+            gender: {
+                type: Type.STRING,
+                description: `Filter by gender. Possible values are: '${Object.values(Gender).join("', '")}'.`
+            },
+            sponsor_name: {
+                type: Type.STRING,
+                description: 'The full name of a sponsor to filter by. For example, if the query is "students sponsored by Hope Foundation", this should be "Hope Foundation".'
+            }
+        },
+    };
+
+    const systemInstruction = `You are an AI assistant for a student sponsorship dashboard. Your task is to convert natural language queries into a JSON object of filters. The available filters are defined in the response schema.
+- Only return a valid JSON object that adheres to the schema.
+- If a query is ambiguous or does not map to any filters, return an empty JSON object.
+- For status-based queries, use the exact values provided in the schema descriptions.
+- For name searches, use the 'search' field.
+- For sponsor-related queries, put the sponsor's name in the 'sponsor_name' field.
+- Examples:
+  - "show me unsponsored active girls" -> {"sponsorship_status": "Unsponsored", "student_status": "Active", "gender": "Female"}
+  - "find john doe" -> {"search": "john doe"}
+  - "who is sponsored by Global Outreach Inc." -> {"sponsor_name": "Global Outreach Inc."}
+  - "how many students are there" -> {}`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: query,
+            config: {
+                systemInstruction,
+                responseMimeType: 'application/json',
+                responseSchema,
+            },
+        });
+
+        const jsonString = response.text.trim();
+        return JSON.parse(jsonString);
+
+    } catch (error) {
+        console.error("Error querying AI for filters:", error);
+        throw new Error("The AI assistant could not process your request. Please try again.");
+    }
 };
 
 export const api = {
@@ -472,4 +534,5 @@ export const api = {
             body: JSON.stringify({ prompt, history: conversationHistory })
         });
     },
+    queryAIAssistantForStudentFilters,
 };
