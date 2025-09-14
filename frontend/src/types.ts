@@ -195,7 +195,7 @@ export interface AcademicReport {
     gradeLevel: string;
     // FIX: Made subjectsAndGrades optional to match form usage.
     subjectsAndGrades?: string | null;
-    overallAverage: number;
+    overallAverage?: number | null;
     passFailStatus: 'Pass' | 'Fail';
     // FIX: Made teacherComments optional to match form usage.
     teacherComments?: string | null;
