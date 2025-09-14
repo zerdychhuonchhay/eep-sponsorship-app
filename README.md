@@ -38,6 +38,8 @@ The application is architected with a modern React frontend and a robust Django 
 - **Routing**: React Router v6
 - **State Management**: React Context API for global state (Auth, UI, Data Lookups).
 - **Forms**: React Hook Form with Zod for schema-based validation.
+- **Testing**: Vitest for unit and integration testing.
+- **API Mocking**: Mock Service Worker (MSW) for development and testing.
 - **Data Visualization**: Recharts
 - **API Communication**: A custom Fetch-based client with automated JWT authentication and silent token refresh.
 
@@ -54,10 +56,16 @@ The application is architected with a modern React frontend and a robust Django 
 
 ## Key Architectural Concepts
 
+- **API Mocking (MSW)**: The frontend uses Mock Service Worker to intercept API requests during development and testing. This allows for rapid UI development and robust, isolated tests without depending on a live backend. Mocks are defined in `src/mocks/handlers.ts`.
+
 - **API Design**: The backend exposes a RESTful API with JSON responses using `snake_case` keys. The frontend's centralized API client automatically converts these to `camelCase` for idiomatic JavaScript usage.
+
 - **Authentication Flow**: The system uses a JWT-based authentication flow with short-lived access tokens (15 mins) and long-lived refresh tokens (7 days). The frontend features a silent, proactive token refresh mechanism to ensure a seamless user experience without interruptions.
+
 - **Role-Based Access Control (RBAC)**: The backend implements a powerful RBAC system by extending Django's built-in `Group` model with a `RoleProfile`. This profile stores a JSON object defining granular permissions (create, read, update, delete) for each application module. These permissions are sent to the frontend upon login and used to dynamically render the UI.
+
 - **AI Assistant**: The frontend sends user prompts to a dedicated backend endpoint. The backend then securely communicates with the Google Generative AI API, provides it with relevant context from the database, and processes the response. It can return either a natural language answer or a structured JSON payload to trigger actions on the frontend, like generating a report.
+
 - **Audit Logging**: Using Django Signals, the backend automatically creates `AuditLog` entries for all Create, Update, and Delete operations on key models, ensuring a comprehensive and automated paper trail of all data modifications.
 
 ## Getting Started
@@ -129,18 +137,27 @@ Follow these instructions to get the full-stack application running on your loca
     ```
 
 3.  **Set up environment variables:**
-    Create a `.env` file in the project root.
+    Create a `.env` file in the project root by copying the example.
+    ```bash
+    cp .env.example .env
     ```
-    # .env
-    VITE_API_BASE_URL=http://127.0.0.1:8000/api
-    ```
-    *Note: The `/api` path is important as it's defined in the backend's `urls.py`.*
+    The default configuration points to the local backend and has API mocking disabled.
 
 4.  **Run the development server:**
     ```bash
     npm run dev
     ```
     The frontend application will be available at `http://localhost:5173`. You can now log in with the superuser you created.
+
+### Running with API Mocking
+
+To run the frontend without a live backend, enable API mocking:
+1.  Open the `.env` file in the project root.
+2.  Change `VITE_API_MOCKING` to `enabled`:
+    ```
+    VITE_API_MOCKING=enabled
+    ```
+3.  Restart the Vite development server (`npm run dev`). The application will now use the mock API handlers defined in `src/mocks/handlers.ts`.
 
 ### Available Scripts
 

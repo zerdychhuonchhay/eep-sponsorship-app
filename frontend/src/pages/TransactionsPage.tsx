@@ -56,23 +56,23 @@ const TransactionForm: React.FC<{
     return (
         <form onSubmit={handleSubmit(onSave)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* FIX: Cast react-hook-form error message to string. */}
-                <FormInput label="Date" id="date" type="date" {...register('date')} error={errors.date?.message as string} />
-                {/* FIX: Cast react-hook-form error message to string. */}
-                <FormSelect label="Type" id="type" {...register('type')} error={errors.type?.message as string}>
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormInput label="Date" id="date" type="date" {...register('date')} error={errors.date?.message} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormSelect label="Type" id="type" {...register('type')} error={errors.type?.message}>
                     {Object.values(TransactionType).map((t: string) => <option key={t} value={t}>{t}</option>)}
                 </FormSelect>
                 <div className="md:col-span-2">
-                    {/* FIX: Cast react-hook-form error message to string. */}
-                    <FormInput label="Description" id="description" type="text" placeholder="Description of the transaction" {...register('description')} error={errors.description?.message as string} />
+                    {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                    <FormInput label="Description" id="description" type="text" placeholder="Description of the transaction" {...register('description')} error={errors.description?.message} />
                 </div>
-                {/* FIX: Cast react-hook-form error message to string. */}
-                <FormInput label="Location" id="location" type="text" placeholder="Location" {...register('location')} error={errors.location?.message as string} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormInput label="Location" id="location" type="text" placeholder="Location" {...register('location')} error={errors.location?.message} />
                 {/* FIX: Added `valueAsNumber: true` to ensure the form passes a number to the validation schema. */}
-                {/* FIX: Cast react-hook-form error message to string. */}
-                <FormInput label="Amount" id="amount" type="number" step="0.01" placeholder="0.00" {...register('amount', { valueAsNumber: true })} error={errors.amount?.message as string} />
-                {/* FIX: Cast react-hook-form error message to string. */}
-                <FormSelect label="Category" id="category" {...register('category')} error={errors.category?.message as string}>
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormInput label="Amount" id="amount" type="number" step="0.01" placeholder="0.00" {...register('amount', { valueAsNumber: true })} error={errors.amount?.message} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormSelect label="Category" id="category" {...register('category')} error={errors.category?.message}>
                     {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </FormSelect>
             </div>
