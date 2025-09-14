@@ -5,6 +5,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
 export const filingSchema = z.object({
+    id: z.string().optional(),
     documentName: z.string().min(1, 'Document name is required.'),
     authority: z.string().min(1, 'Authority is required.'),
     dueDate: z.string().min(1, 'Due date is required.').refine(val => !isNaN(Date.parse(val)), { message: 'A valid date is required.' }),

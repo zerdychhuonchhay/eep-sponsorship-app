@@ -5,10 +5,10 @@ import { AcademicReport } from '../types.ts';
 import { FormInput, FormSelect, FormTextArea } from './forms/FormControls.tsx';
 import Button from './ui/Button.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
-import { academicReportSchema, AcademicReportFormData } from '@/schemas/academicReportSchema.ts';
+import { academicReportSchema, AcademicReportFormData } from '@/components/schemas/academicReportSchema.ts';
 
 interface AcademicReportFormProps {
-    onSave: (data: AcademicReportFormData, studentId: string) => void;
+    onSave: (data: AcademicReportFormData) => void;
     onCancel: () => void;
     initialData?: AcademicReport | null;
     studentId?: string; // Pre-selected student ID
@@ -44,7 +44,7 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
             alert('Please select a student.');
             return;
         }
-        onSave(data, data.studentId);
+        onSave(data);
     };
 
     return (
@@ -65,7 +65,7 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput label="Report Period (e.g., Term 1 2024)" id="reportPeriod" {...register('reportPeriod')} required error={errors.reportPeriod?.message as string} />
                 <FormInput label="Grade Level" id="gradeLevel" {...register('gradeLevel')} required error={errors.gradeLevel?.message as string} />
-                <FormInput label="Overall Average" id="overallAverage" type="number" step="0.1" {...register('overallAverage')} error={errors.overallAverage?.message as string} />
+                <FormInput label="Overall Average" id="overallAverage" type="number" step="0.1" {...register('overallAverage', { valueAsNumber: true })} error={errors.overallAverage?.message as string} />
                 <FormSelect label="Pass/Fail Status" id="passFailStatus" {...register('passFailStatus')} error={errors.passFailStatus?.message as string}>
                     <option value="Pass">Pass</option>
                     <option value="Fail">Fail</option>

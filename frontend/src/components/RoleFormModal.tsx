@@ -1,8 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Role } from '@/types.ts';
 import Modal from './Modal.tsx';
 import { FormInput } from './forms/FormControls.tsx';
 import Button from './ui/Button.tsx';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const roleSchema = z.object({
+    name: z.string().min(1, 'Role name is required.'),
+});
+
+type RoleFormData = z.infer<typeof roleSchema>;
 
 interface RoleFormModalProps {
     isOpen: boolean;
@@ -20,17 +29,19 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
     isSubmitting,
 }) => {
     const isEdit = !!initialData;
-    const [name, setName] = useState('');
+    
+    const { register, handleSubmit, formState: { errors }, reset } = useForm<RoleFormData>({
+        resolver: zodResolver(roleSchema),
+    });
 
     useEffect(() => {
         if (isOpen) {
-            setName(initialData?.name || '');
+            reset({ name: initialData?.name || '' });
         }
-    }, [isOpen, initialData]);
+    }, [isOpen, initialData, reset]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave(name);
+    const onSubmit = (data: RoleFormData) => {
+        onSave(data.name);
     };
 
     return (
@@ -39,16 +50,14 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
             onClose={onClose}
             title={isEdit ? `Edit Role: ${initialData.name}` : 'Add New Role'}
         >
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <FormInput
                     label="Role Name"
                     id="roleName"
-                    name="roleName"
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
                     placeholder="e.g., Accountant"
+                    {...register('name')}
+                    error={errors.name?.message}
                 />
                 <div className="flex justify-end space-x-2 pt-4">
                     <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>

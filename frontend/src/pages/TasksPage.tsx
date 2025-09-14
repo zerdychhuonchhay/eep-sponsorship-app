@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../services/api.ts';
 import { Task, TaskStatus, TaskPriority, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
@@ -19,43 +17,61 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
-import { taskSchema, TaskFormData } from '@/schemas/taskSchema.ts';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { taskSchema, TaskFormData } from '@/components/schemas/taskSchema.ts';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
     onCancel: () => void; 
     initialData?: Task | null;
-    isSubmitting: boolean;
-}> = ({ onSave, onCancel, initialData, isSubmitting }) => {
+    isApiSubmitting: boolean;
+}> = ({ onSave, onCancel, initialData, isApiSubmitting }) => {
     const isEdit = !!initialData;
     
-    const { register, handleSubmit, formState: { errors } } = useForm<TaskFormData>({
+    const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<TaskFormData>({
         resolver: zodResolver(taskSchema),
         defaultValues: {
-            title: initialData?.title || '',
-            description: initialData?.description || '',
-            dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
-            priority: initialData?.priority || TaskPriority.MEDIUM,
-            status: initialData?.status || TaskStatus.TO_DO,
+            title: '',
+            description: '',
+            dueDate: new Date().toISOString().split('T')[0],
+            priority: TaskPriority.MEDIUM,
+            status: TaskStatus.TO_DO,
         }
     });
 
+    useEffect(() => {
+        if (isEdit && initialData) {
+            reset({
+                ...initialData,
+                dueDate: initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
+            });
+        }
+    }, [isEdit, initialData, reset]);
+
+    const isFormSubmitting = isSubmitting || isApiSubmitting;
+
     return (
         <form onSubmit={handleSubmit(onSave)} className="space-y-4">
-            <FormInput label="Title" id="title" type="text" {...register('title')} required error={errors.title?.message as string} />
+            {/* FIX: Cast react-hook-form error message to string. */}
+            <FormInput label="Title" id="title" type="text" {...register('title')} error={errors.title?.message as string} />
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormTextArea label="Description" id="description" {...register('description')} error={errors.description?.message as string} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormInput label="Due Date" id="dueDate" type="date" {...register('dueDate')} required error={errors.dueDate?.message as string} />
+                {/* FIX: Cast react-hook-form error message to string. */}
+                <FormInput label="Due Date" id="dueDate" type="date" {...register('dueDate')} error={errors.dueDate?.message as string} />
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormSelect label="Priority" id="priority" {...register('priority')} error={errors.priority?.message as string}>
                     {Object.values(TaskPriority).map((p: string) => <option key={p} value={p}>{p}</option>)}
                 </FormSelect>
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message as string}>
                     {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
-                <Button type="submit" isLoading={isSubmitting}>{isEdit ? 'Update Task' : 'Save Task'}</Button>
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={isFormSubmitting}>Cancel</Button>
+                <Button type="submit" isLoading={isFormSubmitting}>{isEdit ? 'Update Task' : 'Save Task'}</Button>
             </div>
         </form>
     );
@@ -65,7 +81,7 @@ const TaskForm: React.FC<{
 const TasksPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Task> | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isApiSubmitting, setIsApiSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const { showToast } = useNotification();
@@ -101,7 +117,7 @@ const TasksPage: React.FC = () => {
     }, [fetchTasks]);
     
     const handleSaveTask = async (taskData: TaskFormData) => {
-        setIsSubmitting(true);
+        setIsApiSubmitting(true);
         try {
             if (editingTask) {
                 await api.updateTask({ ...taskData, id: editingTask.id });
@@ -116,7 +132,7 @@ const TasksPage: React.FC = () => {
         } catch (error: any) {
             showToast(error.message || 'Failed to save task.', 'error');
         } finally {
-            setIsSubmitting(false);
+            setIsApiSubmitting(false);
         }
     };
     
@@ -259,7 +275,7 @@ const TasksPage: React.FC = () => {
                     onSave={handleSaveTask}
                     onCancel={() => { setIsAdding(false); setEditingTask(null); }}
                     initialData={editingTask}
-                    isSubmitting={isSubmitting}
+                    isApiSubmitting={isApiSubmitting}
                 />
             </Modal>
         </div>

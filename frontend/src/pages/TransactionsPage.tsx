@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../services/api.ts';
 import { Transaction, TransactionType, PaginatedResponse, StudentLookup } from '../types.ts';
 import Modal from '../components/Modal.tsx';
@@ -20,58 +18,71 @@ import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
-import { transactionSchema, TransactionFormData } from '@/schemas/transactionSchema.ts';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { transactionSchema, TransactionFormData } from '@/components/schemas/transaction.ts';
 
 const TransactionForm: React.FC<{ 
-    onSave: (transaction: TransactionFormData | (TransactionFormData & { id: string })) => void;
+    onSave: (transaction: TransactionFormData) => void; 
     onCancel: () => void; 
     students: StudentLookup[],
     categories: string[],
     initialData?: Transaction | null;
     isSubmitting: boolean;
-}> = ({ onSave, onCancel, students, categories, initialData, isSubmitting }) => {
+}> = ({ onSave, onCancel, students, categories, initialData, isSubmitting: isApiSubmitting }) => {
     const isEdit = !!initialData;
-
-    const { register, handleSubmit, formState: { errors } } = useForm<TransactionFormData>({
-        resolver: zodResolver(transactionSchema),
-        defaultValues: {
-            date: initialData ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            description: initialData?.description || '',
-            location: initialData?.location || '',
-            amount: initialData?.amount || undefined,
-            type: initialData?.type || TransactionType.EXPENSE,
-            category: initialData?.category || (categories.length > 3 ? categories[3] : ''),
-            studentId: initialData?.studentId || ''
-        }
+    
+    const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<TransactionFormData>({
+      resolver: zodResolver(transactionSchema),
+      defaultValues: {
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        location: '',
+        amount: 0,
+        type: TransactionType.EXPENSE,
+        category: categories.length > 3 ? categories[3] : '',
+        studentId: ''
+      }
     });
 
-    const onSubmit = (data: TransactionFormData) => {
-        onSave(isEdit && initialData ? { ...data, id: initialData.id } : data);
-    };
+    useEffect(() => {
+        if (isEdit && initialData) {
+            reset({ ...initialData, date: new Date(initialData.date).toISOString().split('T')[0] });
+        }
+    }, [isEdit, initialData, reset]);
+
+    const isFormSubmitting = isSubmitting || isApiSubmitting;
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSave)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput label="Date" id="date" type="date" {...register('date')} required error={errors.date?.message as string} />
+                {/* FIX: Cast react-hook-form error message to string. */}
+                <FormInput label="Date" id="date" type="date" {...register('date')} error={errors.date?.message as string} />
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormSelect label="Type" id="type" {...register('type')} error={errors.type?.message as string}>
                     {Object.values(TransactionType).map((t: string) => <option key={t} value={t}>{t}</option>)}
                 </FormSelect>
                 <div className="md:col-span-2">
-                    <FormInput label="Description" id="description" type="text" placeholder="Description of the transaction" {...register('description')} required error={errors.description?.message as string} />
+                    {/* FIX: Cast react-hook-form error message to string. */}
+                    <FormInput label="Description" id="description" type="text" placeholder="Description of the transaction" {...register('description')} error={errors.description?.message as string} />
                 </div>
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Location" id="location" type="text" placeholder="Location" {...register('location')} error={errors.location?.message as string} />
-                <FormInput label="Amount" id="amount" type="number" step="0.01" placeholder="0.00" {...register('amount')} required error={errors.amount?.message as string} />
-                <FormSelect label="Category" id="category" {...register('category')} required error={errors.category?.message as string}>
+                {/* FIX: Added `valueAsNumber: true` to ensure the form passes a number to the validation schema. */}
+                {/* FIX: Cast react-hook-form error message to string. */}
+                <FormInput label="Amount" id="amount" type="number" step="0.01" placeholder="0.00" {...register('amount', { valueAsNumber: true })} error={errors.amount?.message as string} />
+                {/* FIX: Cast react-hook-form error message to string. */}
+                <FormSelect label="Category" id="category" {...register('category')} error={errors.category?.message as string}>
                     {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </FormSelect>
             </div>
-            <FormSelect label="Associated Student (Optional)" id="studentId" {...register('studentId')} error={errors.studentId?.message as string}>
+            <FormSelect label="Associated Student (Optional)" id="studentId" {...register('studentId')}>
                 <option value="">None</option>
                 {students.map(s => <option key={s.studentId} value={s.studentId}>{s.firstName} {s.lastName} ({s.studentId})</option>)}
             </FormSelect>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
-                <Button type="submit" isLoading={isSubmitting}>{isEdit ? 'Update Transaction' : 'Save Transaction'}</Button>
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={isFormSubmitting}>Cancel</Button>
+                <Button type="submit" isLoading={isFormSubmitting}>{isEdit ? 'Update Transaction' : 'Save Transaction'}</Button>
             </div>
         </form>
     );
@@ -82,7 +93,7 @@ const TransactionsPage: React.FC = () => {
     const { studentLookup: students } = useData();
     const [categories, setCategories] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isApiSubmitting, setIsApiSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const { showToast } = useNotification();
@@ -121,11 +132,11 @@ const TransactionsPage: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
-    const handleSave = async (transaction: TransactionFormData | (TransactionFormData & { id: string })) => {
-        setIsSubmitting(true);
+    const handleSave = async (transaction: TransactionFormData) => {
+        setIsApiSubmitting(true);
         try {
-            if ('id' in transaction) {
-                await api.updateTransaction(transaction as Transaction);
+            if (editingTransaction) {
+                await api.updateTransaction({ ...transaction, id: editingTransaction.id } as Transaction);
                 showToast('Transaction updated successfully!', 'success');
             } else {
                 await api.addTransaction(transaction);
@@ -137,7 +148,7 @@ const TransactionsPage: React.FC = () => {
         } catch (error: any) {
             showToast(error.message || 'Failed to save transaction.', 'error');
         } finally {
-            setIsSubmitting(false);
+            setIsApiSubmitting(false);
         }
     };
     
@@ -203,22 +214,32 @@ const TransactionsPage: React.FC = () => {
                             </thead>
                             <tbody>
                                 {transactions.length > 0 ? transactions.map((t) => {
-                                     const actionItems = [];
-                                     if(canUpdate) {
-                                         actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
-                                     }
-                                     if(canDelete) {
-                                         actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
-                                     }
+                                    const student = students.find(s => s.studentId === t.studentId);
+                                    const actionItems = [];
+                                    if (canUpdate) {
+                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
+                                    }
+                                    if (canDelete) {
+                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
+                                    }
 
-                                     return (
+                                    return (
                                         <tr key={t.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(t.date).toLocaleDateString()}</td>
-                                            <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{t.description}</td>
+                                            <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{new Date(t.date).toLocaleDateString()}</td>
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                <p className="font-medium text-black dark:text-white">{t.description}</p>
+                                                {student && (
+                                                    <p className="text-sm text-body-color dark:text-gray-300">
+                                                        For: {student.firstName} {student.lastName}
+                                                    </p>
+                                                )}
+                                            </td>
                                             <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{t.category}</td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={t.type} /></td>
-                                            <td className={`py-5 px-4 text-right font-medium border-b border-stroke dark:border-strokedark ${t.type === 'Income' ? 'text-success' : 'text-danger'}`}>
-                                                {t.type === 'Income' ? '+' : '-'}${Number(t.amount).toFixed(2)}
+                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                                <Badge type={t.type} />
+                                            </td>
+                                            <td className={`py-5 px-4 font-medium text-right border-b border-stroke dark:border-strokedark ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
+                                                ${Number(t.amount).toFixed(2)}
                                             </td>
                                             <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
                                                 {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
@@ -228,27 +249,27 @@ const TransactionsPage: React.FC = () => {
                                 }) : (
                                     <tr>
                                         <td colSpan={6}>
-                                           <EmptyState title="No Transactions Found" />
+                                            <EmptyState title="No Transactions Found" />
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
-                    
+
                     {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
                 </CardContent>
             </Card>
 
-            <Modal isOpen={isAdding || !!editingTransaction} onClose={() => { setIsAdding(false); setEditingTransaction(null); }}>
+            <Modal isOpen={isAdding || !!editingTransaction} onClose={() => { setIsAdding(false); setEditingTransaction(null); }} title={editingTransaction ? 'Edit Transaction' : 'Log a New Transaction'}>
                 <TransactionForm 
                     key={editingTransaction ? editingTransaction.id : 'new-transaction'}
                     onSave={handleSave} 
-                    onCancel={() => { setIsAdding(false); setEditingTransaction(null); }}
+                    onCancel={() => { setIsAdding(false); setEditingTransaction(null); }} 
                     students={students}
                     categories={categories}
                     initialData={editingTransaction}
-                    isSubmitting={isSubmitting}
+                    isSubmitting={isApiSubmitting}
                 />
             </Modal>
         </div>

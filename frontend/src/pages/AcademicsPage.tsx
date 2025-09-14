@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { AcademicReport, PaginatedResponse } from '../types.ts';
@@ -6,6 +8,7 @@ import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../co
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable } from '../components/SkeletonLoader.tsx';
 import AcademicReportForm from '../components/AcademicReportForm.tsx';
+import { AcademicReportFormData } from '@/components/schemas/academicReportSchema.ts';
 import { useTableControls } from '../hooks/useTableControls.ts';
 import Pagination from '../components/Pagination.tsx';
 import AdvancedFilter, { FilterOption } from '../components/AdvancedFilter.tsx';
@@ -17,8 +20,6 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
-
-type ReportFormData = Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>;
 
 const AcademicsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AcademicReport> | null>(null);
@@ -64,14 +65,15 @@ const AcademicsPage: React.FC = () => {
         fetchAllData();
     }, [fetchAllData]);
 
-    const handleSaveReport = async (formData: ReportFormData, studentId: string) => {
+    const handleSaveReport = async (formData: AcademicReportFormData) => {
         setIsSubmitting(true);
         try {
+            const { studentId, ...reportData } = formData;
             if (modalState === 'edit' && selectedReport) {
-                await api.updateAcademicReport(selectedReport.id, formData);
+                await api.updateAcademicReport(selectedReport.id, reportData);
                 showToast('Report updated successfully!', 'success');
             } else {
-                await api.addAcademicReport(studentId, formData);
+                await api.addAcademicReport(studentId, reportData);
                 showToast('Report added successfully!', 'success');
             }
             setModalState(null);
@@ -159,7 +161,7 @@ const AcademicsPage: React.FC = () => {
                                             <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{report.studentName}</td>
                                             <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.reportPeriod}</td>
                                             <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.gradeLevel}</td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage.toFixed(1)}%</td>
+                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
                                             <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
                                                 <Badge type={report.passFailStatus} />
                                             </td>
