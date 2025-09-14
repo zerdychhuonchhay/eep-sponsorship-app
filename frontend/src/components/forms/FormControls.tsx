@@ -130,7 +130,7 @@ export const FormSection: React.FC<{ title: string; children: React.ReactNode; c
 
 export const FormSubSection: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
     <div className={`rounded-sm border border-stroke bg-gray-2 dark:bg-box-dark-2 p-4 md:col-span-2 ${className}`}>
-         <h4 className="font-medium text-black dark:text-white mb-3">{title}</h4>
+         <h4 className="font-medium text-black dark:text-white mb-3"></h4>
          <div className="space-y-4">
             {children}
          </div>

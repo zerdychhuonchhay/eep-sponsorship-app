@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '../services/api.ts';
 import { GovernmentFiling, FilingStatus, PaginatedResponse } from '../types.ts';
 import Modal from '../components/Modal.tsx';
@@ -19,25 +17,27 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
-import { filingSchema, FilingFormData } from '@/schemas/filingSchema.ts';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { filingSchema, FilingFormData } from '@/components/schemas/filingSchema.ts';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
-    onSave: (filing: FilingFormData & { id?: string }) => void;
+    onSave: (filing: any) => void; 
     onCancel: () => void;
-    isSubmitting: boolean;
-}> = ({ filing, onSave, onCancel, isSubmitting }) => {
+    isApiSubmitting: boolean;
+}> = ({ filing, onSave, onCancel, isApiSubmitting }) => {
     const isEdit = !!filing;
-    
-    const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FilingFormData>({
+    const [file, setFile] = useState<File | null>(null);
+
+    const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch, setValue } = useForm<FilingFormData>({
         resolver: zodResolver(filingSchema),
         defaultValues: {
-            documentName: filing?.documentName || '',
-            authority: filing?.authority || '',
-            dueDate: filing ? new Date(filing.dueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            submissionDate: filing?.submissionDate ? new Date(filing.submissionDate).toISOString().split('T')[0] : '',
-            status: filing?.status || FilingStatus.PENDING,
-            attachedFile: undefined
+            documentName: '',
+            authority: '',
+            dueDate: new Date().toISOString().split('T')[0],
+            submissionDate: '',
+            status: FilingStatus.PENDING,
         }
     });
 
@@ -47,31 +47,52 @@ const FilingForm: React.FC<{
     useEffect(() => {
         if (submissionDate && status !== FilingStatus.SUBMITTED) {
             setValue('status', FilingStatus.SUBMITTED);
-        } else if (!submissionDate && status === FilingStatus.SUBMITTED) {
-            setValue('status', FilingStatus.PENDING);
+        } else if (!submissionDate && status !== FilingStatus.PENDING) {
+             setValue('status', FilingStatus.PENDING);
         }
     }, [submissionDate, status, setValue]);
 
-    const onSubmit = (data: FilingFormData) => {
-        onSave(isEdit && filing ? { ...data, id: filing.id } : data);
+    useEffect(() => {
+        if (isEdit && filing) {
+            reset({
+                ...filing,
+                dueDate: new Date(filing.dueDate).toISOString().split('T')[0],
+                submissionDate: filing.submissionDate ? new Date(filing.submissionDate).toISOString().split('T')[0] : '',
+            });
+        }
+    }, [isEdit, filing, reset]);
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if(e.target.files) setFile(e.target.files[0]);
     };
+
+    const onSubmit = (data: FilingFormData) => {
+        onSave({...data, attached_file: file || filing?.attachedFile });
+    };
+
+    const isFormSubmitting = isSubmitting || isApiSubmitting;
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <FormInput label="Document Name" type="text" id="documentName" {...register('documentName')} required error={errors.documentName?.message as string} />
-            <FormInput label="Authority" type="text" id="authority" {...register('authority')} required error={errors.authority?.message as string} />
-            <FormInput label="Due Date" type="date" id="dueDate" {...register('dueDate')} required error={errors.dueDate?.message as string} />
+            {/* FIX: Cast react-hook-form error message to string. */}
+            <FormInput label="Document Name" type="text" id="documentName" {...register('documentName')} error={errors.documentName?.message as string} />
+            {/* FIX: Cast react-hook-form error message to string. */}
+            <FormInput label="Authority" type="text" id="authority" {...register('authority')} error={errors.authority?.message as string} />
+            {/* FIX: Cast react-hook-form error message to string. */}
+            <FormInput label="Due Date" type="date" id="dueDate" {...register('dueDate')} error={errors.dueDate?.message as string} />
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message as string}>
                 {Object.values(FilingStatus).map((s: FilingStatus) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormInput label="Submission Date" type="date" id="submissionDate" {...register('submissionDate')} error={errors.submissionDate?.message as string} />
             <div>
-                <FormInput label="Attach File" type="file" id="attached_file" {...register('attachedFile')} error={errors.attachedFile?.message as string} />
-                {filing?.attachedFile && typeof filing.attachedFile === 'string' && <p className="text-xs mt-1 text-body-color dark:text-gray-300">Current file: <a href={filing.attachedFile} target="_blank" rel="noopener noreferrer" className="text-primary underline">{filing.attachedFile.split('/').pop()}</a></p>}
+                <FormInput label="Attach File" type="file" id="attached_file" onChange={handleFileChange} />
+                {filing?.attachedFile && typeof filing.attachedFile === 'string' && <p className="text-xs mt-1 text-body-color dark:text-gray-300">Current file: {filing.attachedFile}</p>}
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
-                <Button type="submit" isLoading={isSubmitting}>{isEdit ? 'Update Filing' : 'Save Filing'}</Button>
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={isFormSubmitting}>Cancel</Button>
+                <Button type="submit" isLoading={isFormSubmitting}>{isEdit ? 'Update Filing' : 'Save Filing'}</Button>
             </div>
         </form>
     );
@@ -80,7 +101,7 @@ const FilingForm: React.FC<{
 const FilingsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<GovernmentFiling> | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isApiSubmitting, setIsApiSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [selectedFiling, setSelectedFiling] = useState<GovernmentFiling | null>(null);
     const { showToast } = useNotification();
@@ -114,20 +135,14 @@ const FilingsPage: React.FC = () => {
         fetchFilings();
     }, [fetchFilings]);
     
-    const handleSave = async (formData: FilingFormData & { id?: string }) => {
-        setIsSubmitting(true);
+    const handleSave = async (filingData: GovernmentFiling | Omit<GovernmentFiling, 'id'>) => {
+        setIsApiSubmitting(true);
         try {
-            const file = formData.attachedFile instanceof FileList ? formData.attachedFile[0] : undefined;
-            const dataToSubmit = {
-                ...formData,
-                attached_file: file || (typeof formData.attachedFile === 'string' ? formData.attachedFile : undefined),
-            };
-
-            if (dataToSubmit.id) {
-                await api.updateFiling(dataToSubmit as GovernmentFiling & { attached_file?: File | string });
+            if ('id' in filingData) { // Update
+                await api.updateFiling(filingData as GovernmentFiling & { attached_file?: File | string });
                 showToast('Filing updated successfully!', 'success');
-            } else {
-                await api.addFiling(dataToSubmit);
+            } else { // Create
+                await api.addFiling(filingData as Omit<GovernmentFiling, 'id'> & { attached_file?: File | string });
                 showToast('Filing added successfully!', 'success');
             }
             setSelectedFiling(null);
@@ -136,7 +151,7 @@ const FilingsPage: React.FC = () => {
         } catch (error: any) {
             showToast(error.message || 'Failed to save filing.', 'error');
         } finally {
-            setIsSubmitting(false);
+            setIsApiSubmitting(false);
         }
     };
 
@@ -243,7 +258,7 @@ const FilingsPage: React.FC = () => {
                     filing={selectedFiling} 
                     onSave={handleSave} 
                     onCancel={() => { setIsAdding(false); setSelectedFiling(null); }}
-                    isSubmitting={isSubmitting}
+                    isApiSubmitting={isApiSubmitting}
                 />
             </Modal>
         </div>

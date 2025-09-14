@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Sponsor } from '@/types.ts';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
-import { sponsorSchema, SponsorFormData } from '@/schemas/sponsorSchema.ts';
+import { sponsorSchema, SponsorFormData } from '@/components/schemas/sponsorSchema.ts';
+
 
 interface SponsorFormProps {
     onSave: (sponsor: SponsorFormData | (SponsorFormData & { id: string })) => void; 

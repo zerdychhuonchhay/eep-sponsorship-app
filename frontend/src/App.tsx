@@ -21,7 +21,6 @@ import LoginPage from './pages/LoginPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import SignupPage from './pages/SignupPage.tsx';
-import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 const AuditLogPage = React.lazy(() => import('@/pages/AuditLogPage.tsx'));
 const SponsorsPage = React.lazy(() => import('@/pages/SponsorsPage.tsx'));
@@ -107,11 +106,7 @@ const App: React.FC = () => (
                                 <Route path="/signup" element={<SignupPage />} />
                                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                                 <Route element={<ProtectedRoute />}>
-                                    <Route path="/*" element={
-                                        <ErrorBoundary>
-                                            <AppContent />
-                                        </ErrorBoundary>
-                                    } />
+                                    <Route path="/*" element={<AppContent />} />
                                 </Route>
                             </Routes>
                             <Toast />
