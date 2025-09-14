@@ -32,7 +32,6 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput 
                 label="Sponsor Name" 
                 id="name" 
@@ -42,7 +41,6 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData
                 required
                 error={errors.name?.message}
             />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput 
                 label="Email" 
                 id="email" 
@@ -52,7 +50,6 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData
                 required
                 error={errors.email?.message}
             />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput 
                 label="Sponsorship Start Date" 
                 id="sponsorshipStartDate" 

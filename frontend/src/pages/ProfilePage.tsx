@@ -7,39 +7,52 @@ import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
 import { api } from '@/services/api.ts';
 import { UserIcon } from '@/components/Icons.tsx';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const profileSchema = z.object({
+    username: z.string().min(1, 'Username is required.'),
+    email: z.string().email('Please enter a valid email address.'),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
+
+const passwordSchema = z.object({
+    oldPassword: z.string().min(1, 'Current password is required.'),
+    newPassword1: z.string().min(6, 'New password must be at least 6 characters.'),
+    newPassword2: z.string(),
+}).refine(data => data.newPassword1 === data.newPassword2, {
+    message: "New passwords do not match.",
+    path: ['newPassword2'],
+});
+
+type PasswordFormData = z.infer<typeof passwordSchema>;
+
 
 const ProfilePage: React.FC = () => {
     const { user, refreshUser } = useAuth();
     const { showToast } = useNotification();
     
-    // State for profile information
-    const [profileData, setProfileData] = useState({ username: '', email: '' });
     const [photoFile, setPhotoFile] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
-
-    // State for password change
-    const [passwordData, setPasswordData] = useState({
-        oldPassword: '',
-        newPassword1: '',
-        newPassword2: '',
-    });
-    const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
     const [passwordError, setPasswordError] = useState('');
+
+    const { register: registerProfile, handleSubmit: handleProfileSubmit, formState: { errors: profileErrors }, reset: resetProfile } = useForm<ProfileFormData>({
+        resolver: zodResolver(profileSchema),
+    });
+
+    const { register: registerPassword, handleSubmit: handlePasswordSubmit, formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting }, reset: resetPassword } = useForm<PasswordFormData>({
+        resolver: zodResolver(passwordSchema),
+    });
 
     useEffect(() => {
         if (user) {
-            setProfileData({
-                username: user.username,
-                email: user.email,
-            });
+            resetProfile({ username: user.username, email: user.email });
             setPhotoPreview(user.profilePhoto || null);
         }
-    }, [user]);
-
-    const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setProfileData({ ...profileData, [e.target.name]: e.target.value });
-    };
+    }, [user, resetProfile]);
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -53,18 +66,11 @@ const ProfilePage: React.FC = () => {
         }
     };
 
-
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
-    };
-
-    const handleProfileSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onProfileSubmit = async (data: ProfileFormData) => {
         setIsProfileSubmitting(true);
-        
         const formData = new FormData();
-        formData.append('username', profileData.username);
-        formData.append('email', profileData.email);
+        formData.append('username', data.username);
+        formData.append('email', data.email);
         if (photoFile) {
             formData.append('profile_photo', photoFile);
         }
@@ -81,29 +87,15 @@ const ProfilePage: React.FC = () => {
         }
     };
 
-    const handlePasswordSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onPasswordSubmit = async (data: PasswordFormData) => {
         setPasswordError('');
-
-        if (passwordData.newPassword1 !== passwordData.newPassword2) {
-            setPasswordError('New passwords do not match.');
-            return;
-        }
-        if (!passwordData.oldPassword || !passwordData.newPassword1) {
-            setPasswordError('All password fields are required.');
-            return;
-        }
-
-        setIsPasswordSubmitting(true);
         try {
-            const response = await api.changePassword(passwordData);
+            const response = await api.changePassword(data);
             showToast(response.detail || 'Password changed successfully!', 'success');
-            setPasswordData({ oldPassword: '', newPassword1: '', newPassword2: '' });
+            resetPassword({ oldPassword: '', newPassword1: '', newPassword2: '' });
         } catch (error: any) {
             setPasswordError(error.message || 'Failed to change password.');
             showToast(error.message || 'Failed to change password.', 'error');
-        } finally {
-            setIsPasswordSubmitting(false);
         }
     };
 
@@ -118,7 +110,7 @@ const ProfilePage: React.FC = () => {
                 <Card>
                     <CardContent>
                         <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Profile Information</h3>
-                        <form onSubmit={handleProfileSubmit} className="space-y-4">
+                        <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-4">
                             <div className="flex items-center gap-4">
                                 {photoPreview ? (
                                     <img src={photoPreview} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
@@ -130,7 +122,6 @@ const ProfilePage: React.FC = () => {
                                 <FormInput
                                     label="Change Profile Photo"
                                     id="profilePhoto"
-                                    name="profilePhoto"
                                     type="file"
                                     onChange={handlePhotoChange}
                                     accept="image/*"
@@ -139,20 +130,16 @@ const ProfilePage: React.FC = () => {
                             <FormInput
                                 label="Username"
                                 id="username"
-                                name="username"
                                 type="text"
-                                value={profileData.username}
-                                onChange={handleProfileChange}
-                                required
+                                {...registerProfile('username')}
+                                error={profileErrors.username?.message}
                             />
                             <FormInput
                                 label="Email"
                                 id="email"
-                                name="email"
                                 type="email"
-                                value={profileData.email}
-                                onChange={handleProfileChange}
-                                required
+                                {...registerProfile('email')}
+                                error={profileErrors.email?.message}
                             />
                             <div className="flex justify-end">
                                 <Button type="submit" isLoading={isProfileSubmitting}>
@@ -166,36 +153,30 @@ const ProfilePage: React.FC = () => {
                 <Card>
                     <CardContent>
                         <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Change Password</h3>
-                        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                        <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-4">
                             <FormInput
                                 label="Current Password"
                                 id="oldPassword"
-                                name="oldPassword"
                                 type="password"
-                                value={passwordData.oldPassword}
-                                onChange={handlePasswordChange}
-                                required
                                 autoComplete="current-password"
+                                {...registerPassword('oldPassword')}
+                                error={passwordErrors.oldPassword?.message}
                             />
                             <FormInput
                                 label="New Password"
                                 id="newPassword1"
-                                name="newPassword1"
                                 type="password"
-                                value={passwordData.newPassword1}
-                                onChange={handlePasswordChange}
-                                required
                                 autoComplete="new-password"
+                                {...registerPassword('newPassword1')}
+                                error={passwordErrors.newPassword1?.message}
                             />
                             <FormInput
                                 label="Confirm New Password"
                                 id="newPassword2"
-                                name="newPassword2"
                                 type="password"
-                                value={passwordData.newPassword2}
-                                onChange={handlePasswordChange}
-                                required
                                 autoComplete="new-password"
+                                {...registerPassword('newPassword2')}
+                                error={passwordErrors.newPassword2?.message}
                             />
                              {passwordError && <p className="text-sm text-danger">{passwordError}</p>}
                             <div className="flex justify-end">
