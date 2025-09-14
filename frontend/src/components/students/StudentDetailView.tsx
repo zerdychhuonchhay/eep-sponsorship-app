@@ -154,7 +154,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                                         <tr key={report.id} className="border-b border-stroke dark:border-strokedark last:border-b-0">
                                             <td className="py-3 px-4 text-black dark:text-white">{report.reportPeriod}</td>
                                             <td className="py-3 px-4 text-body-color dark:text-gray-300">{report.gradeLevel}</td>
-                                            <td className="py-3 px-4 text-body-color dark:text-gray-300">{report.overallAverage.toFixed(1)}%</td>
+                                            <td className="py-3 px-4 text-body-color dark:text-gray-300">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
                                             <td className="py-3 px-4"><Badge type={report.passFailStatus} /></td>
                                         </tr>
                                     ))}
