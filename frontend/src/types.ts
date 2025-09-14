@@ -194,11 +194,11 @@ export interface AcademicReport {
     reportPeriod: string;
     gradeLevel: string;
     // FIX: Made subjectsAndGrades optional to match form usage.
-    subjectsAndGrades?: string;
+    subjectsAndGrades?: string | null;
     overallAverage: number;
     passFailStatus: 'Pass' | 'Fail';
     // FIX: Made teacherComments optional to match form usage.
-    teacherComments?: string;
+    teacherComments?: string | null;
 }
 
 export interface FollowUpRecord {
@@ -255,11 +255,11 @@ export interface Transaction {
     date: string;
     description: string;
     // FIX: Made location optional to match form usage.
-    location?: string;
+    location?: string | null;
     amount: number;
     type: TransactionType;
     category: string;
-    studentId?: string;
+    studentId?: string | null;
 }
 
 export enum FilingStatus {
@@ -293,7 +293,7 @@ export interface Task {
     id: string;
     title: string;
     // FIX: Made description optional to match form usage.
-    description?: string;
+    description?: string | null;
     dueDate: string;
     priority: TaskPriority;
     status: TaskStatus;
