@@ -5,7 +5,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, SearchIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, SparklesIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -51,6 +51,8 @@ const StudentsPage: React.FC = () => {
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const { setIsBulkActionBarVisible } = useUI();
     const { canCreate, canUpdate } = usePermissions('students');
+    const [isAiSearching, setIsAiSearching] = useState(false);
+    const [aiSearchQuery, setAiSearchQuery] = useState('');
 
     const {
         sortConfig, currentPage, searchTerm, filters, apiQueryString,
@@ -186,6 +188,39 @@ const StudentsPage: React.FC = () => {
             showToast(error.message || 'Failed to perform bulk update.', 'error');
         }
     };
+
+    const handleAiSearch = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!aiSearchQuery.trim()) return;
+
+        setIsAiSearching(true);
+        try {
+            const aiFilters = await api.queryAIAssistantForStudentFilters(aiSearchQuery);
+            
+            const { search, sponsor_name, ...restFilters } = aiFilters;
+            
+            setSearchTerm(search || '');
+
+            const finalFilters = { ...restFilters };
+
+            if (sponsor_name) {
+                const sponsor = sponsorLookup.find(s => s.name.toLowerCase().includes(sponsor_name.toLowerCase()));
+                if (sponsor) {
+                    finalFilters.sponsor = String(sponsor.id);
+                } else {
+                    showToast(`Sponsor "${sponsor_name}" not found.`, 'info');
+                }
+            }
+            
+            applyFilters(finalFilters);
+            showToast('AI filters applied!', 'success');
+
+        } catch (error: any) {
+            showToast(error.message || 'AI search failed. Please try a different query.', 'error');
+        } finally {
+            setIsAiSearching(false);
+        }
+    };
     
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
     const isInitialLoadAndEmpty = !loading && studentsList.length === 0 && !Object.values(filters).some(Boolean) && !searchTerm;
@@ -231,21 +266,37 @@ const StudentsPage: React.FC = () => {
                     <Card>
                         <CardContent>
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                                <div className="relative w-full sm:w-1/2 md:w-1/3">
-                                   <input type="text" placeholder="Search students..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-5 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"/>
-                                   <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-body-color w-5 h-5" />
-                                </div>
+                                <form onSubmit={handleAiSearch} className="w-full sm:flex-grow flex items-center gap-2">
+                                    <div className="relative w-full">
+                                        <input
+                                            type="text"
+                                            placeholder="Search with AI (e.g., 'show all unsponsored girls')"
+                                            value={aiSearchQuery}
+                                            onChange={e => setAiSearchQuery(e.target.value)}
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-4 pr-10 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <SparklesIcon className="text-body-color w-5 h-5"/>
+                                        </div>
+                                    </div>
+                                    <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()}>
+                                        Search
+                                    </Button>
+                                </form>
                                  <AdvancedFilter
                                     filterOptions={filterOptions}
                                     currentFilters={filters}
                                     onApply={applyFilters}
-                                    onClear={clearFilters}
+                                    onClear={() => {
+                                        clearFilters();
+                                        setSearchTerm('');
+                                    }}
                                 />
                             </div>
 
                             <ActiveFiltersDisplay 
-                                activeFilters={filters} 
-                                onRemoveFilter={(key) => handleFilterChange(key, '')} 
+                                activeFilters={{...filters, search: searchTerm}}
+                                onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} 
                                 customLabels={{ sponsor: (id) => sponsorLookup.find(s => s.id === id)?.name }}
                             />
                             
