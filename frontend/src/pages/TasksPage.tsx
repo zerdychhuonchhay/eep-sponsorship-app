@@ -53,18 +53,13 @@ const TaskForm: React.FC<{
 
     return (
         <form onSubmit={handleSubmit(onSave)} className="space-y-4">
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput label="Title" id="title" type="text" {...register('title')} error={errors.title?.message} />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormTextArea label="Description" id="description" {...register('description')} error={errors.description?.message} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Due Date" id="dueDate" type="date" {...register('dueDate')} error={errors.dueDate?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormSelect label="Priority" id="priority" {...register('priority')} error={errors.priority?.message}>
                     {Object.values(TaskPriority).map((p: string) => <option key={p} value={p}>{p}</option>)}
                 </FormSelect>
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message}>
                     {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>

@@ -11,7 +11,8 @@ interface FormControlProps {
 
 interface InputProps extends FormControlProps, React.InputHTMLAttributes<HTMLInputElement> {
     id: string;
-    error?: string;
+    // FIX: Changed error prop type to 'any' to accommodate react-hook-form error message types.
+    error?: any;
 }
 export const FormInput: React.FC<InputProps> = ({ id, label, className, error, ...props }) => (
     <div className={className}>
@@ -31,7 +32,8 @@ export const FormInput: React.FC<InputProps> = ({ id, label, className, error, .
 
 interface SelectProps extends FormControlProps, React.SelectHTMLAttributes<HTMLSelectElement> {
     id: string;
-    error?: string;
+    // FIX: Changed error prop type to 'any' to accommodate react-hook-form error message types.
+    error?: any;
 }
 export const FormSelect: React.FC<SelectProps> = ({ id, label, className, children, error, ...props }) => (
      <div className={className}>
@@ -82,7 +84,8 @@ export const ControlledSelect: React.FC<ControlledSelectProps> = ({ control, nam
 
 interface TextAreaProps extends FormControlProps, React.TextareaHTMLAttributes<HTMLTextAreaElement> {
     id: string;
-    error?: string;
+    // FIX: Changed error prop type to 'any' to accommodate react-hook-form error message types.
+    error?: any;
 }
 export const FormTextArea: React.FC<TextAreaProps> = ({ id, label, className, error, ...props }) => (
     <div className={className}>

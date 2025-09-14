@@ -141,30 +141,20 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
 
     const CoreProgramData = (
         <FormSection title="Core Program Data">
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput label="Student ID" id="studentId" {...register('studentId')} disabled={isEdit} error={errors.studentId?.message} />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormSelect label="Status" id="studentStatus" {...register('studentStatus')} error={errors.studentStatus?.message}>
-                {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
                 {Object.values(StudentStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
-             {/* FIX: Removed unnecessary 'as string' cast for error message. */}
              <FormSelect label="Sponsorship Status" id="sponsorshipStatus" {...register('sponsorshipStatus')} error={errors.sponsorshipStatus?.message}>
-                {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
                 {Object.values(SponsorshipStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
-             {/* FIX: Removed unnecessary 'as string' cast for error message. */}
              <FormSelect label="Sponsor" id="sponsor" {...register('sponsor')} error={errors.sponsor?.message}>
                 <option value="">-- No Sponsor --</option>
                 {sponsors.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
             </FormSelect>
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput label="School" id="school" {...register('school')} error={errors.school?.message} />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput label="Current Grade" id="currentGrade" {...register('currentGrade')} error={errors.currentGrade?.message} />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput label="EEP Enroll Date" id="eepEnrollDate" type="date" {...register('eepEnrollDate')} error={errors.eepEnrollDate?.message} />
-            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput label="Out of Program Date" id="outOfProgramDate" type="date" {...register('outOfProgramDate')} error={errors.outOfProgramDate?.message} />
             <FormCheckbox label="Has Housing Sponsorship?" id="hasHousingSponsorship" {...register('hasHousingSponsorship')} />
             <FormCheckbox label="Has Sponsorship Contract?" id="hasSponsorshipContract" {...register('hasSponsorshipContract')} />
@@ -174,28 +164,17 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
     const DetailedInfo = (
         <div className="space-y-4">
             <FormSection title="Personal & Family Details">
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Application Date" id="applicationDate" type="date" {...register('applicationDate')} error={errors.applicationDate?.message} />
                 <FormCheckbox label="Has Birth Certificate?" id="hasBirthCertificate" {...register('hasBirthCertificate')} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Number of Siblings" id="siblingsCount" type="number" {...register('siblingsCount', { valueAsNumber: true })} error={errors.siblingsCount?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Household Members" id="householdMembersCount" type="number" {...register('householdMembersCount', { valueAsNumber: true })} error={errors.householdMembersCount?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="City" id="city" {...register('city')} error={errors.city?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Village/Slum" id="villageSlum" {...register('villageSlum')} error={errors.villageSlum?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Guardian Name" id="guardianName" {...register('guardianName')} error={errors.guardianName?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Guardian Contact Info" id="guardianContactInfo" {...register('guardianContactInfo')} error={errors.guardianContactInfo?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Home Location" id="homeLocation" {...register('homeLocation')} error={errors.homeLocation?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Annual Income" id="annualIncome" type="number" {...register('annualIncome', { valueAsNumber: true })} error={errors.annualIncome?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Guardian (if not parents)" id="guardianIfNotParents" {...register('guardianIfNotParents')} error={errors.guardianIfNotParents?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Parental Support Level (1-5)" id="parentSupportLevel" type="number" min="1" max="5" {...register('parentSupportLevel', { valueAsNumber: true })} error={errors.parentSupportLevel?.message} />
             </FormSection>
              <FormSection title="Parents/Guardians">
@@ -220,11 +199,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
      const NarrativeInfo = (
         <div className="space-y-4">
              <FormSection title="Education & Health">
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <YesNoNASelect label="Currently in School?" id="currentlyInSchool" {...register('currentlyInSchool')} error={errors.currentlyInSchool?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Grade before EEP" id="gradeLevelBeforeEep" {...register('gradeLevelBeforeEep')} error={errors.gradeLevelBeforeEep?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                  <YesNoNASelect label="Previously in School?" id="previousSchooling" {...register('previousSchooling')} error={errors.previousSchooling?.message} />
                 {watchPreviousSchooling === YesNo.YES && (
                     <FormSubSection title="Previous Schooling Details">
@@ -233,36 +209,23 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                         <FormInput label="Where?" id="prevSchoolWhere" {...register('previousSchoolingDetails.where')} />
                     </FormSubSection>
                 )}
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Closest Private School" id="closestPrivateSchool" {...register('closestPrivateSchool')} error={errors.closestPrivateSchool?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormSelect label="Health Status" id="healthStatus" {...register('healthStatus')} error={errors.healthStatus?.message} >
-                    {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
                     {Object.values(HealthStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormTextArea label="Health Issues/Details" id="healthIssues" {...register('healthIssues')} error={errors.healthIssues?.message} />
              </FormSection>
              <FormSection title="Social & Narrative">
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormSelect label="Interaction with Others" id="interactionWithOthers" {...register('interactionWithOthers')} error={errors.interactionWithOthers?.message} >
-                    {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
                     {Object.values(InteractionStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormTextArea label="Interaction Issues" id="interactionIssues" {...register('interactionIssues')} error={errors.interactionIssues?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormInput label="Risk Level (1-5)" id="riskLevel" type="number" min="1" max="5" {...register('riskLevel', { valueAsNumber: true })} error={errors.riskLevel?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                  <FormSelect label="Transportation" id="transportation" {...register('transportation')} error={errors.transportation?.message} >
-                    {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
                     {Object.values(TransportationType).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormTextArea label="Child's Responsibilities" id="childResponsibilities" className="md:col-span-2" {...register('childResponsibilities')} error={errors.childResponsibilities?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormTextArea label="Child's Story" id="childStory" className="md:col-span-2" {...register('childStory')} error={errors.childStory?.message} />
-                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormTextArea label="Other Notes" id="otherNotes" className="md:col-span-2" {...register('otherNotes')} error={errors.otherNotes?.message} />
             </FormSection>
         </div>
@@ -278,18 +241,12 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="p-4 space-y-4">
                  <FormSection title="Basic Information">
-                    {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                     <FormInput label="First Name" id="firstName" {...register('firstName')} error={errors.firstName?.message} />
-                    {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                     <FormInput label="Last Name" id="lastName" {...register('lastName')} error={errors.lastName?.message} />
-                    {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                     <FormInput label="Date of Birth" id="dateOfBirth" type="date" {...register('dateOfBirth')} error={errors.dateOfBirth?.message} />
-                    {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                     <FormSelect label="Gender" id="gender" {...register('gender')} error={errors.gender?.message}>
-                        {/* FIX: Explicitly type `g` as string to prevent type inference issues. */}
                         {Object.values(Gender).map((g: string) => <option key={g} value={g}>{g}</option>)}
                     </FormSelect>
-                    {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                     <FormInput label="Profile Photo" id="profilePhoto" type="file" accept="image/*" {...register('profilePhoto')} error={errors.profilePhoto?.message} />
                 </FormSection>
                 <Tabs tabs={tabs} />
