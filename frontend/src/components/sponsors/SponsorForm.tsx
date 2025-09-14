@@ -32,6 +32,7 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput 
                 label="Sponsor Name" 
                 id="name" 
@@ -39,8 +40,9 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData
                 placeholder="Full name of the sponsor" 
                 {...register('name')}
                 required
-                error={errors.name?.message as string}
+                error={errors.name?.message}
             />
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput 
                 label="Email" 
                 id="email" 
@@ -48,15 +50,16 @@ const SponsorForm: React.FC<SponsorFormProps> = ({ onSave, onCancel, initialData
                 placeholder="sponsor@example.com"
                 {...register('email')}
                 required
-                error={errors.email?.message as string}
+                error={errors.email?.message}
             />
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
             <FormInput 
                 label="Sponsorship Start Date" 
                 id="sponsorshipStartDate" 
                 type="date" 
                 {...register('sponsorshipStartDate')}
                 required
-                error={errors.sponsorshipStartDate?.message as string}
+                error={errors.sponsorshipStartDate?.message}
             />
             <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>

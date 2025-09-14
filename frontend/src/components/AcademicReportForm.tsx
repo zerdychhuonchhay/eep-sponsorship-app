@@ -50,32 +50,39 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
              <div>
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
                 <FormSelect 
                     label="Student" 
                     id="studentId" 
                     {...register('studentId')} 
                     required 
                     disabled={isEdit || !!preselectedStudentId}
-                    error={errors.studentId?.message as string}
+                    error={errors.studentId?.message}
                 >
                     <option value="">-- Select Student --</option>
                     {students.map(s => <option key={s.studentId} value={s.studentId}>{s.firstName} {s.lastName} ({s.studentId})</option>)}
                 </FormSelect>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput label="Report Period (e.g., Term 1 2024)" id="reportPeriod" {...register('reportPeriod')} required error={errors.reportPeriod?.message as string} />
-                <FormInput label="Grade Level" id="gradeLevel" {...register('gradeLevel')} required error={errors.gradeLevel?.message as string} />
-                <FormInput label="Overall Average" id="overallAverage" type="number" step="0.1" {...register('overallAverage', { valueAsNumber: true })} error={errors.overallAverage?.message as string} />
-                <FormSelect label="Pass/Fail Status" id="passFailStatus" {...register('passFailStatus')} error={errors.passFailStatus?.message as string}>
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormInput label="Report Period (e.g., Term 1 2024)" id="reportPeriod" {...register('reportPeriod')} required error={errors.reportPeriod?.message} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormInput label="Grade Level" id="gradeLevel" {...register('gradeLevel')} required error={errors.gradeLevel?.message} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormInput label="Overall Average" id="overallAverage" type="number" step="0.1" {...register('overallAverage', { valueAsNumber: true })} error={errors.overallAverage?.message} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormSelect label="Pass/Fail Status" id="passFailStatus" {...register('passFailStatus')} error={errors.passFailStatus?.message}>
                     <option value="Pass">Pass</option>
                     <option value="Fail">Fail</option>
                 </FormSelect>
             </div>
             <div>
-                <FormTextArea label="Subjects & Grades" id="subjectsAndGrades" placeholder="e.g., Math: A, Science: B+" {...register('subjectsAndGrades')} error={errors.subjectsAndGrades?.message as string} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormTextArea label="Subjects & Grades" id="subjectsAndGrades" placeholder="e.g., Math: A, Science: B+" {...register('subjectsAndGrades')} error={errors.subjectsAndGrades?.message} />
             </div>
             <div>
-                <FormTextArea label="Teacher Comments" id="teacherComments" {...register('teacherComments')} error={errors.teacherComments?.message as string} />
+                {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+                <FormTextArea label="Teacher Comments" id="teacherComments" {...register('teacherComments')} error={errors.teacherComments?.message} />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>

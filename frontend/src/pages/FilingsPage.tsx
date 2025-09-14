@@ -74,18 +74,18 @@ const FilingForm: React.FC<{
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* FIX: Cast react-hook-form error message to string. */}
-            <FormInput label="Document Name" type="text" id="documentName" {...register('documentName')} error={errors.documentName?.message as string} />
-            {/* FIX: Cast react-hook-form error message to string. */}
-            <FormInput label="Authority" type="text" id="authority" {...register('authority')} error={errors.authority?.message as string} />
-            {/* FIX: Cast react-hook-form error message to string. */}
-            <FormInput label="Due Date" type="date" id="dueDate" {...register('dueDate')} error={errors.dueDate?.message as string} />
-            {/* FIX: Cast react-hook-form error message to string. */}
-            <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message as string}>
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+            <FormInput label="Document Name" type="text" id="documentName" {...register('documentName')} error={errors.documentName?.message} />
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+            <FormInput label="Authority" type="text" id="authority" {...register('authority')} error={errors.authority?.message} />
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+            <FormInput label="Due Date" type="date" id="dueDate" {...register('dueDate')} error={errors.dueDate?.message} />
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+            <FormSelect label="Status" id="status" {...register('status')} error={errors.status?.message}>
                 {Object.values(FilingStatus).map((s: FilingStatus) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
-            {/* FIX: Cast react-hook-form error message to string. */}
-            <FormInput label="Submission Date" type="date" id="submissionDate" {...register('submissionDate')} error={errors.submissionDate?.message as string} />
+            {/* FIX: Removed unnecessary 'as string' cast for error message. */}
+            <FormInput label="Submission Date" type="date" id="submissionDate" {...register('submissionDate')} error={errors.submissionDate?.message} />
             <div>
                 <FormInput label="Attach File" type="file" id="attached_file" onChange={handleFileChange} />
                 {filing?.attachedFile && typeof filing.attachedFile === 'string' && <p className="text-xs mt-1 text-body-color dark:text-gray-300">Current file: {filing.attachedFile}</p>}
