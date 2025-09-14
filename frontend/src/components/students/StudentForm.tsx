@@ -255,7 +255,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                 <FormInput label="Risk Level (1-5)" id="riskLevel" type="number" min="1" max="5" {...register('riskLevel', { valueAsNumber: true })} error={errors.riskLevel?.message as string} />
                 {/* FIX: Cast react-hook-form error message to string. */}
                  <FormSelect label="Transportation" id="transportation" {...register('transportation')} error={errors.transportation?.message as string} >
-                    {Object.values(TransportationType).map(s => <option key={s} value={s}>{s}</option>)}
+                    {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
+                    {Object.values(TransportationType).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
                 {/* FIX: Cast react-hook-form error message to string. */}
                 <FormTextArea label="Child's Responsibilities" id="childResponsibilities" className="md:col-span-2" {...register('childResponsibilities')} error={errors.childResponsibilities?.message as string} />
