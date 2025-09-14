@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Student, Gender, StudentStatus, SponsorshipStatus, YesNo, HealthStatus, InteractionStatus, TransportationType } from '@/types.ts';
 import { FormInput, FormSelect, FormTextArea, FormCheckbox, FormSection, FormSubSection, YesNoNASelect } from '@/components/forms/FormControls.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
@@ -141,28 +141,30 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
 
     const CoreProgramData = (
         <FormSection title="Core Program Data">
-            {/* FIX: Cast error message to string */}
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormInput label="Student ID" id="studentId" {...register('studentId')} disabled={isEdit} error={errors.studentId?.message as string} />
-            {/* FIX: Cast error message to string */}
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormSelect label="Status" id="studentStatus" {...register('studentStatus')} error={errors.studentStatus?.message as string}>
-                {Object.values(StudentStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
+                {Object.values(StudentStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
-             {/* FIX: Cast error message to string */}
+             {/* FIX: Cast react-hook-form error message to string. */}
              <FormSelect label="Sponsorship Status" id="sponsorshipStatus" {...register('sponsorshipStatus')} error={errors.sponsorshipStatus?.message as string}>
-                {Object.values(SponsorshipStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
+                {Object.values(SponsorshipStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
             </FormSelect>
-             {/* FIX: Cast error message to string */}
+             {/* FIX: Cast react-hook-form error message to string. */}
              <FormSelect label="Sponsor" id="sponsor" {...register('sponsor')} error={errors.sponsor?.message as string}>
                 <option value="">-- No Sponsor --</option>
-                {sponsors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {sponsors.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
             </FormSelect>
-            {/* FIX: Cast error message to string */}
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormInput label="School" id="school" {...register('school')} error={errors.school?.message as string} />
-            {/* FIX: Cast error message to string */}
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormInput label="Current Grade" id="currentGrade" {...register('currentGrade')} error={errors.currentGrade?.message as string} />
-            {/* FIX: Cast error message to string */}
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormInput label="EEP Enroll Date" id="eepEnrollDate" type="date" {...register('eepEnrollDate')} error={errors.eepEnrollDate?.message as string} />
-            {/* FIX: Cast error message to string */}
+            {/* FIX: Cast react-hook-form error message to string. */}
             <FormInput label="Out of Program Date" id="outOfProgramDate" type="date" {...register('outOfProgramDate')} error={errors.outOfProgramDate?.message as string} />
             <FormCheckbox label="Has Housing Sponsorship?" id="hasHousingSponsorship" {...register('hasHousingSponsorship')} />
             <FormCheckbox label="Has Sponsorship Contract?" id="hasSponsorshipContract" {...register('hasSponsorshipContract')} />
@@ -172,28 +174,28 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
     const DetailedInfo = (
         <div className="space-y-4">
             <FormSection title="Personal & Family Details">
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Application Date" id="applicationDate" type="date" {...register('applicationDate')} error={errors.applicationDate?.message as string} />
                 <FormCheckbox label="Has Birth Certificate?" id="hasBirthCertificate" {...register('hasBirthCertificate')} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Number of Siblings" id="siblingsCount" type="number" {...register('siblingsCount', { valueAsNumber: true })} error={errors.siblingsCount?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Household Members" id="householdMembersCount" type="number" {...register('householdMembersCount', { valueAsNumber: true })} error={errors.householdMembersCount?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="City" id="city" {...register('city')} error={errors.city?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Village/Slum" id="villageSlum" {...register('villageSlum')} error={errors.villageSlum?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Guardian Name" id="guardianName" {...register('guardianName')} error={errors.guardianName?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Guardian Contact Info" id="guardianContactInfo" {...register('guardianContactInfo')} error={errors.guardianContactInfo?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Home Location" id="homeLocation" {...register('homeLocation')} error={errors.homeLocation?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Annual Income" id="annualIncome" type="number" {...register('annualIncome', { valueAsNumber: true })} error={errors.annualIncome?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Guardian (if not parents)" id="guardianIfNotParents" {...register('guardianIfNotParents')} error={errors.guardianIfNotParents?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Parental Support Level (1-5)" id="parentSupportLevel" type="number" min="1" max="5" {...register('parentSupportLevel', { valueAsNumber: true })} error={errors.parentSupportLevel?.message as string} />
             </FormSection>
              <FormSection title="Parents/Guardians">
@@ -218,11 +220,11 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
      const NarrativeInfo = (
         <div className="space-y-4">
              <FormSection title="Education & Health">
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <YesNoNASelect label="Currently in School?" id="currentlyInSchool" {...register('currentlyInSchool')} error={errors.currentlyInSchool?.message as string} />
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Grade before EEP" id="gradeLevelBeforeEep" {...register('gradeLevelBeforeEep')} error={errors.gradeLevelBeforeEep?.message as string} />
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                  <YesNoNASelect label="Previously in School?" id="previousSchooling" {...register('previousSchooling')} error={errors.previousSchooling?.message as string} />
                 {watchPreviousSchooling === YesNo.YES && (
                     <FormSubSection title="Previous Schooling Details">
@@ -231,33 +233,35 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                         <FormInput label="Where?" id="prevSchoolWhere" {...register('previousSchoolingDetails.where')} />
                     </FormSubSection>
                 )}
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Closest Private School" id="closestPrivateSchool" {...register('closestPrivateSchool')} error={errors.closestPrivateSchool?.message as string} />
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormSelect label="Health Status" id="healthStatus" {...register('healthStatus')} error={errors.healthStatus?.message as string} >
-                    {Object.values(HealthStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
+                    {Object.values(HealthStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormTextArea label="Health Issues/Details" id="healthIssues" {...register('healthIssues')} error={errors.healthIssues?.message as string} />
              </FormSection>
              <FormSection title="Social & Narrative">
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormSelect label="Interaction with Others" id="interactionWithOthers" {...register('interactionWithOthers')} error={errors.interactionWithOthers?.message as string} >
-                    {Object.values(InteractionStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    {/* FIX: Explicitly type `s` as string to prevent type inference issues. */}
+                    {Object.values(InteractionStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormTextArea label="Interaction Issues" id="interactionIssues" {...register('interactionIssues')} error={errors.interactionIssues?.message as string} />
-                {/* FIX: Cast error message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormInput label="Risk Level (1-5)" id="riskLevel" type="number" min="1" max="5" {...register('riskLevel', { valueAsNumber: true })} error={errors.riskLevel?.message as string} />
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                  <FormSelect label="Transportation" id="transportation" {...register('transportation')} error={errors.transportation?.message as string} >
                     {Object.values(TransportationType).map(s => <option key={s} value={s}>{s}</option>)}
                 </FormSelect>
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormTextArea label="Child's Responsibilities" id="childResponsibilities" className="md:col-span-2" {...register('childResponsibilities')} error={errors.childResponsibilities?.message as string} />
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormTextArea label="Child's Story" id="childStory" className="md:col-span-2" {...register('childStory')} error={errors.childStory?.message as string} />
-                {/* FIX: Add error prop and cast message to string */}
+                {/* FIX: Cast react-hook-form error message to string. */}
                 <FormTextArea label="Other Notes" id="otherNotes" className="md:col-span-2" {...register('otherNotes')} error={errors.otherNotes?.message as string} />
             </FormSection>
         </div>
@@ -273,15 +277,16 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="p-4 space-y-4">
                  <FormSection title="Basic Information">
-                    {/* FIX: Cast error message to string */}
+                    {/* FIX: Cast react-hook-form error message to string. */}
                     <FormInput label="First Name" id="firstName" {...register('firstName')} error={errors.firstName?.message as string} />
-                    {/* FIX: Cast error message to string */}
+                    {/* FIX: Cast react-hook-form error message to string. */}
                     <FormInput label="Last Name" id="lastName" {...register('lastName')} error={errors.lastName?.message as string} />
-                    {/* FIX: Cast error message to string */}
+                    {/* FIX: Cast react-hook-form error message to string. */}
                     <FormInput label="Date of Birth" id="dateOfBirth" type="date" {...register('dateOfBirth')} error={errors.dateOfBirth?.message as string} />
-                    {/* FIX: Cast error message to string */}
+                    {/* FIX: Cast react-hook-form error message to string. */}
                     <FormSelect label="Gender" id="gender" {...register('gender')} error={errors.gender?.message as string}>
-                        {Object.values(Gender).map(g => <option key={g} value={g}>{g}</option>)}
+                        {/* FIX: Explicitly type `g` as string to prevent type inference issues. */}
+                        {Object.values(Gender).map((g: string) => <option key={g} value={g}>{g}</option>)}
                     </FormSelect>
                     <FormInput label="Profile Photo" id="profilePhoto" type="file" accept="image/*" {...register('profilePhoto')} error={errors.profilePhoto?.message as string} />
                 </FormSection>
