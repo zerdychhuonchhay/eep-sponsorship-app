@@ -28,7 +28,7 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
     const { register, handleSubmit, formState: { errors } } = useForm<AcademicReportFormData>({
         resolver: zodResolver(academicReportSchema),
         defaultValues: {
-            studentId: preselectedStudentId || initialData?.studentId || '',
+            studentId: preselectedStudentId || initialData?.student || '',
             reportPeriod: initialData?.reportPeriod || '',
             gradeLevel: initialData?.gradeLevel || '',
             subjectsAndGrades: initialData?.subjectsAndGrades || '',
