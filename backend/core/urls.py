@@ -22,6 +22,8 @@ urlpatterns = [
     path('dashboard/stats/', views.dashboard_stats, name='dashboard-stats'),
     path('dashboard/recent-transactions/', views.recent_transactions, name='recent-transactions'),
     path('ai-assistant/query/', views.query_ai_assistant, name='ai-assistant-query'),
+    # --- NEW URL FOR AI STUDENT SEARCH ---
+    path('ai-assistant/student-filters/', views.AIAssistantStudentFilterView.as_view(), name='ai_student_filters'),
     path('user/me/', views.get_current_user, name='current-user'),
     path('register/', views.UserRegistrationView.as_view(), name='user-registration'),
 ]

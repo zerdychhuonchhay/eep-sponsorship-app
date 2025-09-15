@@ -26,6 +26,21 @@ from .pagination import StandardResultsSetPagination
 from . import ai_assistant
 from .permissions import HasModulePermission
 
+# --- NEW IMPORTS FOR AI SEARCH ---
+import google.generativeai as genai
+import json
+from django.conf import settings
+from rest_framework.views import APIView
+
+# --- NEW: CONFIGURE GEMINI API ---
+try:
+    genai.configure(api_key=settings.GOOGLE_API_KEY)
+except (AttributeError, TypeError):
+    # Handle case where key is not set or None, to prevent server crash on startup
+    print("WARNING: GOOGLE_API_KEY not configured in settings. AI features will not work.")
+    pass
+
+
 # --- Audit Logging Mixin ---
 class AuditLoggingMixin:
     """Mixin to automatically log create, update, and delete actions."""
@@ -475,6 +490,70 @@ def recent_transactions(request):
     recent = Transaction.objects.all().order_by('-date')[:5]
     serializer = TransactionSerializer(recent, many=True)
     return Response(serializer.data)
+
+# --- NEW: AI Assistant for Student Filters ---
+class AIAssistantStudentFilterView(APIView):
+    """
+    An API view that uses the Gemini AI to parse a natural language query
+    and return a structured JSON object of filters for the student model.
+    """
+    def post(self, request, *args, **kwargs):
+        if not settings.GOOGLE_API_KEY:
+            return Response(
+                {"error": "AI Assistant is not configured on the server."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+        query = request.data.get('query')
+        if not query:
+            return Response(
+                {"error": "Query parameter is missing."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # This is the core of the feature: a well-defined prompt for the AI.
+        prompt = f"""
+            You are an expert data analyst for an NGO. Your task is to convert a user's natural language query into a JSON object of filters for a student database.
+
+            The available filters and their exact possible values are:
+            - "student_status": ["Active", "Inactive", "Pending Qualification"]
+            - "sponsorship_status": ["Sponsored", "Unsponsored"]
+            - "gender": ["Male", "Female", "Other"]
+            - "sponsor_name": This should be a string representing the sponsor's name if mentioned.
+            - "search": This should be a string for a general text search on the student's first or last name if a specific name is mentioned.
+
+            Analyze the user's query: "{query}"
+
+            Your response MUST be only the JSON object, with no extra text, explanation, or formatting like markdown ```json blocks.
+            If a filter is not mentioned, do not include it in the JSON.
+            If a name is mentioned (e.g., "show me Jane Doe" or "find John"), use the "search" key.
+            If a sponsor's name is mentioned (e.g., "students sponsored by Hope Foundation"), use the "sponsor_name" key.
+        """
+
+        try:
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            ai_response = model.generate_content(prompt)
+            
+            # Clean up the response to ensure it's valid JSON
+            cleaned_text = ai_response.text.strip().replace("```json", "").replace("```", "").strip()
+            
+            # Parse the JSON string into a Python dictionary
+            filters = json.loads(cleaned_text)
+            
+            return Response(filters, status=status.HTTP_200_OK)
+
+        except json.JSONDecodeError:
+            return Response(
+                {"error": "The AI returned an invalid format. Please try rephrasing your query."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            # Catch potential errors from the Gemini API (e.g., API key issues, content filtering)
+            print(f"Error calling Gemini API: {e}")
+            return Response(
+                {"error": "There was a problem communicating with the AI assistant."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

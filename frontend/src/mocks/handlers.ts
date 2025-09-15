@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { mockUser, mockStudents, mockTransactions, mockUsers, mockSponsorLookup, mockStudentLookup, mockGroups, mockRoles } from './data.ts';
+import { Gender, SponsorshipStatus, StudentStatus } from '@/types.ts';
 
 // Use a variable for the base URL to keep it consistent.
 // Note: This must match the VITE_API_BASE_URL in your .env file.
@@ -74,5 +75,34 @@ export const handlers = [
       previous: null,
       results: mockUsers,
     });
+  }),
+
+  // --- AI FEATURES ---
+  http.post(`${API_BASE_URL}/ai-assistant/query/`, () => {
+    return HttpResponse.json({
+      response: 'This is a mocked response from the AI assistant. I can help you find data or generate reports.',
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/ai-assistant/student-filters/`, async ({ request }) => {
+    const body = await request.json() as { query: string };
+    const query = body.query.toLowerCase();
+    const filters: Record<string, string> = {};
+
+    if (query.includes('unsponsored')) filters.sponsorship_status = SponsorshipStatus.UNSPONSORED;
+    if (query.includes('sponsored')) filters.sponsorship_status = SponsorshipStatus.SPONSORED;
+    if (query.includes('active')) filters.student_status = StudentStatus.ACTIVE;
+    if (query.includes('inactive')) filters.student_status = StudentStatus.INACTIVE;
+    if (query.includes('pending')) filters.student_status = StudentStatus.PENDING_QUALIFICATION;
+    if (query.includes('girl') || query.includes('female')) filters.gender = Gender.FEMALE;
+    if (query.includes('boy') || query.includes('male')) filters.gender = Gender.MALE;
+    
+    // A simple search term extraction
+    const nameMatch = query.match(/(find|search for|show me|find student) (([a-zA-Z]+)\s?([a-zA-Z]+)?)/);
+    if (nameMatch && nameMatch[2]) {
+        filters.search = nameMatch[2].trim();
+    }
+
+    return HttpResponse.json(filters);
   }),
 ];
