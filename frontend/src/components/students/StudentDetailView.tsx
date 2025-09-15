@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button.tsx';
 import Badge from '../ui/Badge.tsx';
 import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
+import { AcademicReportFormData } from '../schemas/academicReportSchema.ts';
 
 interface StudentDetailViewProps {
     student: Student;
@@ -64,10 +65,11 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
         }, 100);
     };
 
-    const handleSaveAcademicReport = async (reportData: Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>) => {
+    const handleSaveAcademicReport = async (formData: AcademicReportFormData) => {
         setIsSaving(true);
         try {
-            await api.addAcademicReport(student.studentId, reportData);
+            const { studentId, ...reportData } = formData;
+            await api.addAcademicReport(studentId, reportData);
             showToast('Academic report added!', 'success');
             setModal(null);
             onDataChange();
@@ -246,7 +248,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <Modal isOpen={true} onClose={() => setModal(null)} title="Add Academic Report">
                     <AcademicReportForm 
                         studentId={student.studentId}
-                        onSave={(data) => handleSaveAcademicReport(data)} 
+                        onSave={handleSaveAcademicReport} 
                         onCancel={() => setModal(null)}
                         isSaving={isSaving}
                     />

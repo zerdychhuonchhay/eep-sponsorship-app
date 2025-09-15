@@ -429,10 +429,10 @@ export const api = {
     },
 
     // Academic Report Endpoints
-    addAcademicReport: async (studentId: string, report: Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>) => {
+    addAcademicReport: async (studentId: string, report: Omit<AcademicReport, 'id' | 'student' | 'studentName'>) => {
         return apiClient(`/students/${studentId}/academic-reports/`, { method: 'POST', body: JSON.stringify(convertKeysToSnake(report)) });
     },
-    updateAcademicReport: async (reportId: string, updatedReportData: Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>): Promise<AcademicReport> => {
+    updateAcademicReport: async (reportId: string, updatedReportData: Partial<Omit<AcademicReport, 'id' | 'studentName'>>): Promise<AcademicReport> => {
         return apiClient(`/academic-reports/${reportId}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(updatedReportData)) });
     },
     deleteAcademicReport: async (reportId: string) => apiClient(`/academic-reports/${reportId}/`, { method: 'DELETE' }),
