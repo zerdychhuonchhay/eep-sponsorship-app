@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/services/api.ts';
-import { AppUser, PaginatedResponse } from '@/types.ts';
+import { AppUser, PaginatedResponse, UserStatus } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import { SkeletonTable } from '@/components/SkeletonLoader.tsx';
@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button.tsx';
 import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
-import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, UserIcon, TrashIcon } from '@/components/Icons.tsx';
+import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, UserIcon, TrashIcon, KeyIcon } from '@/components/Icons.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import UserForm from '@/components/users/UserForm.tsx';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
@@ -88,6 +88,15 @@ const UsersList: React.FC = () => {
         setDeletingUser(user);
     };
 
+    const handleSendPasswordReset = async (user: AppUser) => {
+        try {
+            const result = await api.requestPasswordReset(user.email);
+            showToast(result.message, 'success');
+        } catch(error: any) {
+            showToast(error.message || 'Failed to send password reset link.', 'error');
+        }
+    };
+
     const handleConfirmDelete = async () => {
         if (!deletingUser) return;
         setIsSubmittingDelete(true);
@@ -142,6 +151,13 @@ const UsersList: React.FC = () => {
 
                                 if(canUpdate) {
                                     actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
+                                }
+                                if (canUpdate && user.status === UserStatus.ACTIVE && !isCurrentUser) {
+                                    actionItems.push({ 
+                                        label: 'Send Password Set', 
+                                        icon: <KeyIcon className="w-4 h-4" />, 
+                                        onClick: () => handleSendPasswordReset(user) 
+                                    });
                                 }
                                 if (!isCurrentUser && canDelete) {
                                     actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });

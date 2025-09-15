@@ -4,8 +4,13 @@ from datetime import date, timedelta
 from dateutil.parser import parse as parse_date
 from django.db.models import Sum, Count, Q
 from django.db import transaction
+from django.core.mail import send_mail
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.template.loader import render_to_string
 from rest_framework import viewsets, status, filters, generics, permissions
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -20,7 +25,8 @@ from .serializers import (
     TransactionSerializer, GovernmentFilingSerializer, TaskSerializer,
     StudentLookupSerializer, StudentListSerializer, AuditLogSerializer, 
     SponsorSerializer, SponsorLookupSerializer, UserRegistrationSerializer, 
-    UserSerializer, InviteUserSerializer, RoleSerializer, GroupSerializer
+    UserSerializer, InviteUserSerializer, RoleSerializer, GroupSerializer,
+    ChangePasswordSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer
 )
 from .pagination import StandardResultsSetPagination
 from . import ai_assistant
@@ -87,7 +93,6 @@ class AuditLoggingMixin:
 
 
 # --- ViewSets ---
-
 class GroupViewSet(viewsets.ModelViewSet):
     """
     API endpoint for viewing and managing user groups (roles).
@@ -575,3 +580,72 @@ def get_current_user(request):
     user = request.user
     serializer = UserSerializer(user)
     return Response(serializer.data)
+
+# --- NEW VIEWS for password management ---
+
+class ChangePasswordView(generics.GenericAPIView):
+    """
+    An endpoint for an authenticated user to change their own password.
+    """
+    serializer_class = ChangePasswordSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Password updated successfully"}, status=status.HTTP_200_OK)
+
+
+class PasswordResetRequestView(APIView):
+    """
+    An endpoint to request a password reset link.
+    This is used by both the "Forgot Password" page and the admin's "Send Password Set" action.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = User.objects.get(email__iexact=email)
+                
+                # This should match the route in your frontend App.tsx
+                # For development, it points to your local frontend server.
+                frontend_base_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
+                
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+                reset_link = f"{frontend_base_url}/#/reset-password/{uidb64}/{token}"
+
+                # Send email (which will be printed to console in development)
+                send_mail(
+                    'Set Your Password for NGO Dashboard',
+                    f'Hello,\n\nPlease click the link below to set your password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email.\n\nThanks,\nNGO Dashboard Team',
+                    'noreply@extremelove.com',
+                    [user.email],
+                    fail_silently=False,
+                )
+            except User.DoesNotExist:
+                # To prevent email enumeration, we don't reveal that the user doesn't exist.
+                # The frontend will show a generic success message regardless.
+                pass
+
+        return Response(
+            {"message": "If an account with this email exists, a password reset link has been sent."},
+            status=status.HTTP_200_OK
+        )
+
+class PasswordResetConfirmView(generics.GenericAPIView):
+    """
+    An endpoint to confirm the password reset and set a new password.
+    """
+    permission_classes = [permissions.AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)

@@ -210,3 +210,19 @@ AUTHENTICATION_BACKENDS = [
     'core.authentication.EmailOrUsernameBackend', # Our custom backend
     'django.contrib.auth.backends.ModelBackend', # The default backend
 ]
+
+# --- Email Configuration ---
+if DEBUG:
+    # In development, print emails to the console.
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # In production, use SendGrid.
+    EMAIL_BACKEND = 'sendgrid_backend.SendGridBackend'
+    # These values are pulled from your environment variables on Railway
+    SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+    # This is the email address that will appear in the "From" field.
+    # You should configure this as a verified sender in your SendGrid account.
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com')
+
+# Make sure to add 'sendgrid_backend' to your INSTALLED_APPS list
+INSTALLED_APPS.append('sendgrid_backend')
