@@ -8,6 +8,8 @@ import DetailCard from './DetailCard.tsx';
 import FollowUpRecordView from './FollowUpRecordView.tsx';
 import AcademicReportForm from '@/components/AcademicReportForm.tsx';
 import FollowUpForm from './FollowUpForm.tsx';
+import PrintableFollowUpRecord from './PrintableFollowUpRecord.tsx';
+import { usePdfGenerator } from '@/hooks/usePdfGenerator.ts';
 import { calculateAge, formatDateForDisplay } from '@/utils/dateUtils.ts';
 import Button from '@/components/ui/Button.tsx';
 import Badge from '../ui/Badge.tsx';
@@ -19,10 +21,7 @@ interface StudentDetailViewProps {
     onBack: () => void;
     onEdit: (student: Student) => void;
     onDelete: (studentId: string) => void;
-    onDownloadFollowUp: (record: FollowUpRecord) => void;
     onDataChange: () => void;
-    isGeneratingPdf: boolean;
-    recordForPdf: FollowUpRecord | null;
 }
 
 const NarrativeDetailCard: React.FC<{ title: string; data: Record<string, any> }> = ({ title, data }) => (
@@ -41,16 +40,29 @@ const NarrativeDetailCard: React.FC<{ title: string; data: Record<string, any> }
 
 
 const StudentDetailView: React.FC<StudentDetailViewProps> = ({ 
-    student, onBack, onEdit, onDelete, onDownloadFollowUp, onDataChange,
-    isGeneratingPdf, recordForPdf
+    student, onBack, onEdit, onDelete, onDataChange,
 }) => {
     const [modal, setModal] = useState<'add_report' | 'add_follow_up' | 'edit_follow_up' | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [editingFollowUp, setEditingFollowUp] = useState<FollowUpRecord | null>(null);
     const [openFollowUpId, setOpenFollowUpId] = useState<string | null>(null);
+    const [recordForPdf, setRecordForPdf] = useState<FollowUpRecord | null>(null);
+    const printableRef = React.useRef<HTMLDivElement>(null);
+    const { isGenerating: isGeneratingPdf, generatePdf } = usePdfGenerator(printableRef);
     const { showToast } = useNotification();
     const { canUpdate, canDelete } = usePermissions('students');
     const { canCreate: canCreateAcademics } = usePermissions('academics');
+
+    const handleDownloadPdf = (record: FollowUpRecord) => {
+        setRecordForPdf(record);
+        setTimeout(() => {
+            const studentName = record.childName.replace(/\s+/g, '-');
+            const date = new Date(record.dateOfFollowUp).toISOString().split('T')[0];
+            generatePdf(`Follow-Up-Report-${studentName}-${date}`).finally(() => {
+                setRecordForPdf(null);
+            });
+        }, 100);
+    };
 
     const handleSaveAcademicReport = async (reportData: Omit<AcademicReport, 'id' | 'studentId' | 'studentName'>) => {
         setIsSaving(true);
@@ -189,7 +201,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                                         <span className="font-semibold text-black dark:text-white">Follow-up from {formatDateForDisplay(record.dateOfFollowUp)}</span>
                                         <span>{openFollowUpId === record.id ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />}</span>
                                     </button>
-                                    {openFollowUpId === record.id && <FollowUpRecordView record={record} onEdit={(record) => { setEditingFollowUp(record); setModal('edit_follow_up'); }} onDownload={onDownloadFollowUp} isGeneratingPdf={isGeneratingPdf} isCurrentPdfTarget={record.id === recordForPdf?.id} />}
+                                    {openFollowUpId === record.id && <FollowUpRecordView record={record} onEdit={(record) => { setEditingFollowUp(record); setModal('edit_follow_up'); }} onDownload={handleDownloadPdf} isGeneratingPdf={isGeneratingPdf} isCurrentPdfTarget={record.id === recordForPdf?.id} />}
                                 </div>
                             ))
                         ) : (
@@ -250,6 +262,11 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                         isSaving={isSaving}
                     />
                 </Modal>
+            )}
+            {recordForPdf && (
+                 <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '210mm' }} ref={printableRef}>
+                    <PrintableFollowUpRecord record={recordForPdf} student={student} />
+                </div>
             )}
         </div>
     );

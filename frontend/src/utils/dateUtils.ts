@@ -72,10 +72,14 @@ export const calculateAge = (dob: string): number | string => {
  * @param dateStr The date string to format.
  * @returns A formatted date string, or 'N/A' if the date is invalid.
  */
-export const formatDateForDisplay = (dateStr?: string) => {
+export const formatDateForDisplay = (dateStr?: string | null): string => {
     if (!dateStr || isNaN(new Date(dateStr).getTime())) return 'N/A';
+    // Adjust for timezone by creating the date in UTC
+    const date = new Date(dateStr);
+    const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    
     // Use toLocaleDateString for better internationalization support.
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return utcDate.toLocaleDateString(undefined, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
