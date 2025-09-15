@@ -17,6 +17,7 @@ import { GlobalNotificationProvider } from './contexts/GlobalNotificationProvide
 import DebugEventLogger from './components/debug/DebugEventLogger.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
+import { SettingsProvider } from './contexts/SettingsContext.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
@@ -99,20 +100,22 @@ const App: React.FC = () => (
         <ThemeProvider>
             <UIProvider>
                 <DataProvider>
-                    <GlobalNotificationProvider>
-                        <AuthProvider>
-                            <Routes>
-                                <Route path="/login" element={<LoginPage />} />
-                                <Route path="/signup" element={<SignupPage />} />
-                                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                                <Route element={<ProtectedRoute />}>
-                                    <Route path="/*" element={<AppContent />} />
-                                </Route>
-                            </Routes>
-                            <Toast />
-                            <DebugEventLogger />
-                        </AuthProvider>
-                    </GlobalNotificationProvider>
+                    <SettingsProvider>
+                        <GlobalNotificationProvider>
+                            <AuthProvider>
+                                <Routes>
+                                    <Route path="/login" element={<LoginPage />} />
+                                    <Route path="/signup" element={<SignupPage />} />
+                                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                                    <Route element={<ProtectedRoute />}>
+                                        <Route path="/*" element={<AppContent />} />
+                                    </Route>
+                                </Routes>
+                                <Toast />
+                                <DebugEventLogger />
+                            </AuthProvider>
+                        </GlobalNotificationProvider>
+                    </SettingsProvider>
                 </DataProvider>
             </UIProvider>
         </ThemeProvider>

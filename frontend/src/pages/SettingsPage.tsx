@@ -3,6 +3,7 @@ import PageHeader from '@/components/layout/PageHeader.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import { useTheme } from '@/contexts/ThemeContext.tsx';
 import { SunIcon, MoonIcon } from '@/components/Icons.tsx';
+import ColumnOrderManager from '@/components/settings/ColumnOrderManager.tsx';
 import PermissionsManager from '@/components/PermissionsManager.tsx';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 
@@ -57,6 +58,8 @@ const SettingsPage: React.FC = () => {
                         </fieldset>
                     </CardContent>
                 </Card>
+
+                <ColumnOrderManager />
 
                 {user?.isAdmin && (
                     <Card className="xl:col-span-2">
