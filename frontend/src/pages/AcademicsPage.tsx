@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { AcademicReport, PaginatedResponse } from '../types.ts';
@@ -70,7 +71,8 @@ const AcademicsPage: React.FC = () => {
         try {
             const { studentId, ...reportData } = formData;
             if (modalState === 'edit' && selectedReport) {
-                await api.updateAcademicReport(selectedReport.id, reportData);
+                const payload = { ...reportData, student: selectedReport.student };
+                await api.updateAcademicReport(selectedReport.id, payload);
                 showToast('Report updated successfully!', 'success');
             } else {
                 await api.addAcademicReport(studentId, reportData);
