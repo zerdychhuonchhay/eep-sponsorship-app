@@ -1,28 +1,33 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const forgotPasswordSchema = z.object({
+    email: z.string().email('Please enter a valid email address.'),
+});
+
+type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
 
 const ForgotPasswordPage: React.FC = () => {
-    const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ForgotPasswordSchema>({
+        resolver: zodResolver(forgotPasswordSchema),
+    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+    const onSubmit = async (data: ForgotPasswordSchema) => {
         setMessage('');
-        setIsSubmitting(true);
         try {
-            const response = await api.forgotPassword(email);
+            const response = await api.forgotPassword(data.email);
             setMessage(response.message);
         } catch (err: any) {
-            // For security, we can show a generic message even on error.
             setMessage("If an account with this email exists, a password reset link has been sent.");
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
@@ -41,19 +46,16 @@ const ForgotPasswordPage: React.FC = () => {
                         <p>{message}</p>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                         <FormInput
                             label="Email"
                             id="email"
-                            name="email"
                             type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
                             autoComplete="email"
                             placeholder="Enter your email"
+                            {...register('email')}
+                            error={errors.email?.message}
                         />
-                        {error && <p className="text-sm text-danger text-center">{error}</p>}
                         <div>
                             <Button type="submit" isLoading={isSubmitting} className="w-full">
                                 Send Reset Link
@@ -63,9 +65,9 @@ const ForgotPasswordPage: React.FC = () => {
                 )}
 
                 <div className="text-sm text-center">
-                    <NavLink to="/login" className="font-medium text-primary hover:underline">
+                    <ReactRouterDOM.NavLink to="/login" className="font-medium text-primary hover:underline">
                         &larr; Back to Sign In
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                 </div>
             </div>
         </div>

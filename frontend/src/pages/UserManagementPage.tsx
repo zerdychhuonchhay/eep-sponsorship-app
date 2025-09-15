@@ -17,8 +17,10 @@ import UserForm from '@/components/users/UserForm.tsx';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import { useAuth, usePermissions } from '@/contexts/AuthContext.tsx';
 import ConfirmationModal from '@/components/ConfirmationModal.tsx';
+import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
+import PermissionsManager from '@/components/PermissionsManager.tsx';
 
-const UserManagementPage: React.FC = () => {
+const UsersList: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AppUser> | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +44,8 @@ const UserManagementPage: React.FC = () => {
         try {
             const data = await api.getUsers(apiQueryString);
             setPaginatedData(data);
-        } catch (error: any) {
+        } catch (error: any)
+{
             showToast(error.message || 'Failed to load user data.', 'error');
         } finally {
             setLoading(false);
@@ -52,7 +55,7 @@ const UserManagementPage: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
+    
     const handleInviteUser = async (email: string, role: string) => {
         setIsSubmitting(true);
         try {
@@ -66,7 +69,7 @@ const UserManagementPage: React.FC = () => {
             setIsSubmitting(false);
         }
     };
-
+    
     const handleUpdateUser = async (userId: number, data: Partial<Pick<AppUser, 'role' | 'status'>>) => {
         setIsSubmitting(true);
         try {
@@ -80,7 +83,7 @@ const UserManagementPage: React.FC = () => {
             setIsSubmitting(false);
         }
     };
-    
+
     const handleDeleteUser = (user: AppUser) => {
         setDeletingUser(user);
     };
@@ -100,115 +103,120 @@ const UserManagementPage: React.FC = () => {
         }
     };
 
-
     const users = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
     if (loading && !paginatedData) {
-        return (
-            <>
-                <PageHeader title="Manage Users" />
-                <SkeletonTable rows={10} cols={5} />
-            </>
-        );
+        return <SkeletonTable rows={10} cols={5} />;
     }
 
     return (
-        <div className="space-y-6">
-            <PageHeader title="Manage Users">
-                {canCreate && (
-                    <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />}>
-                        Invite User
-                    </Button>
-                )}
-            </PageHeader>
+         <Card>
+            <CardContent>
+                <div className="flex justify-end mb-4">
+                     {canCreate && (
+                        <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} size="sm">
+                            Invite User
+                        </Button>
+                    )}
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-gray-2 dark:bg-box-dark-2">
+                                {(['username', 'role', 'status', 'lastLogin'] as (keyof AppUser)[]).map(key => (
+                                    <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
+                                        <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                            {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                        </button>
+                                    </th>
+                                ))}
+                                <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.length > 0 ? users.map((user) => {
+                                const isCurrentUser = currentUser?.id === user.id;
+                                const actionItems: { label: string; icon: React.ReactNode; onClick: () => void; className?: string }[] = [];
 
-            <Card>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                    {(['username', 'role', 'status', 'lastLogin'] as (keyof AppUser)[]).map(key => (
-                                        <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
-                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                            </button>
-                                        </th>
-                                    ))}
-                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.length > 0 ? users.map((user) => {
-                                    const isCurrentUser = currentUser?.id === user.id;
-                                    const actionItems: { label: string; icon: React.ReactNode; onClick: () => void; className?: string }[] = [];
+                                if(canUpdate) {
+                                    actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
+                                }
+                                if (!isCurrentUser && canDelete) {
+                                    actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
+                                }
 
-                                    if(canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
-                                    }
-                                    if (!isCurrentUser && canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
-                                    }
-
-                                    return (
-                                        <tr key={user.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <p className="font-medium text-black dark:text-white">{user.username}</p>
-                                                <p className="text-sm text-body-color dark:text-gray-300">{user.email}</p>
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <Badge type={user.role} />
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <Badge type={user.status} />
-                                            </td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">
-                                                {formatDateForDisplay(user.lastLogin || undefined)}
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                            </td>
-                                        </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan={5}>
-                                            <EmptyState title="No Users Found" icon={<UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />} />
+                                return (
+                                    <tr key={user.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                            <p className="font-medium text-black dark:text-white">{user.username}</p>
+                                            <p className="text-sm text-body-color dark:text-gray-300">{user.email}</p>
+                                        </td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                            <Badge type={user.role} />
+                                        </td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
+                                            <Badge type={user.status} />
+                                        </td>
+                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">
+                                            {formatDateForDisplay(user.lastLogin || undefined)}
+                                        </td>
+                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
+                                            {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
                                         </td>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {users.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
-                </CardContent>
-            </Card>
+                                );
+                            }) : (
+                                <tr>
+                                    <td colSpan={5}>
+                                        <EmptyState title="No Users Found" icon={<UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />} />
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {users.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
 
-            <Modal isOpen={isInviting || !!editingUser} onClose={() => { setIsInviting(false); setEditingUser(null); }}>
-                <UserForm
-                    key={editingUser ? editingUser.id : 'invite'}
-                    user={editingUser}
-                    currentUserId={currentUser?.id}
-                    onInvite={handleInviteUser}
-                    onUpdate={handleUpdateUser}
-                    onCancel={() => { setIsInviting(false); setEditingUser(null); }}
-                    isSubmitting={isSubmitting}
+                 <Modal isOpen={isInviting || !!editingUser} onClose={() => { setIsInviting(false); setEditingUser(null); }}>
+                    <UserForm
+                        key={editingUser ? editingUser.id : 'invite'}
+                        user={editingUser}
+                        currentUserId={currentUser?.id}
+                        onInvite={handleInviteUser}
+                        onUpdate={handleUpdateUser}
+                        onCancel={() => { setIsInviting(false); setEditingUser(null); }}
+                        isSubmitting={isSubmitting}
+                    />
+                </Modal>
+
+                <ConfirmationModal
+                    isOpen={!!deletingUser}
+                    onClose={() => setDeletingUser(null)}
+                    onConfirm={handleConfirmDelete}
+                    title="Delete User"
+                    message={`Are you sure you want to permanently delete the user "${deletingUser?.username}"? This action cannot be undone.`}
+                    confirmText="Delete"
+                    isConfirming={isSubmittingDelete}
                 />
-            </Modal>
+            </CardContent>
+        </Card>
+    );
+};
 
-            <ConfirmationModal
-                isOpen={!!deletingUser}
-                onClose={() => setDeletingUser(null)}
-                onConfirm={handleConfirmDelete}
-                title="Delete User"
-                message={`Are you sure you want to permanently delete the user "${deletingUser?.username}"? This action cannot be undone.`}
-                confirmText="Delete"
-                isConfirming={isSubmittingDelete}
-            />
+const UsersAndRolesPage: React.FC = () => {
+    const tabs: Tab[] = [
+        { id: 'users', label: 'Users', content: <UsersList /> },
+        { id: 'roles', label: 'Roles & Permissions', content: <PermissionsManager /> },
+    ];
+    
+    return (
+        <div className="space-y-6">
+            <PageHeader title="Users & Roles" />
+            <Tabs tabs={tabs} />
         </div>
     );
 };
 
-export default UserManagementPage;
+export default UsersAndRolesPage;

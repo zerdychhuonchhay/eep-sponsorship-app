@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
+import * as ReactRouterDOM from 'react-router-dom';
 import { MenuIcon, MoonIcon, SunIcon, LogoutIcon, ArrowDownIcon, BugIcon, ProfileIcon, UserIcon } from '@/components/Icons.tsx';
 import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
 import { useTheme } from '@/contexts/ThemeContext.tsx';
@@ -53,9 +54,9 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
                     </button>
                     {/* Logo for collapsed sidebar on desktop */}
                     {isSidebarCollapsed && (
-                         <NavLink to="/" className="hidden lg:block">
+                         <ReactRouterDOM.NavLink to="/" className="hidden lg:block">
                             <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
-                        </NavLink>
+                        </ReactRouterDOM.NavLink>
                     )}
                 </div>
                 
@@ -94,10 +95,10 @@ const Header: React.FC<HeaderProps> = ({ isSidebarOpen, setIsSidebarOpen }) => {
                         {isProfileOpen && (
                             <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark z-20">
                                 <div className="py-1">
-                                    <NavLink to="/profile" className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                                    <ReactRouterDOM.NavLink to="/profile" className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
                                         <ProfileIcon className="w-6 h-6" />
                                         My Profile
-                                    </NavLink>
+                                    </ReactRouterDOM.NavLink>
                                     <button onClick={logout} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
                                         <LogoutIcon className="w-6 h-6" />
                                         Log Out
