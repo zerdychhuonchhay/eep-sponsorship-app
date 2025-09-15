@@ -188,6 +188,15 @@ const prepareStudentData = (studentData: any) => {
     return data;
 };
 
+const prepareTransactionData = (data: any) => {
+    const snakeData = convertKeysToSnake(data);
+    if ('student_id' in snakeData) {
+        snakeData.student = snakeData.student_id;
+        delete snakeData.student_id;
+    }
+    return snakeData;
+};
+
 const queryAIAssistantForStudentFilters = async (query: string): Promise<any> => {
     try {
         const response = await apiClient('/ai-assistant/student-filters/', {
@@ -433,10 +442,14 @@ export const api = {
         const params = new URLSearchParams(dateRange);
         return apiClient(`/transactions/all/?${params.toString()}`);
     },
-    addTransaction: async (data: Omit<Transaction, 'id'>) => apiClient('/transactions/', { method: 'POST', body: JSON.stringify(convertKeysToSnake(data)) }),
+    addTransaction: async (data: Omit<Transaction, 'id'>) => {
+        const payload = prepareTransactionData(data);
+        return apiClient('/transactions/', { method: 'POST', body: JSON.stringify(payload) });
+    },
     updateTransaction: async (data: Transaction) => {
         const { id, ...rest } = data;
-        return apiClient(`/transactions/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(rest)) });
+        const payload = prepareTransactionData(rest);
+        return apiClient(`/transactions/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) });
     },
     deleteTransaction: async (id: string) => apiClient(`/transactions/${id}/`, { method: 'DELETE' }),
 

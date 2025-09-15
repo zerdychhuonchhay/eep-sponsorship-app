@@ -183,18 +183,18 @@ const StudentsPage: React.FC = () => {
         try {
             const aiFilters = await api.queryAIAssistantForStudentFilters(aiSearchQuery);
             
-            const { search, sponsor_name, ...restFilters } = aiFilters;
+            const { search, sponsorName, ...restFilters } = aiFilters;
             
             setSearchTerm(search || '');
 
             const finalFilters = { ...restFilters };
 
-            if (sponsor_name) {
-                const sponsor = sponsorLookup.find(s => s.name.toLowerCase().includes(sponsor_name.toLowerCase()));
+            if (sponsorName) {
+                const sponsor = sponsorLookup.find(s => s.name.toLowerCase().includes(sponsorName.toLowerCase()));
                 if (sponsor) {
                     finalFilters.sponsor = String(sponsor.id);
                 } else {
-                    showToast(`Sponsor "${sponsor_name}" not found.`, 'info');
+                    showToast(`Sponsor "${sponsorName}" not found.`, 'info');
                 }
             }
             

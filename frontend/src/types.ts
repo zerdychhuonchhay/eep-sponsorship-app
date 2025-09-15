@@ -189,7 +189,7 @@ export interface Student {
 
 export interface AcademicReport {
     id: string;
-    studentId: string;
+    student: string; // Renamed from studentId to match backend serializer
     studentName?: string; // Added for convenience
     reportPeriod: string;
     gradeLevel: string;
