@@ -99,24 +99,29 @@ const App: React.FC = () => (
     <HashRouter>
         <ThemeProvider>
             <UIProvider>
-                <DataProvider>
-                    <SettingsProvider>
-                        <GlobalNotificationProvider>
-                            <AuthProvider>
-                                <Routes>
-                                    <Route path="/login" element={<LoginPage />} />
-                                    <Route path="/signup" element={<SignupPage />} />
-                                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                                    <Route element={<ProtectedRoute />}>
-                                        <Route path="/*" element={<AppContent />} />
-                                    </Route>
-                                </Routes>
-                                <Toast />
-                                <DebugEventLogger />
-                            </AuthProvider>
-                        </GlobalNotificationProvider>
-                    </SettingsProvider>
-                </DataProvider>
+                <GlobalNotificationProvider>
+                    <AuthProvider>
+                        <Routes>
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/signup" element={<SignupPage />} />
+                            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                            <Route element={<ProtectedRoute />}>
+                                <Route
+                                    path="/*"
+                                    element={
+                                        <DataProvider>
+                                            <SettingsProvider>
+                                                <AppContent />
+                                            </SettingsProvider>
+                                        </DataProvider>
+                                    }
+                                />
+                            </Route>
+                        </Routes>
+                        <Toast />
+                        <DebugEventLogger />
+                    </AuthProvider>
+                </GlobalNotificationProvider>
             </UIProvider>
         </ThemeProvider>
     </HashRouter>
