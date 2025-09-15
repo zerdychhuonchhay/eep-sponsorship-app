@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { Sponsor, PaginatedResponse } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
@@ -22,7 +23,7 @@ const SponsorsPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const { showToast } = useNotification();
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { refetchSponsorLookup } = useData();
     const { canCreate } = usePermissions('sponsors');
 

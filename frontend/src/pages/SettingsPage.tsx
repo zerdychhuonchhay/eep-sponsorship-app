@@ -4,12 +4,9 @@ import { Card, CardContent } from '@/components/ui/Card.tsx';
 import { useTheme } from '@/contexts/ThemeContext.tsx';
 import { SunIcon, MoonIcon } from '@/components/Icons.tsx';
 import ColumnOrderManager from '@/components/settings/ColumnOrderManager.tsx';
-import PermissionsManager from '@/components/PermissionsManager.tsx';
-import { useAuth } from '@/contexts/AuthContext.tsx';
 
 const SettingsPage: React.FC = () => {
     const { theme, setTheme } = useTheme();
-    const { user } = useAuth();
 
     return (
         <div className="space-y-6">
@@ -61,13 +58,6 @@ const SettingsPage: React.FC = () => {
 
                 <ColumnOrderManager />
 
-                {user?.isAdmin && (
-                    <Card className="xl:col-span-2">
-                        <CardContent>
-                           <PermissionsManager />
-                        </CardContent>
-                    </Card>
-                )}
             </div>
         </div>
     );

@@ -9,68 +9,28 @@ export interface ColumnConfig {
   renderCell: (student: Student) => React.ReactNode;
 }
 
+// All possible columns that can be shown.
 export const ALL_STUDENT_COLUMNS: ColumnConfig[] = [
-  {
-    id: 'studentId',
-    label: 'Student ID',
-    renderCell: (s) => s.studentId,
-  },
-  {
-    id: 'firstName',
-    label: 'First Name',
-    renderCell: (s) => s.firstName,
-  },
-  {
-    id: 'lastName',
-    label: 'Last Name',
-    renderCell: (s) => s.lastName,
-  },
-  {
-    id: 'age',
-    label: 'Age',
-    renderCell: (s) => calculateAge(s.dateOfBirth),
-  },
-  {
-    id: 'gender',
-    label: 'Sex',
-    renderCell: (s) => s.gender,
-  },
-  {
-    id: 'currentGrade',
-    label: 'Grade',
-    renderCell: (s) => s.currentGrade,
-  },
-  {
-    id: 'guardianName',
-    label: 'Guardian',
-    renderCell: (s) => s.guardianName,
-  },
-  {
-    id: 'studentStatus',
-    label: 'Status',
-    renderCell: (s) => <Badge type={s.studentStatus} />,
-  },
-  {
-    id: 'sponsorshipStatus',
-    label: 'Sponsorship',
-    renderCell: (s) => <Badge type={s.sponsorshipStatus} />,
-  },
-  {
-    id: 'school',
-    label: 'School',
-    renderCell: (s) => s.school,
-  },
+    { id: 'firstName', label: 'First Name', renderCell: (s) => s.firstName, },
+    { id: 'lastName', label: 'Last Name', renderCell: (s) => s.lastName, },
+    { id: 'studentId', label: 'Student ID', renderCell: (s) => s.studentId, },
+    { id: 'age', label: 'Age', renderCell: (s) => calculateAge(s.dateOfBirth), },
+    { id: 'gender', label: 'Gender', renderCell: (s) => s.gender, },
+    { id: 'currentGrade', label: 'Grade', renderCell: (s) => s.currentGrade, },
+    { id: 'school', label: 'School', renderCell: (s) => s.school || 'N/A', },
+    { id: 'guardianName', label: 'Guardian', renderCell: (s) => s.guardianName || 'N/A', },
+    { id: 'studentStatus', label: 'Status', renderCell: (s) => <Badge type={s.studentStatus} />, },
+    { id: 'sponsorshipStatus', label: 'Sponsorship', renderCell: (s) => <Badge type={s.sponsorshipStatus} />, },
 ];
 
+// The default set of columns and their order.
 export const DEFAULT_STUDENT_COLUMNS_ORDER: (keyof Student | 'age')[] = [
-  'studentId',
   'firstName',
   'lastName',
+  'school',
   'age',
-  'gender',
-  'currentGrade',
-  'guardianName',
   'studentStatus',
+  'sponsorshipStatus',
 ];
 
 export const getDefaultColumns = (): ColumnConfig[] => {

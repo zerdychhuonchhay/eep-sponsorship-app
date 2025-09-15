@@ -28,7 +28,7 @@ const SponsorsPage = React.lazy(() => import('@/pages/SponsorsPage.tsx'));
 const SponsorDetailPage = React.lazy(() => import('@/pages/SponsorDetailPage.tsx'));
 const ReportsPage = React.lazy(() => import('@/pages/ReportsPage.tsx'));
 const SettingsPage = React.lazy(() => import('@/pages/SettingsPage.tsx'));
-const UserManagementPage = React.lazy(() => import('@/pages/UserManagementPage.tsx'));
+const UsersAndRolesPage = React.lazy(() => import('@/pages/UserManagementPage.tsx'));
 const ProfilePage = React.lazy(() => import('@/pages/ProfilePage.tsx'));
 
 const AppContent: React.FC = () => {
@@ -73,7 +73,7 @@ const AppContent: React.FC = () => {
                             } />
                              <Route path="users" element={
                                 <React.Suspense fallback={<SkeletonTable rows={10} cols={5} />}>
-                                    <UserManagementPage />
+                                    <UsersAndRolesPage />
                                 </React.Suspense>
                             } />
                              <Route path="settings" element={

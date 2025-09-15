@@ -1,38 +1,43 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const signupSchema = z.object({
+    username: z.string().min(3, 'Username must be at least 3 characters.'),
+    email: z.string().email('Please enter a valid email address.'),
+    password: z.string().min(6, 'Password must be at least 6 characters.'),
+    confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ['confirmPassword'],
+});
+
+type SignupSchema = z.infer<typeof signupSchema>;
 
 const SignupPage: React.FC = () => {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const navigate = useNavigate();
+    const [apiError, setApiError] = useState('');
+    const navigate = ReactRouterDOM.useNavigate();
     const { showToast } = useNotification();
+    
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupSchema>({
+        resolver: zodResolver(signupSchema)
+    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (password !== confirmPassword) {
-            setError('Passwords do not match.');
-            return;
-        }
-
-        setError('');
-        setIsSubmitting(true);
+    const onSubmit = async (data: SignupSchema) => {
+        setApiError('');
         try {
-            await api.signup(username, email, password);
+            await api.signup(data.username, data.email, data.password);
             showToast('Registration successful! Your account is pending administrator approval.', 'success');
             navigate('/login');
         } catch (err: any) {
-            setError(err.message || 'Registration failed. Please try again.');
-        } finally {
-            setIsSubmitting(false);
+            setApiError(err.message || 'Registration failed. Please try again.');
         }
     };
 
@@ -42,56 +47,45 @@ const SignupPage: React.FC = () => {
                 <div className="text-center">
                      <img src="/logo.png" alt="Logo" className="w-20 h-20 mx-auto mb-4" />
                     <h1 className="text-2xl font-bold text-black dark:text-white">Create an Account</h1>
-                     <p className="text-body-color dark:text-gray-300 mt-2">
-                        Registration is restricted to @extremelove.com emails.
-                    </p>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                      <FormInput
                         label="Username"
                         id="username"
-                        name="username"
                         type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        required
                         autoComplete="username"
                         placeholder="Choose a username"
+                        {...register('username')}
+                        error={errors.username?.message}
                     />
                     <FormInput
                         label="Email"
                         id="email"
-                        name="email"
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
                         autoComplete="email"
                         placeholder="your-name@extremelove.com"
+                        {...register('email')}
+                        error={errors.email?.message}
                     />
                     <FormInput
                         label="Password"
                         id="password"
-                        name="password"
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
                         autoComplete="new-password"
                         placeholder="Create a password"
+                        {...register('password')}
+                        error={errors.password?.message}
                     />
                      <FormInput
                         label="Confirm Password"
                         id="confirmPassword"
-                        name="confirmPassword"
                         type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
                         autoComplete="new-password"
                         placeholder="Confirm your password"
+                        {...register('confirmPassword')}
+                        error={errors.confirmPassword?.message}
                     />
-                    {error && <p className="text-sm text-danger text-center">{error}</p>}
+                    {apiError && <p className="text-sm text-danger text-center">{apiError}</p>}
                     <div>
                         <Button type="submit" isLoading={isSubmitting} className="w-full">
                             Sign Up
@@ -99,9 +93,9 @@ const SignupPage: React.FC = () => {
                     </div>
                 </form>
                 <div className="text-sm text-center">
-                    <NavLink to="/login" className="font-medium text-primary hover:underline">
+                    <ReactRouterDOM.NavLink to="/login" className="font-medium text-primary hover:underline">
                         Already have an account? Sign In
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                 </div>
             </div>
         </div>

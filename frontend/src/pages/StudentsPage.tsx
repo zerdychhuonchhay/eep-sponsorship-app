@@ -327,7 +327,7 @@ const StudentsPage: React.FC = () => {
                                                             {canUpdate && <input type="checkbox" className="form-checkbox" checked={selectedStudentIds.has(student.studentId)} onChange={(e) => handleSelectStudent(student.studentId, e.target.checked)} />}
                                                         </td>
                                                         {studentTableColumns.map(column => (
-                                                            <td key={column.id as string} className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark" onClick={() => setSelectedStudent(student)}>
+                                                            <td key={column.id as string} className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark cursor-pointer" onClick={() => setSelectedStudent(student)}>
                                                                 <div className="flex items-center gap-3">
                                                                     {column.id === 'firstName' && (
                                                                          student.profilePhoto ? (

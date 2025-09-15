@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email or Username is required.'),
+  password: z.string().min(1, 'Password is required.'),
+});
+
+type LoginSchema = z.infer<typeof loginSchema>;
 
 const LoginPage: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [apiError, setApiError] = useState('');
     const { login } = useAuth();
+    
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginSchema>({
+        resolver: zodResolver(loginSchema)
+    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setIsSubmitting(true);
+    const onSubmit = async (data: LoginSchema) => {
+        setApiError('');
         try {
-            await login(email, password);
+            await login(data.email, data.password);
         } catch (err: any) {
-            setError(err.message || 'Invalid email or password.');
-        } finally {
-            setIsSubmitting(false);
+            setApiError(err.message || 'Invalid email or password.');
         }
     };
 
@@ -32,30 +40,26 @@ const LoginPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-black dark:text-white">NGO Sponsorship Dashboard</h1>
                     <p className="text-body-color dark:text-gray-300">Please sign in to continue</p>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <FormInput
                         label="Email or Username"
                         id="email"
-                        name="email"
                         type="text"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
                         autoComplete="username"
                         placeholder='Enter your email or username'
+                        {...register('email')}
+                        error={errors.email?.message}
                     />
                     <FormInput
                         label="Password"
                         id="password"
-                        name="password"
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
                         autoComplete="current-password"
                         placeholder='Enter your password'
+                        {...register('password')}
+                        error={errors.password?.message}
                     />
-                    {error && <p className="text-sm text-danger text-center">{error}</p>}
+                    {apiError && <p className="text-sm text-danger text-center">{apiError}</p>}
                     <div>
                         <Button type="submit" isLoading={isSubmitting} className="w-full">
                             Sign In
@@ -63,13 +67,13 @@ const LoginPage: React.FC = () => {
                     </div>
                 </form>
                 <div className="text-sm text-center text-body-color dark:text-gray-300 space-x-4">
-                    <NavLink to="/forgot-password" className="font-medium text-primary hover:underline">
+                    <ReactRouterDOM.NavLink to="/forgot-password" className="font-medium text-primary hover:underline">
                         Forgot Password?
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                     <span>|</span>
-                     <NavLink to="/signup" className="font-medium text-primary hover:underline">
+                     <ReactRouterDOM.NavLink to="/signup" className="font-medium text-primary hover:underline">
                         Don't have an account? Sign Up
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                 </div>
             </div>
         </div>
