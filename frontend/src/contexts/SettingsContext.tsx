@@ -5,7 +5,7 @@ const STORAGE_KEY = 'student-table-columns-order';
 
 interface SettingsContextType {
     studentTableColumns: ColumnConfig[];
-    setStudentTableColumns: (newOrderIds: (keyof any)[]) => void;
+    setStudentTableColumns: (newOrderIds: string[]) => void;
     resetStudentTableColumns: () => void;
 }
 

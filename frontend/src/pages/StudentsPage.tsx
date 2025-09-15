@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef, lazy, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useMemo } from 'react';
 import { api } from '@/services/api.ts';
-import { Student, FollowUpRecord, PaginatedResponse, StudentStatus, SponsorshipStatus, Gender } from '@/types.ts';
+import { Student, PaginatedResponse, StudentStatus, SponsorshipStatus, Gender } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
@@ -9,7 +9,6 @@ import { PlusIcon, UploadIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, SparklesIco
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
-import PrintableFollowUpRecord from '@/components/students/PrintableFollowUpRecord.tsx';
 import AdvancedFilter, { FilterOption } from '@/components/AdvancedFilter.tsx';
 import ActiveFiltersDisplay from '@/components/ActiveFiltersDisplay.tsx';
 import PageHeader from '@/components/layout/PageHeader.tsx';
@@ -21,7 +20,6 @@ import { useUI } from '@/contexts/UIContext.tsx';
 import { useSettings } from '@/contexts/SettingsContext.tsx';
 import BulkActionBar from '@/components/students/BulkActionBar.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
-// FIX: Import the `Badge` component to resolve a "Cannot find name 'Badge'" error in the mobile student card view.
 import Badge from '@/components/ui/Badge.tsx';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
@@ -51,7 +49,6 @@ const StudentsPage: React.FC = () => {
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [aiSearchQuery, setAiSearchQuery] = useState('');
 
-    // Get column configuration from settings
     const { studentTableColumns } = useSettings();
 
     const {
@@ -283,7 +280,7 @@ const StudentsPage: React.FC = () => {
                             <ActiveFiltersDisplay 
                                 activeFilters={{...filters, search: searchTerm}}
                                 onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} 
-                                customLabels={{ sponsor: (id) => sponsorLookup.find(s => s.id === id)?.name }}
+                                customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }}
                             />
                             
                             {isInitialLoadAndEmpty ? (
@@ -305,16 +302,17 @@ const StudentsPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <>
-                                    <div className="mt-4">
-                                        <table className="w-full text-left hidden md:table">
+                                    {/* Desktop Table View */}
+                                    <div className="mt-4 hidden md:block overflow-x-auto">
+                                        <table className="w-full text-left">
                                             <thead>
                                                 <tr className="bg-gray-2 dark:bg-box-dark-2">
                                                     <th className="py-4 px-4 font-medium text-black dark:text-white">
                                                          {canUpdate && <input type="checkbox" className="form-checkbox" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />}
                                                     </th>
                                                     {studentTableColumns.map(column => (
-                                                        <th key={column.id} className="py-4 px-4 font-medium text-black dark:text-white">
-                                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(column.id)}>
+                                                        <th key={column.id as string} className="py-4 px-4 font-medium text-black dark:text-white">
+                                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(column.id as keyof Student)}>
                                                                 {column.label}
                                                                 {sortConfig?.key === column.id && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                                             </button>
@@ -329,88 +327,79 @@ const StudentsPage: React.FC = () => {
                                                             {canUpdate && <input type="checkbox" className="form-checkbox" checked={selectedStudentIds.has(student.studentId)} onChange={(e) => handleSelectStudent(student.studentId, e.target.checked)} />}
                                                         </td>
                                                         {studentTableColumns.map(column => (
-                                                            <td key={column.id} className="py-5 px-4 border-b border-stroke dark:border-strokedark text-black dark:text-white">
-                                                                {/* Special case for clickable name */}
-                                                                {column.id === 'firstName' ? (
-                                                                    <button onClick={() => setSelectedStudent(student)} className="font-medium hover:text-primary text-left">
-                                                                        {column.renderCell(student)}
-                                                                    </button>
-                                                                ) : (
-                                                                    column.renderCell(student)
-                                                                )}
+                                                            <td key={column.id as string} className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark" onClick={() => setSelectedStudent(student)}>
+                                                                <div className="flex items-center gap-3">
+                                                                    {column.id === 'firstName' && (
+                                                                         student.profilePhoto ? (
+                                                                            <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-10 h-10 rounded-full object-cover"/>
+                                                                        ) : (
+                                                                            <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                                                                <UserIcon className="w-6 h-6 text-gray-500" />
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                    <div className="font-medium">{column.renderCell(student)}</div>
+                                                                </div>
                                                             </td>
                                                         ))}
                                                     </tr>
                                                 )) : (
                                                     <tr>
                                                         <td colSpan={studentTableColumns.length + 1}>
-                                                            <EmptyState title="No Students Found" />
+                                                            <EmptyState />
                                                         </td>
                                                     </tr>
                                                 )}
                                             </tbody>
                                         </table>
-                                        
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
-                                            {studentsList.length > 0 ? studentsList.map((s) => (
-                                                <div key={s.studentId} className={`bg-white dark:bg-box-dark rounded-lg p-4 border border-stroke dark:border-strokedark shadow-sm relative ${selectedStudentIds.has(s.studentId) ? 'ring-2 ring-primary' : ''}`}>
-                                                    <div className="absolute top-2 right-2">
-                                                        {canUpdate && <input type="checkbox" className="form-checkbox h-5 w-5" checked={selectedStudentIds.has(s.studentId)} onChange={(e) => handleSelectStudent(s.studentId, e.target.checked)} />}
-                                                    </div>
-                                                    <div className="flex items-center gap-4 mb-3">
-                                                        {s.profilePhoto ? (
-                                                            <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-12 h-12 rounded-full object-cover"/>
-                                                        ) : (
-                                                            <div className="w-12 h-12 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center flex-shrink-0">
-                                                                <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <button onClick={() => setSelectedStudent(s)} className="font-bold text-lg text-black dark:text-white truncate text-left hover:text-primary">
-                                                                {s.firstName} {s.lastName}
-                                                            </button>
-                                                            <p className="text-sm text-body-color dark:text-gray-300">{s.studentId}</p>
+                                    </div>
+
+                                    {/* Mobile Card View */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden mt-4">
+                                        {studentsList.map(student => (
+                                            <div key={student.studentId} onClick={() => setSelectedStudent(student)} className="bg-white dark:bg-box-dark rounded-lg p-4 shadow-sm border border-stroke dark:border-strokedark">
+                                                <div className="flex items-center gap-4">
+                                                    {student.profilePhoto ? (
+                                                        <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-16 h-16 rounded-full object-cover"/>
+                                                    ) : (
+                                                        <div className="w-16 h-16 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                                            <UserIcon className="w-10 h-10 text-gray-500" />
                                                         </div>
-                                                    </div>
-                                                    <div className="text-sm text-body-color dark:text-gray-300 mb-2">
-                                                        <p>Guardian: <span className="font-medium text-black dark:text-white">{s.guardianName || 'N/A'}</span></p>
-                                                        <p>Sex: <span className="font-medium text-black dark:text-white">{s.gender}</span></p>
-                                                    </div>
-                                                     <div className="flex justify-between items-center text-sm pt-3 border-t border-stroke dark:border-strokedark">
-                                                        <div className="space-y-1">
-                                                            <p className="text-body-color dark:text-gray-300">Age: <span className="font-medium text-black dark:text-white">{studentTableColumns.find(c => c.id === 'age')?.renderCell(s)}</span></p>
-                                                            <p className="text-body-color dark:text-gray-300">Grade: <span className="font-medium text-black dark:text-white">{s.currentGrade}</span></p>
-                                                        </div>
-                                                        <div>
-                                                           <Badge type={s.studentStatus} />
-                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="font-bold text-lg text-black dark:text-white">{student.firstName} {student.lastName}</p>
+                                                        <p className="text-sm text-body-color dark:text-gray-300">{student.studentId}</p>
+                                                        <p className="text-sm text-body-color dark:text-gray-300">Grade {student.currentGrade} | Sex: {student.gender}</p>
                                                     </div>
                                                 </div>
-                                            )) : (
-                                                 <EmptyState title="No Students Found" />
-                                            )}
-                                        </div>
+                                                <div className="mt-4 flex justify-between items-center">
+                                                    <Badge type={student.studentStatus} />
+                                                    <Badge type={student.sponsorshipStatus} />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    
                                     {studentsList.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
                                 </>
                             )}
                         </CardContent>
                     </Card>
+
+                    {selectedStudentIds.size > 0 && (
+                        <BulkActionBar 
+                            selectedCount={selectedStudentIds.size}
+                            onUpdateStatus={handleBulkUpdateStatus}
+                            onClearSelection={() => setSelectedStudentIds(new Set())}
+                        />
+                    )}
                 </>
             )}
 
-            <BulkActionBar
-                selectedCount={selectedStudentIds.size}
-                onUpdateStatus={handleBulkUpdateStatus}
-                onClearSelection={() => setSelectedStudentIds(new Set())}
-            />
-            
             <Modal isOpen={!!editingStudent} onClose={() => setEditingStudent(null)} title={editingStudent?.studentId ? 'Edit Student' : 'Add New Student'}>
                 <Suspense fallback={<FormLoader />}>
                     {editingStudent && (
                         <StudentForm 
-                            key={editingStudent ? editingStudent.studentId : 'new-student'}
+                            key={editingStudent.studentId || 'new'}
                             student={editingStudent} 
                             onSave={handleSaveStudent} 
                             onCancel={() => setEditingStudent(null)}
@@ -420,8 +409,12 @@ const StudentsPage: React.FC = () => {
                 </Suspense>
             </Modal>
             
-            {isShowingImportModal && <StudentImportModal existingStudents={studentLookup} onFinished={handleImportFinished} />}
-
+            {isShowingImportModal && (
+                <StudentImportModal
+                    existingStudents={studentLookup}
+                    onFinished={handleImportFinished}
+                />
+            )}
         </div>
     );
 };
