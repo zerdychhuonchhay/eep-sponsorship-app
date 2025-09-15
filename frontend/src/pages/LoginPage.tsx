@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().min(1, 'Email or Username is required.'),
+  username: z.string().min(1, 'Email or Username is required.'),
   password: z.string().min(1, 'Password is required.'),
 });
 
@@ -26,7 +26,7 @@ const LoginPage: React.FC = () => {
     const onSubmit = async (data: LoginSchema) => {
         setApiError('');
         try {
-            await login(data.email, data.password);
+            await login(data.username, data.password);
         } catch (err: any) {
             setApiError(err.message || 'Invalid email or password.');
         }
@@ -43,12 +43,12 @@ const LoginPage: React.FC = () => {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <FormInput
                         label="Email or Username"
-                        id="email"
+                        id="username"
                         type="text"
                         autoComplete="username"
                         placeholder='Enter your email or username'
-                        {...register('email')}
-                        error={errors.email?.message}
+                        {...register('username')}
+                        error={errors.username?.message}
                     />
                     <FormInput
                         label="Password"

@@ -24,9 +24,10 @@ const ForgotPasswordPage: React.FC = () => {
     const onSubmit = async (data: ForgotPasswordSchema) => {
         setMessage('');
         try {
-            const response = await api.forgotPassword(data.email);
+            const response = await api.requestPasswordReset(data.email);
             setMessage(response.message);
         } catch (err: any) {
+            // For security, show a generic message even on failure to prevent email enumeration
             setMessage("If an account with this email exists, a password reset link has been sent.");
         }
     };

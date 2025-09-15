@@ -20,8 +20,9 @@ import { AuthProvider } from './contexts/AuthContext.tsx';
 import { SettingsProvider } from './contexts/SettingsContext.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import SignupPage from './pages/SignupPage.tsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 
 const AuditLogPage = React.lazy(() => import('@/pages/AuditLogPage.tsx'));
 const SponsorsPage = React.lazy(() => import('@/pages/SponsorsPage.tsx'));
@@ -105,6 +106,7 @@ const App: React.FC = () => (
                             <Route path="/login" element={<LoginPage />} />
                             <Route path="/signup" element={<SignupPage />} />
                             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                            <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
                             <Route element={<ProtectedRoute />}>
                                 <Route
                                     path="/*"

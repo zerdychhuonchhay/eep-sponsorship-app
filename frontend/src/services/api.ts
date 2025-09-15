@@ -271,9 +271,17 @@ export const api = {
             body: JSON.stringify(convertKeysToSnake(data)),
         });
     },
-    forgotPassword: async (email: string): Promise<{ message: string }> => {
-        console.log(`Simulating password reset request for ${email}`);
-        return Promise.resolve({ message: "If an account with this email exists, a password reset link has been sent." });
+    requestPasswordReset: async (email: string): Promise<{ message: string }> => {
+        return apiClient('/users/request-password-reset/', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        });
+    },
+    confirmPasswordReset: async (data: any): Promise<{ message: string }> => {
+        return apiClient('/users/password-reset-confirm/', {
+            method: 'POST',
+            body: JSON.stringify(convertKeysToSnake(data)),
+        });
     },
     
     // User & Role Management Endpoints

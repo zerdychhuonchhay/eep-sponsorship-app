@@ -1,9 +1,11 @@
 # backend/core/serializers.py
 
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
 from django.conf import settings
 from rest_framework import serializers
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
 import json
 from .models import Student, AcademicReport, FollowUpRecord, Transaction, GovernmentFiling, Task, AuditLog, Sponsor, RoleProfile
 
@@ -218,3 +220,63 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ['id', 'name']
+
+# --- NEW SERIALIZERS FOR PASSWORD MANAGEMENT ---
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password1 = serializers.CharField(required=True, write_only=True)
+    new_password2 = serializers.CharField(required=True, write_only=True)
+
+    def validate(self, data):
+        user = self.context['request'].user
+        if not user.check_password(data['old_password']):
+            raise serializers.ValidationError({"old_password": "Your old password was entered incorrectly."})
+        if data['new_password1'] != data['new_password2']:
+            raise serializers.ValidationError({"new_password2": "The two password fields didn't match."})
+        # You can add password strength validation here if desired
+        return data
+
+    def save(self, **kwargs):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password1'])
+        user.save()
+        return user
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        # We check for the user in the view, but the serializer can just validate the format.
+        # This approach helps prevent email enumeration attacks.
+        return value
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    new_password1 = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password1'] != attrs['new_password2']:
+            raise serializers.ValidationError({"new_password2": "The two password fields didn't match."})
+        
+        try:
+            uid = urlsafe_base64_decode(attrs['uidb64']).decode()
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist, DjangoValidationError):
+            user = None
+
+        if user is None or not default_token_generator.check_token(user, attrs['token']):
+            raise serializers.ValidationError('The reset link is invalid or has expired. Please request a new one.')
+        
+        attrs['user'] = user
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.validated_data['user']
+        user.set_password(self.validated_data['new_password1'])
+        # If the user was invited and inactive, this is their first login. Activate them.
+        if not user.is_active:
+            user.is_active = True
+        user.save()
+        return user
