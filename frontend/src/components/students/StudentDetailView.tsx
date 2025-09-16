@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, FollowUpRecord, AcademicReport } from '@/types.ts';
+import { Student, FollowUpRecord } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
 import { EditIcon, TrashIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
