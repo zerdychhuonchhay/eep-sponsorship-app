@@ -203,7 +203,7 @@ export interface AcademicReport {
 
 export interface FollowUpRecord {
     id: string;
-    studentId: string;
+    student: string;
     childName: string;
     childCurrentAge: number;
     dateOfFollowUp: string;
