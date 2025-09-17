@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, FollowUpRecord } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
 import { EditIcon, TrashIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
@@ -56,14 +56,19 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
 
     const handleDownloadPdf = (record: FollowUpRecord) => {
         setRecordForPdf(record);
-        setTimeout(() => {
-            const studentName = record.childName.replace(/\s+/g, '-');
-            const date = new Date(record.dateOfFollowUp).toISOString().split('T')[0];
-            generatePdf(`Follow-Up-Report-${studentName}-${date}`).finally(() => {
-                setRecordForPdf(null);
-            });
-        }, 100);
     };
+    
+    // Use an effect to generate the PDF after the state has updated and the component has rendered.
+    // This avoids race conditions with the off-screen rendering.
+    useEffect(() => {
+        if (recordForPdf && printableRef.current) {
+            const studentName = recordForPdf.childName.replace(/\s+/g, '-');
+            const date = new Date(recordForPdf.dateOfFollowUp).toISOString().split('T')[0];
+            generatePdf(`Follow-Up-Report-${studentName}-${date}`).finally(() => {
+                setRecordForPdf(null); // Reset after generation is complete
+            });
+        }
+    }, [recordForPdf, generatePdf]);
 
     const handleSaveAcademicReport = async (formData: AcademicReportFormData) => {
         setIsSaving(true);

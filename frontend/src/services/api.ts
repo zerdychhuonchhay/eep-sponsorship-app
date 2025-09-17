@@ -23,17 +23,14 @@ const logoutUser = () => {
 
 
 let isRefreshing = false;
-let failedRequestQueue: ((token: string) => void)[] = [];
+let failedRequestQueue: { resolve: (token: string) => void; reject: (error: Error) => void; }[] = [];
 
 const processQueue = (error: Error | null, token: string | null = null) => {
     failedRequestQueue.forEach(promise => {
         if (error) {
-            // FIX: The `promise` function expects a string, but is being passed a rejected Promise to propagate the error.
-            // This is a valid pattern (resolving with a rejected promise rejects the outer promise), but the TypeScript types are too strict.
-            // Casting to `any` resolves the type error while maintaining the intended runtime behavior.
-            (promise as any)(Promise.reject(error));
+            promise.reject(error);
         } else {
-            promise(token!);
+            promise.resolve(token!);
         }
     });
     failedRequestQueue = [];
@@ -46,14 +43,12 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
 
     // If a token refresh is in progress, wait for it to complete
     if (isRefreshing) {
-        return new Promise<string>((resolve) => {
-            failedRequestQueue.push(newToken => resolve(newToken));
-        }).then(newToken => {
-             const newOptions = { ...options };
-             if (newOptions.headers) {
-                (newOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
-             }
-             return apiClient(endpoint, newOptions);
+        return new Promise<string>((resolve, reject) => {
+            failedRequestQueue.push({ resolve, reject });
+        }).then(() => {
+             // The original request will be retried by the refreshed apiClient call.
+             // It will pick up the new token from localStorage automatically.
+             return apiClient(endpoint, options);
         });
     }
 
@@ -90,7 +85,8 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
 
                     if (!refreshResponse.ok) {
                         logoutUser(); // Refresh token failed, log out
-                        processQueue(new Error('Session expired.'));
+                        const err = new Error('Session expired.');
+                        processQueue(err, null);
                         let errorMessage = 'Session expired. Please log in again.';
                         if (refreshResponse.status >= 500) {
                             errorMessage = 'A server error occurred while refreshing your session. Please log in again.';
@@ -107,7 +103,7 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
 
                 } catch (e) {
                     logoutUser(); // Network error or other issue during refresh
-                    processQueue(e as Error);
+                    processQueue(e as Error, null);
                     throw e;
                 } finally {
                     isRefreshing = false;
