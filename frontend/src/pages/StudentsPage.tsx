@@ -412,6 +412,7 @@ const StudentsPage: React.FC = () => {
             {isShowingImportModal && (
                 <StudentImportModal
                     existingStudents={studentLookup}
+                    studentsOnPage={studentsList}
                     onFinished={handleImportFinished}
                 />
             )}

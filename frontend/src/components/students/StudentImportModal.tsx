@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button.tsx';
 
 interface StudentImportModalProps {
     existingStudents: StudentLookup[];
+    studentsOnPage: Student[]; // This can be removed, but keeping it for now to minimize breaking changes.
     onFinished: () => void;
 }
 
@@ -126,6 +127,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     const { showToast } = useNotification();
     const [validationIssues, setValidationIssues] = useState<ValidationError[]>([]);
     const [validatedData, setValidatedData] = useState<Partial<Student>[]>([]);
+    const [fullExistingStudents, setFullExistingStudents] = useState<Map<string, Student>>(new Map());
 
 
     const stepTitles: Record<number, string> = {
@@ -223,55 +225,122 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     const handleValidation = useCallback((dataToValidate: Partial<Student>[]) => {
         const issues: ValidationError[] = [];
         const validRows: Partial<Student>[] = [];
-        // Only require the absolute minimum for a record to be useful
-        const requiredFields: (keyof Student)[] = ['studentId', 'firstName', 'lastName'];
-
+        const requiredFieldsForNew: (keyof Student)[] = ['studentId', 'firstName', 'lastName'];
+        const existingStudentsMap = new Map(existingStudents.map(s => [s.studentId, s]));
+    
         dataToValidate.forEach((student, index) => {
-            for (const field of requiredFields) {
-                if (student[field] === null || student[field] === undefined || String(student[field]).trim() === '') {
+            let hasError = false;
+            const isExisting = student.studentId ? existingStudentsMap.has(student.studentId) : false;
+    
+            if (!student.studentId) {
+                issues.push({
+                    rowNumber: index + 2,
+                    studentId: 'N/A',
+                    studentName: `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'N/A',
+                    error: `Missing required field: Student ID. This row will be skipped.`
+                });
+                hasError = true;
+            } else if (!isExisting) { // Only check other required fields for NEW students
+                const missingFields = requiredFieldsForNew.filter(field => {
+                    return !student[field] || String(student[field]).trim() === '';
+                });
+    
+                if (missingFields.length > 0) {
                     issues.push({
-                        rowNumber: index + 2, // +2 for 1-based index and header row
-                        studentId: student.studentId || 'N/A',
+                        rowNumber: index + 2,
+                        studentId: student.studentId,
                         studentName: `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'N/A',
-                        error: `Missing required field: ${String(field).replace(/([A-Z])/g, ' $1')}`
+                        error: `Missing required fields for new student: ${missingFields.join(', ')}. This row will be skipped.`
                     });
+                    hasError = true;
                 }
             }
-            // All rows are considered "valid" to proceed, errors are just informational
-            validRows.push(student);
+            
+            if (!hasError) {
+                validRows.push(student);
+            }
         });
-
+    
         setValidationIssues(issues);
         setValidatedData(validRows);
         setStep(3);
-    }, []);
+    }, [existingStudents]);
+
+    const handleProceedToReview = async () => {
+        const existingIdsInFile = validatedData
+            .filter(s => existingStudents.some(es => es.studentId === s.studentId))
+            .map(s => s.studentId!);
+        
+        if (existingIdsInFile.length === 0) {
+            setFullExistingStudents(new Map());
+            setStep(4);
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            const fullData = await api.getStudentsByIds(existingIdsInFile);
+            setFullExistingStudents(new Map(fullData.map(s => [s.studentId, s])));
+            setStep(4);
+        } catch (error: any) {
+            showToast(error.message || 'Could not fetch existing student details for comparison.', 'error');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     const { newStudents, updatedStudentsDiffs } = useMemo(() => {
-        const existingStudentsMap = new Map(existingStudents.map(s => [s.studentId, s]));
         const newStudents: Partial<Student>[] = [];
         const diffs: StudentDiff[] = [];
 
         validatedData.forEach(fileStudent => {
             if (!fileStudent.studentId) return;
-            const existingStudent = existingStudentsMap.get(fileStudent.studentId);
-            if (existingStudent) {
+            const existingStudentData = fullExistingStudents.get(fileStudent.studentId);
+
+            if (existingStudentData) {
                 const changes: Change[] = [];
                 (Object.keys(fileStudent) as (keyof Student)[]).forEach(field => {
                     if (field === 'studentId') return;
-                    const newValue = fileStudent[field]; const oldValue = (existingStudent as any)[field];
-                    const normNew = (newValue === null || newValue === undefined) ? '' : String(newValue);
-                    const normOld = (oldValue === null || oldValue === undefined) ? '' : String(oldValue);
-                    if (normNew !== normOld) changes.push({ field, oldValue, newValue });
+
+                    const newValue = fileStudent[field];
+                    const oldValue = (existingStudentData as any)[field];
+
+                    let normNew, normOld;
+                    const isDateField = ['dateOfBirth', 'eepEnrollDate', 'applicationDate', 'outOfProgramDate'].includes(field as string);
+
+                    if (isDateField) {
+                        normNew = newValue ? parseAndFormatDate(newValue) : null;
+                        normOld = oldValue ? parseAndFormatDate(oldValue) : null;
+                    } else if (typeof newValue === 'boolean' || typeof oldValue === 'boolean') {
+                        normNew = !!newValue;
+                        normOld = !!oldValue;
+                    } else {
+                        normNew = (newValue === null || newValue === undefined) ? '' : String(newValue);
+                        normOld = (oldValue === null || oldValue === undefined) ? '' : String(oldValue);
+                    }
+                    
+                    if (normNew !== normOld) {
+                        changes.push({ field, oldValue, newValue });
+                    }
                 });
+
                 if (changes.length > 0) {
-                    diffs.push({ studentId: fileStudent.studentId, firstName: existingStudent.firstName, lastName: existingStudent.lastName, changes });
+                    diffs.push({
+                        studentId: fileStudent.studentId,
+                        firstName: existingStudentData.firstName,
+                        lastName: existingStudentData.lastName,
+                        changes
+                    });
                 }
             } else {
-                newStudents.push(fileStudent);
+                const isKnownFromLookup = existingStudents.some(es => es.studentId === fileStudent.studentId);
+                if (!isKnownFromLookup) {
+                     newStudents.push(fileStudent);
+                }
             }
         });
         return { newStudents, updatedStudentsDiffs: diffs };
-    }, [validatedData, existingStudents]);
+    }, [validatedData, fullExistingStudents, existingStudents]);
 
     useEffect(() => {
         const initialSelections: Record<string, Record<string, boolean>> = {};
@@ -299,19 +368,14 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
     
     const handleFinalImport = async () => {
         const today = new Date().toISOString().split('T')[0];
-
-        const processStudent = (student: Partial<Student>): Partial<Student> => {
+        
+        const studentsToCreate = newStudents.map(student => {
             const processed = { ...student };
-            if (!processed.dateOfBirth) {
-                processed.dateOfBirth = '1900-01-01'; // Assign placeholder
-            }
-            if (!processed.eepEnrollDate) {
-                processed.eepEnrollDate = today; // Assign today as placeholder
-            }
+            if (!processed.dateOfBirth) processed.dateOfBirth = '1900-01-01';
+            if (!processed.eepEnrollDate) processed.eepEnrollDate = today;
             return processed;
-        };
+        });
 
-        const studentsToCreate = newStudents.map(processStudent);
         const studentsToUpdate: Partial<Student>[] = [];
 
         updatedStudentsDiffs.forEach(diff => {
@@ -323,13 +387,12 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                     hasChanges = true;
                 }
             });
-            if (hasChanges) studentsToUpdate.push(studentUpdatePayload);
+            if (hasChanges) {
+                studentsToUpdate.push(studentUpdatePayload);
+            }
         });
         
-        // Process updates to add placeholders if necessary
-        const processedUpdates = studentsToUpdate.map(processStudent);
-
-        const payload = [...studentsToCreate, ...processedUpdates];
+        const payload = [...studentsToCreate, ...studentsToUpdate];
         
         if (payload.length === 0) {
             showToast('No new students or approved changes to import.', 'info');
@@ -396,11 +459,11 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                  <div>
                     <p className="text-body-color mb-4">
                         Validation complete. {validatedData.length} rows are ready to be reviewed.
-                        {validationIssues.length > 0 && ` ${validationIssues.length} rows have missing required fields (ID, First Name, Last Name) and will be skipped.`}
+                        {validationIssues.length > 0 && ` ${validationIssues.length} rows had critical errors and will be skipped.`}
                     </p>
                     {validationIssues.length > 0 && (
                         <div>
-                            <h4 className="font-semibold text-danger mb-2">Rows with Issues (will be skipped)</h4>
+                            <h4 className="font-semibold text-danger mb-2">Rows with Errors (will be skipped)</h4>
                              <div className="max-h-60 overflow-y-auto border border-stroke dark:border-strokedark rounded-lg">
                                 <table className="w-full text-sm">
                                     <thead className="bg-gray-2 dark:bg-box-dark-2 sticky top-0">
@@ -425,7 +488,7 @@ const StudentImportModal: React.FC<StudentImportModalProps> = ({ existingStudent
                     )}
                     <div className="flex justify-between mt-4">
                         <Button onClick={() => setStep(1)} variant="ghost">Back & Re-upload</Button>
-                        <Button onClick={() => setStep(4)} disabled={validatedData.length === 0}>
+                        <Button onClick={handleProceedToReview} disabled={validatedData.length === 0 || isProcessing} isLoading={isProcessing}>
                             {`Continue to Review ${validatedData.length} row(s)`}
                         </Button>
                     </div>

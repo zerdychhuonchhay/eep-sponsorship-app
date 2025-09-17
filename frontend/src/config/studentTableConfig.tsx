@@ -28,6 +28,7 @@ export const DEFAULT_STUDENT_COLUMNS_ORDER: (keyof Student | 'age')[] = [
   'firstName',
   'lastName',
   'school',
+  'currentGrade',
   'age',
   'studentStatus',
   'sponsorshipStatus',
