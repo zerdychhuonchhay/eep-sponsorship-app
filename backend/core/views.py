@@ -32,18 +32,22 @@ from .pagination import StandardResultsSetPagination
 from . import ai_assistant
 from .permissions import HasModulePermission
 
+# --- NEW IMPORTS FOR AI SEARCH ---
 import google.generativeai as genai
 import json
 from django.conf import settings
 from rest_framework.views import APIView
 
+# --- NEW: CONFIGURE GEMINI API ---
 try:
     genai.configure(api_key=settings.GOOGLE_API_KEY)
 except (AttributeError, TypeError):
+    # Handle case where key is not set or None, to prevent server crash on startup
     print("WARNING: GOOGLE_API_KEY not configured in settings. AI features will not work.")
     pass
 
 
+# --- Audit Logging Mixin ---
 class AuditLoggingMixin:
     """Mixin to automatically log create, update, and delete actions."""
 
@@ -88,12 +92,17 @@ class AuditLoggingMixin:
         instance.delete()
 
 
+# --- ViewSets ---
 class GroupViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for viewing and managing user groups (roles).
+    The 'Administrator' group is protected and cannot be modified via this API.
+    """
     queryset = Group.objects.all().exclude(name='Administrator').order_by('name')
     serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAdminUser]
-
+    permission_classes = [permissions.IsAdminUser] # Only Admins can manage roles
 class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'students'
     
@@ -229,8 +238,10 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SponsorViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'sponsors'
+
     serializer_class = SponsorSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
@@ -249,8 +260,10 @@ class SponsorViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class AcademicReportViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'academics'
+
     queryset = AcademicReport.objects.select_related('student').all()
     serializer_class = AcademicReportSerializer
     pagination_class = StandardResultsSetPagination
@@ -264,15 +277,19 @@ class AcademicReportViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return queryset
 
 class FollowUpRecordViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'academics'
+
     queryset = FollowUpRecord.objects.select_related('student').all()
     serializer_class = FollowUpRecordSerializer
     pagination_class = StandardResultsSetPagination
 
 class TransactionViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'transactions'
+
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
     pagination_class = StandardResultsSetPagination
@@ -301,8 +318,10 @@ class TransactionViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class GovernmentFilingViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'filings'
+
     queryset = GovernmentFiling.objects.all()
     serializer_class = GovernmentFilingSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -311,8 +330,10 @@ class GovernmentFilingViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     ordering_fields = ['document_name', 'authority', 'due_date', 'status']
 
 class TaskViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'tasks'
+
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     pagination_class = StandardResultsSetPagination
@@ -325,8 +346,10 @@ class TaskViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         return queryset
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'audit'
+
     queryset = AuditLog.objects.select_related('content_type').all()
     serializer_class = AuditLogSerializer
     pagination_class = StandardResultsSetPagination
@@ -357,8 +380,10 @@ class RoleViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'patch', 'head', 'options']
 
 class UserViewSet(viewsets.ModelViewSet):
+    # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
     module_name = 'users'
+
     serializer_class = UserSerializer
     
     def get_queryset(self):
@@ -410,6 +435,7 @@ class UserViewSet(viewsets.ModelViewSet):
              return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response({'message': f'Invitation created for {email}. The user must be activated.'}, status=status.HTTP_201_CREATED)
 
+# --- Dashboard & Other API Views ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard_stats(request):
@@ -479,45 +505,69 @@ def recent_transactions(request):
     serializer = TransactionSerializer(recent, many=True)
     return Response(serializer.data)
 
+# --- NEW: AI Assistant for Student Filters ---
 class AIAssistantStudentFilterView(APIView):
+    """
+    An API view that uses the Gemini AI to parse a natural language query
+    and return a structured JSON object of filters for the student model.
+    """
     def post(self, request, *args, **kwargs):
         if not settings.GOOGLE_API_KEY:
-            return Response({"error": "AI Assistant is not configured on the server."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {"error": "AI Assistant is not configured on the server."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
         query = request.data.get('query')
         if not query:
-            return Response({"error": "Query parameter is missing."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Query parameter is missing."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # IMPROVED: Explicitly request JSON output from the AI for reliability
+        # This is the core of the feature: a well-defined prompt for the AI.
         prompt = f"""
+            You are an expert data analyst for an NGO. Your task is to convert a user's natural language query into a JSON object of filters for a student database.
+
+            The available filters and their exact possible values are:
+            - "student_status": ["Active", "Inactive", "Pending Qualification"]
+            - "sponsorship_status": ["Sponsored", "Unsponsored"]
+            - "gender": ["Male", "Female", "Other"]
+            - "sponsor_name": This should be a string representing the sponsor's name if mentioned.
+            - "search": This should be a string for a general text search on the student's first or last name if a specific name is mentioned.
+
             Analyze the user's query: "{query}"
 
-            Convert it into a JSON object of filters for a student database.
-            The available filters are "student_status", "sponsorship_status", "gender", "sponsor_name", and "search".
-            - student_status values: "Active", "Inactive", "Pending Qualification"
-            - sponsorship_status values: "Sponsored", "Unsponsored"
-            - gender values: "Male", "Female", "Other"
-            - sponsor_name: string for a sponsor's name
-            - search: string for a student's first or last name
-
-            Your response MUST be only the JSON object. Do not include non-JSON text or formatting.
-            If a filter is not mentioned, do not include it.
+            Your response MUST be only the JSON object, with no extra text, explanation, or formatting like markdown ```json blocks.
+            If a filter is not mentioned, do not include it in the JSON.
+            If a name is mentioned (e.g., "show me Jane Doe" or "find John"), use the "search" key.
+            If a sponsor's name is mentioned (e.g., "students sponsored by Hope Foundation"), use the "sponsor_name" key.
         """
+
         try:
             model = genai.GenerativeModel('gemini-2.5-flash')
-            # NEW: Configure the model to return a JSON response
-            generation_config = genai.types.GenerationConfig(
-                response_mime_type="application/json"
-            )
-            ai_response = model.generate_content(prompt, generation_config=generation_config)
+            ai_response = model.generate_content(prompt)
             
-            # REMOVED: Fragile text cleaning is no longer needed
-            filters = json.loads(ai_response.text)
+            # Clean up the response to ensure it's valid JSON
+            cleaned_text = ai_response.text.strip().replace("```json", "").replace("```", "").strip()
+            
+            # Parse the JSON string into a Python dictionary
+            filters = json.loads(cleaned_text)
+            
             return Response(filters, status=status.HTTP_200_OK)
+
         except json.JSONDecodeError:
-            return Response({"error": "The AI returned an invalid format. Please try rephrasing your query."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "The AI returned an invalid format. Please try rephrasing your query."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         except Exception as e:
+            # Catch potential errors from the Gemini API (e.g., API key issues, content filtering)
             print(f"Error calling Gemini API: {e}")
-            return Response({"error": "There was a problem communicating with the AI assistant."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "There was a problem communicating with the AI assistant."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -540,7 +590,12 @@ def get_current_user(request):
     serializer = UserSerializer(user)
     return Response(serializer.data)
 
+# --- NEW VIEWS for password management ---
+
 class ChangePasswordView(generics.GenericAPIView):
+    """
+    An endpoint for an authenticated user to change their own password.
+    """
     serializer_class = ChangePasswordSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -550,7 +605,12 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer.save()
         return Response({"detail": "Password updated successfully"}, status=status.HTTP_200_OK)
 
+
 class PasswordResetRequestView(APIView):
+    """
+    An endpoint to request a password reset link.
+    This is used by both the "Forgot Password" page and the admin's "Send Password Set" action.
+    """
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -559,11 +619,16 @@ class PasswordResetRequestView(APIView):
             email = serializer.validated_data['email']
             try:
                 user = User.objects.get(email__iexact=email)
+                
+                # This should match the route in your frontend App.tsx
+                # For development, it points to your local frontend server.
                 frontend_base_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'http://localhost:5173'
+                
                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
                 token = default_token_generator.make_token(user)
                 reset_link = f"{frontend_base_url}/#/reset-password/{uidb64}/{token}"
 
+                # Send email (which will be printed to console in development)
                 send_mail(
                     'Set Your Password for NGO Dashboard',
                     f'Hello,\n\nPlease click the link below to set your password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email.\n\nThanks,\nNGO Dashboard Team',
@@ -572,13 +637,19 @@ class PasswordResetRequestView(APIView):
                     fail_silently=False,
                 )
             except User.DoesNotExist:
+                # To prevent email enumeration, we don't reveal that the user doesn't exist.
+                # The frontend will show a generic success message regardless.
                 pass
+
         return Response(
             {"message": "If an account with this email exists, a password reset link has been sent."},
             status=status.HTTP_200_OK
         )
 
 class PasswordResetConfirmView(generics.GenericAPIView):
+    """
+    An endpoint to confirm the password reset and set a new password.
+    """
     permission_classes = [permissions.AllowAny]
     serializer_class = PasswordResetConfirmSerializer
 
