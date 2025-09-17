@@ -143,23 +143,46 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
         serializer = StudentLookupSerializer(students, many=True)
         return Response(serializer.data)
 
+    # NEW: Endpoint to get full details for multiple students by ID
+    @action(detail=False, methods=['post'], url_path='bulk_details')
+    def bulk_details(self, request):
+        student_ids = request.data.get('student_ids', [])
+        if not student_ids:
+            return Response([], status=status.HTTP_200_OK)
+        
+        queryset = Student.objects.filter(student_id__in=student_ids)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['post'], url_path='bulk_import')
     @transaction.atomic
     def bulk_import(self, request):
         students_data = request.data
         created_count, updated_count, errors = 0, 0, []
-        required_fields = ['student_id', 'first_name', 'last_name']
         
+        required_fields_for_new = ['student_id', 'first_name', 'last_name']
+        
+        # Determine which students already exist
+        incoming_ids = [s.get('student_id') for s in students_data if s.get('student_id')]
+        existing_student_ids = set(Student.objects.filter(student_id__in=incoming_ids).values_list('student_id', flat=True))
+
         for student_data in students_data:
             student_id = student_data.get('student_id')
-            
-            # IMPROVED: Add specific validation for required fields
-            missing_fields = [field for field in required_fields if not student_data.get(field)]
-            if missing_fields:
-                error_msg = f"Missing required fields: {', '.join(missing_fields)}"
-                errors.append({"id": student_id or "Unknown", "message": error_msg})
+            if not student_id:
+                errors.append({"id": "Unknown", "message": "Missing student_id."})
                 continue
-            
+
+            is_existing = student_id in existing_student_ids
+
+            # For new students, all required fields must be present.
+            # For existing students, we only require the ID for identification.
+            if not is_existing:
+                missing_fields = [field for field in required_fields_for_new if not student_data.get(field)]
+                if missing_fields:
+                    error_msg = f"Missing required fields for new student: {', '.join(missing_fields)}"
+                    errors.append({"id": student_id, "message": error_msg})
+                    continue
+
             try:
                 defaults = {key: value for key, value in student_data.items() if key != 'student_id'}
                 for field in ['date_of_birth', 'eep_enroll_date', 'application_date', 'out_of_program_date']:
@@ -169,7 +192,8 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
                 student, created = Student.objects.update_or_create(student_id=student_id, defaults=defaults)
                 if created: created_count += 1
                 else: updated_count += 1
-            except Exception as e: errors.append({"id": student_id, "message": str(e)})
+            except Exception as e: 
+                errors.append({"id": student_id, "message": str(e)})
         
         return Response({
             "createdCount": created_count, "updatedCount": updated_count, "skippedCount": len(errors),

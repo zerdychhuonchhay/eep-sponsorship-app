@@ -1,9 +1,10 @@
 # backend/core/serializers.py
 
-from datetime import date
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.tokens import default_token_generator
+# MODIFIED: Corrected import path for modern Django versions
 from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str 
 from django.conf import settings
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -20,40 +21,26 @@ class AcademicReportSerializer(serializers.ModelSerializer):
 
 class FollowUpRecordSerializer(serializers.ModelSerializer):
     student = serializers.PrimaryKeyRelatedField(read_only=True)
-    # NEW: Dynamically generate student name and age for data integrity
-    student_name = serializers.SerializerMethodField()
-    child_current_age = serializers.SerializerMethodField()
-
     class Meta:
         model = FollowUpRecord
         fields = '__all__'
 
-    def get_student_name(self, obj):
-        return f"{obj.student.first_name} {obj.student.last_name}"
-
-    def get_child_current_age(self, obj):
-        today = date.today()
-        dob = obj.student.date_of_birth
-        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-        return age
-
-# REFACTORED: Simplified for clarity
 class TransactionSerializer(serializers.ModelSerializer):
-    # Use 'source' to map 'student' model field to 'student_id' in JSON for reads
-    student_id = serializers.CharField(source='student.student_id', read_only=True)
-    # Use 'source' to map incoming 'student' JSON field to 'student' model field for writes
     student = serializers.PrimaryKeyRelatedField(
         queryset=Student.objects.all(), 
         pk_field='student_id', 
         allow_null=True, 
         required=False,
-        write_only=True,
     )
-
     class Meta:
         model = Transaction
-        fields = ['id', 'date', 'description', 'location', 'amount', 'type', 'category', 'student', 'student_id']
-
+        fields = ['id', 'date', 'description', 'location', 'amount', 'type', 'category', 'student']
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['student_id'] = instance.student.student_id if instance.student else None
+        representation.pop('student', None) 
+        return representation
 
 class StudentLookupSerializer(serializers.ModelSerializer):
     class Meta:
@@ -67,7 +54,8 @@ class StudentListSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             'student_id', 'first_name', 'last_name', 'date_of_birth', 
-            'gender', 'profile_photo', 'student_status', 'sponsorship_status', 'sponsor_name'
+            'gender', 'profile_photo', 'student_status', 'sponsorship_status', 
+            'sponsor_name', 'school', 'current_grade'
         ]
 
 class SponsorSerializer(serializers.ModelSerializer):
@@ -189,11 +177,13 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_permissions(self, obj):
         if obj.is_superuser:
+            # An empty object signals to the frontend that the user is an admin with all rights
             return {}
         
         group = obj.groups.first()
         if group and hasattr(group, 'roleprofile'):
             return group.roleprofile.permissions
+        # Default to no permissions if no role or profile exists
         return {}
 
 class InviteUserSerializer(serializers.Serializer):
@@ -227,10 +217,14 @@ class RoleSerializer(serializers.ModelSerializer):
         return instance
 
 class GroupSerializer(serializers.ModelSerializer):
+    """
+    Serializer for managing Groups (Roles).
+    """
     class Meta:
         model = Group
         fields = ['id', 'name']
 
+# --- NEW SERIALIZERS FOR PASSWORD MANAGEMENT ---
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
     new_password1 = serializers.CharField(required=True, write_only=True)
@@ -242,6 +236,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"old_password": "Your old password was entered incorrectly."})
         if data['new_password1'] != data['new_password2']:
             raise serializers.ValidationError({"new_password2": "The two password fields didn't match."})
+        # You can add password strength validation here if desired
         return data
 
     def save(self, **kwargs):
@@ -254,6 +249,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate_email(self, value):
+        # We check for the user in the view, but the serializer can just validate the format.
+        # This approach helps prevent email enumeration attacks.
         return value
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
@@ -267,7 +264,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({"new_password2": "The two password fields didn't match."})
         
         try:
-            uid = urlsafe_base64_decode(attrs['uidb64']).decode()
+            uid = force_str(urlsafe_base64_decode(attrs['uidb64']))
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist, DjangoValidationError):
             user = None
@@ -281,6 +278,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self, **kwargs):
         user = self.validated_data['user']
         user.set_password(self.validated_data['new_password1'])
+        # If the user was invited and inactive, this is their first login. Activate them.
         if not user.is_active:
             user.is_active = True
         user.save()
