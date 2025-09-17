@@ -88,8 +88,9 @@ class Student(models.Model):
     sponsor = models.ForeignKey(Sponsor, on_delete=models.SET_NULL, null=True, blank=True, related_name='sponsored_students')
     application_date = models.DateField(default=timezone.now)
     has_birth_certificate = models.BooleanField(default=False)
-    siblings_count = models.PositiveIntegerField(default=0)
-    household_members_count = models.PositiveIntegerField(default=0)
+    # MODIFIED: Allow null values for better data import resilience
+    siblings_count = models.PositiveIntegerField(default=0, null=True, blank=True)
+    household_members_count = models.PositiveIntegerField(default=0, null=True, blank=True)
     city = models.CharField(max_length=100, blank=True)
     village_slum = models.CharField(max_length=100, blank=True)
     guardian_name = models.CharField(max_length=255, blank=True)
@@ -97,7 +98,8 @@ class Student(models.Model):
     home_location = models.CharField(max_length=255, blank=True)
     father_details = models.JSONField(default=default_parent_details)
     mother_details = models.JSONField(default=default_parent_details)
-    annual_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # MODIFIED: Allow null values for better data import resilience
+    annual_income = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     guardian_if_not_parents = models.CharField(max_length=255, blank=True)
     parent_support_level = models.IntegerField(default=3)
     closest_private_school = models.CharField(max_length=255, blank=True)
@@ -131,8 +133,7 @@ class AcademicReport(models.Model):
 
 class FollowUpRecord(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='follow_up_records', to_field='student_id')
-    child_name = models.CharField(max_length=255, blank=True) 
-    child_current_age = models.PositiveIntegerField()
+    # REMOVED: child_name and child_current_age are now derived in the serializer
     date_of_follow_up = models.DateField()
     location = models.CharField(max_length=255)
     parent_guardian = models.CharField(max_length=255, blank=True)
@@ -229,18 +230,12 @@ class AuditLog(models.Model):
         return f'{self.action} on {self.object_repr} by {self.user_identifier} at {self.timestamp}'
     
 class RoleProfile(models.Model):
-    """
-    Extends the default Django Group to store a JSON field with detailed permissions.
-    """
     group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='roleprofile')
-    # Default permissions grant read-only access to key modules for a new role
     permissions = models.JSONField(default=dict)
 
     def __str__(self):
         return f"Permissions for {self.group.name}"
     
-# --- ADD THIS SIGNAL AT THE END OF THE FILE ---
-# This signal automatically creates a RoleProfile every time a new Group is created in Django.
 @receiver(post_save, sender=Group)
 def create_or_update_role_profile(sender, instance, created, **kwargs):
     if created:
