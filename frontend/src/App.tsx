@@ -1,4 +1,5 @@
 import React from 'react';
+// FIX: Standardizing react-router-dom imports to named imports, which is the correct syntax for v6.
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import DashboardPage from '@/pages/DashboardPage.tsx';
 import StudentsPage from '@/pages/StudentsPage.tsx';
@@ -33,16 +34,11 @@ const UsersAndRolesPage = React.lazy(() => import('@/pages/UserManagementPage.ts
 const ProfilePage = React.lazy(() => import('@/pages/ProfilePage.tsx'));
 
 const AppContent: React.FC = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-
     return (
         <div className="flex h-screen overflow-hidden">
-            <Sidebar 
-                isOpen={isSidebarOpen} 
-                setIsOpen={setIsSidebarOpen}
-            />
+            <Sidebar />
             <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-gray-2 dark:bg-box-dark-2">
-                <Header isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+                <Header />
                 <main>
                     <div className="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
                         <Routes>

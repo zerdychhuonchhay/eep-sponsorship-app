@@ -1,7 +1,6 @@
 import React from 'react';
 import useBreadcrumbs from '@/hooks/useBreadcrumbs.ts';
-// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
-import * as ReactRouterDOM from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { ChevronRightIcon } from '@/components/Icons.tsx';
 
 interface PageHeaderProps {
@@ -18,7 +17,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, children }) => {
                 <nav>
                     <ol className="flex items-center gap-2">
                         <li>
-                            <ReactRouterDOM.NavLink to="/" className="font-medium text-primary hover:underline">Dashboard</ReactRouterDOM.NavLink>
+                            <NavLink to="/" className="font-medium text-primary hover:underline">Dashboard</NavLink>
                         </li>
                         {breadcrumbs.slice(1).map((crumb, index) => (
                             <li key={index} className="flex items-center gap-2">
