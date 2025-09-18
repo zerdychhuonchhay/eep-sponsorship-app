@@ -440,10 +440,10 @@ export const api = {
     deleteAcademicReport: async (reportId: string) => apiClient(`/academic-reports/${reportId}/`, { method: 'DELETE' }),
 
     // Follow-up Record Endpoints
-    addFollowUpRecord: async (studentId: string, record: Omit<FollowUpRecord, 'id' | 'studentId'>) => {
+    addFollowUpRecord: async (studentId: string, record: Omit<FollowUpRecord, 'id' | 'student'>) => {
         return apiClient(`/students/${studentId}/follow-up-records/`, { method: 'POST', body: JSON.stringify(convertKeysToSnake(record)) });
     },
-    updateFollowUpRecord: async (recordId: string, updatedRecord: Omit<FollowUpRecord, 'id' | 'studentId'>): Promise<FollowUpRecord> => {
+    updateFollowUpRecord: async (recordId: string, updatedRecord: Omit<FollowUpRecord, 'id' | 'student'>): Promise<FollowUpRecord> => {
         return apiClient(`/follow-up-records/${recordId}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(updatedRecord)) });
     },
     
