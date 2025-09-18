@@ -5,7 +5,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, SparklesIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, SparklesIcon, SearchIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -248,34 +248,57 @@ const StudentsPage: React.FC = () => {
                 <>
                     <Card>
                         <CardContent>
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                                <form onSubmit={handleAiSearch} className="w-full sm:flex-grow flex items-center gap-2">
-                                    <div className="relative w-full">
+                            <div className="flex flex-col gap-4">
+                                {/* AI Search */}
+                                <form onSubmit={handleAiSearch} className="flex items-center gap-2">
+                                    <div className="relative flex-grow">
                                         <input
                                             type="text"
-                                            placeholder="Search with AI (e.g., 'show all unsponsored girls')"
+                                            placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')"
                                             value={aiSearchQuery}
                                             onChange={e => setAiSearchQuery(e.target.value)}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-4 pr-10 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
                                             <SparklesIcon className="text-body-color w-5 h-5"/>
                                         </div>
                                     </div>
-                                    <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()}>
-                                        Search
+                                    <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">
+                                        Ask AI
                                     </Button>
                                 </form>
-                                 <AdvancedFilter
-                                    filterOptions={filterOptions}
-                                    currentFilters={filters}
-                                    onApply={applyFilters}
-                                    onClear={() => {
-                                        clearFilters();
-                                        setSearchTerm('');
-                                    }}
-                                />
+
+                                <div className="border-t border-stroke dark:border-strokedark"></div>
+
+                                {/* Standard Search and Filters */}
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <div className="relative w-full sm:flex-grow">
+                                        <input
+                                            type="text"
+                                            placeholder="Search by name, ID, school..."
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                        />
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                            <SearchIcon className="w-5 h-5 text-body-color" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                        <AdvancedFilter
+                                            filterOptions={filterOptions}
+                                            currentFilters={filters}
+                                            onApply={applyFilters}
+                                            onClear={() => {
+                                                clearFilters();
+                                                setSearchTerm('');
+                                                setAiSearchQuery('');
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
+
 
                             <ActiveFiltersDisplay 
                                 activeFilters={{...filters, search: searchTerm}}
