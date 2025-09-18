@@ -62,13 +62,13 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
     // This avoids race conditions with the off-screen rendering.
     useEffect(() => {
         if (recordForPdf && printableRef.current) {
-            const studentName = recordForPdf.childName.replace(/\s+/g, '-');
+            const studentName = `${student.firstName} ${student.lastName}`.replace(/\s+/g, '-');
             const date = new Date(recordForPdf.dateOfFollowUp).toISOString().split('T')[0];
             generatePdf(`Follow-Up-Report-${studentName}-${date}`).finally(() => {
                 setRecordForPdf(null); // Reset after generation is complete
             });
         }
-    }, [recordForPdf, generatePdf]);
+    }, [recordForPdf, student, generatePdf]);
 
     const handleSaveAcademicReport = async (formData: AcademicReportFormData) => {
         setIsSaving(true);
