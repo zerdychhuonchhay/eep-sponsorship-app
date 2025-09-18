@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useRef } from 'react';
-// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
-import * as ReactRouterDOM from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { User } from '@/types.ts';
 
@@ -26,7 +25,7 @@ const parseJwt = (token: string) => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     // FIX: Use `ReturnType<typeof setTimeout>` for the timeout ID to ensure cross-environment compatibility (Node.js vs. browser).
     const refreshTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
 

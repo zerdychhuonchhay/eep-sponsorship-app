@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// FIX: Standardizing react-router-dom imports to named imports, which is the correct syntax for v6.
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';

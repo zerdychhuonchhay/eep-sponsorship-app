@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-// FIX: Switched to namespace import for react-router-dom to address module resolution issues.
-import * as ReactRouterDOM from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
@@ -23,7 +22,7 @@ type SignupSchema = z.infer<typeof signupSchema>;
 
 const SignupPage: React.FC = () => {
     const [apiError, setApiError] = useState('');
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const { showToast } = useNotification();
     
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupSchema>({
@@ -93,9 +92,9 @@ const SignupPage: React.FC = () => {
                     </div>
                 </form>
                 <div className="text-sm text-center">
-                    <ReactRouterDOM.NavLink to="/login" className="font-medium text-primary hover:underline">
+                    <NavLink to="/login" className="font-medium text-primary hover:underline">
                         Already have an account? Sign In
-                    </ReactRouterDOM.NavLink>
+                    </NavLink>
                 </div>
             </div>
         </div>
