@@ -1,6 +1,6 @@
 import React from 'react';
 import { Student, FollowUpRecord } from '@/types.ts';
-import { formatDateForDisplay } from '@/utils/dateUtils.ts';
+import { calculateAge, formatDateForDisplay } from '@/utils/dateUtils.ts';
 
 interface PrintableFollowUpRecordProps {
     record: FollowUpRecord;
@@ -34,8 +34,8 @@ const PrintableFollowUpRecord: React.FC<PrintableFollowUpRecordProps> = ({ recor
             </header>
             <Section title="Section 1: Client Information">
                 <div className="grid grid-cols-4 gap-2">
-                    <InfoPair label="Child's Name" value={record.childName} />
-                    <InfoPair label="Child's Age" value={record.childCurrentAge} />
+                    <InfoPair label="Child's Name" value={`${student.firstName} ${student.lastName}`} />
+                    <InfoPair label="Child's Age" value={calculateAge(student.dateOfBirth)} />
                     <InfoPair label="Student ID" value={student.studentId} />
                     <InfoPair label="Date of Follow Up" value={formatDateForDisplay(record.dateOfFollowUp)} />
                     <InfoPair label="Location" value={record.location} className="col-span-2" />
