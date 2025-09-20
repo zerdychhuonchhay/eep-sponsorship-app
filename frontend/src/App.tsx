@@ -14,8 +14,7 @@ import Header from '@/components/layout/Header.tsx';
 import Sidebar from '@/components/layout/Sidebar.tsx';
 import { SkeletonTable } from './components/SkeletonLoader.tsx';
 import AIAssistant from './components/AIAssistant.tsx';
-import { GlobalNotificationProvider } from './contexts/GlobalNotificationProvider.tsx';
-import DebugEventLogger from './components/debug/DebugEventLogger.tsx';
+import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import { SettingsProvider } from './contexts/SettingsContext.tsx';
@@ -95,8 +94,8 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => (
     <HashRouter>
         <ThemeProvider>
-            <UIProvider>
-                <GlobalNotificationProvider>
+            <NotificationProvider>
+                <UIProvider>
                     <AuthProvider>
                         <Routes>
                             <Route path="/login" element={<LoginPage />} />
@@ -117,10 +116,9 @@ const App: React.FC = () => (
                             </Route>
                         </Routes>
                         <Toast />
-                        <DebugEventLogger />
                     </AuthProvider>
-                </GlobalNotificationProvider>
-            </UIProvider>
+                </UIProvider>
+            </NotificationProvider>
         </ThemeProvider>
     </HashRouter>
 );

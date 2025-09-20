@@ -21,14 +21,14 @@ const Toast: React.FC = () => {
     const typeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
         success: { bg: 'bg-success', icon: <SuccessIcon className="w-6 h-6" /> },
         error: { bg: 'bg-danger', icon: <ErrorIcon className="w-6 h-6" /> },
-        info: { bg: 'bg-primary', icon: <SuccessIcon className="w-6 h-6" /> }, // Using SuccessIcon for info as well for visual consistency
+        info: { bg: 'bg-primary', icon: <SuccessIcon className="w-6 h-6" /> },
     };
 
     const styles = typeStyles[toast.type] || typeStyles.info;
 
     return (
         <div 
-            className={`fixed top-5 right-5 z-50 flex items-center px-6 py-4 rounded-lg shadow-lg text-white ${styles.bg}`}
+            className={`fixed top-5 right-5 z-[9999] flex items-center px-6 py-4 rounded-lg shadow-lg text-white ${styles.bg}`}
             role="alert"
         >
             <div className="mr-4">

@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MenuIcon, BugIcon } from '@/components/Icons.tsx';
-import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
+import { MenuIcon, BellIcon } from '@/components/Icons.tsx';
+import NotificationCenter from '@/components/NotificationCenter.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
+import { useNotification } from '@/contexts/NotificationContext.tsx';
 
 const Header: React.FC = () => {
     const { isSidebarOpen, toggleSidebar } = useUI();
-    const [isDebugOpen, setIsDebugOpen] = useState(false);
-    const debugRef = useRef<HTMLLIElement>(null);
+    const { unreadCount } = useNotification();
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const notificationRef = useRef<HTMLLIElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (debugRef.current && !debugRef.current.contains(event.target as Node)) {
+            if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
                 const trigger = (event.target as HTMLElement).closest('button');
-                if (!trigger || trigger.id !== 'debug-trigger') {
-                     setIsDebugOpen(false);
+                if (!trigger || trigger.id !== 'notification-trigger') {
+                     setIsNotificationsOpen(false);
                 }
             }
         };
@@ -39,11 +41,20 @@ const Header: React.FC = () => {
                 
                 <div className="flex items-center gap-3 2xsm:gap-7">
                      <ul className="flex items-center gap-2 2xsm:gap-4">
-                        <li className="relative" ref={debugRef}>
-                            <button id="debug-trigger" onClick={() => setIsDebugOpen(p => !p)} className="p-2 rounded-full text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                <BugIcon className="w-6 h-6" />
+                        <li className="relative" ref={notificationRef}>
+                            <button 
+                                id="notification-trigger" 
+                                onClick={() => setIsNotificationsOpen(p => !p)} 
+                                className="relative p-2 rounded-full text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2"
+                            >
+                                <BellIcon className="w-6 h-6" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-danger text-white text-xs flex items-center justify-center">
+                                        {unreadCount}
+                                    </span>
+                                )}
                             </button>
-                            <NotificationCenter isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} />
+                            <NotificationCenter isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
                         </li>
                      </ul>
                 </div>

@@ -1,32 +1,68 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
-type ToastType = 'success' | 'error' | 'info';
+type NotificationType = 'success' | 'error' | 'info';
 
-interface ToastMessage {
+export interface AppNotification {
+    id: number;
     message: string;
-    type: ToastType;
+    type: NotificationType;
+    timestamp: Date;
+    isRead: boolean;
 }
 
 interface NotificationContextType {
-    toast: ToastMessage | null;
-    showToast: (message: string, type: ToastType) => void;
+    toast: AppNotification | null;
+    notifications: AppNotification[];
+    unreadCount: number;
+    showToast: (message: string, type: NotificationType) => void;
     hideToast: () => void;
+    markAllAsRead: () => void;
+    clearNotifications: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [toast, setToast] = useState<ToastMessage | null>(null);
+    const [toast, setToast] = useState<AppNotification | null>(null);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-    const showToast = useCallback((message: string, type: ToastType) => {
-        setToast({ message, type });
+    const showToast = useCallback((message: string, type: NotificationType) => {
+        const newNotification: AppNotification = {
+            id: Date.now() + Math.random(),
+            message,
+            type,
+            timestamp: new Date(),
+            isRead: false,
+        };
+        setNotifications(prev => [newNotification, ...prev].slice(0, 100)); // Keep last 100
+        setToast(newNotification);
     }, []);
 
     const hideToast = useCallback(() => {
         setToast(null);
     }, []);
 
-    const value = useMemo(() => ({ toast, showToast, hideToast }), [toast, showToast, hideToast]);
+    const markAllAsRead = useCallback(() => {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    }, []);
+
+    const clearNotifications = useCallback(() => {
+        setNotifications([]);
+    }, []);
+
+    const unreadCount = useMemo(() => {
+        return notifications.filter(n => !n.isRead).length;
+    }, [notifications]);
+
+    const value = useMemo(() => ({ 
+        toast, 
+        notifications, 
+        unreadCount, 
+        showToast, 
+        hideToast, 
+        markAllAsRead, 
+        clearNotifications 
+    }), [toast, notifications, unreadCount, showToast, hideToast, markAllAsRead, clearNotifications]);
 
     return (
         <NotificationContext.Provider value={value}>
