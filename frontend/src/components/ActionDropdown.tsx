@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import ReactDOM from 'react-dom';
 import { DotsVerticalIcon } from './Icons.tsx';
 
-interface ActionItem {
+export interface ActionItem {
     label: string;
     icon: ReactNode;
     onClick: () => void;
