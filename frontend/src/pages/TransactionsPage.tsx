@@ -181,16 +181,18 @@ const TransactionsPage: React.FC = () => {
            
             <Card>
                 <CardContent>
-                     <div className="flex justify-end mb-4">
-                        <AdvancedFilter 
-                            filterOptions={filterOptions}
-                            currentFilters={filters}
-                            onApply={applyFilters}
-                            onClear={clearFilters}
-                        />
+                    <div className="p-4 mb-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark">
+                        <div className="flex justify-end">
+                            <AdvancedFilter 
+                                filterOptions={filterOptions}
+                                currentFilters={filters}
+                                onApply={applyFilters}
+                                onClear={clearFilters}
+                            />
+                        </div>
+                        <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
-                    <div className="overflow-x-auto mt-4">
+                    <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-2 dark:bg-box-dark-2">

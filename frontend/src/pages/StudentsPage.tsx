@@ -21,6 +21,7 @@ import { useSettings } from '@/contexts/SettingsContext.tsx';
 import BulkActionBar from '@/components/students/BulkActionBar.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import Badge from '@/components/ui/Badge.tsx';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
@@ -49,7 +50,7 @@ const StudentsPage: React.FC = () => {
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [aiSearchQuery, setAiSearchQuery] = useState('');
 
-    const { studentTableColumns } = useSettings();
+    const { studentTableColumns, isAiEnabled } = useSettings();
 
     const {
         sortConfig, currentPage, searchTerm, filters, apiQueryString,
@@ -225,14 +226,14 @@ const StudentsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
                 {!selectedStudent && canCreate && (
-                    <>
+                    <PageActions>
                         <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>
                             Import
                         </Button>
                         <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>
                             Add Student
                         </Button>
-                    </>
+                    </PageActions>
                 )}
             </PageHeader>
 
@@ -248,63 +249,63 @@ const StudentsPage: React.FC = () => {
                 <>
                     <Card>
                         <CardContent>
-                            <div className="flex flex-col gap-4">
-                                {/* AI Search */}
-                                <form onSubmit={handleAiSearch} className="flex items-center gap-2">
-                                    <div className="relative flex-grow">
-                                        <input
-                                            type="text"
-                                            placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')"
-                                            value={aiSearchQuery}
-                                            onChange={e => setAiSearchQuery(e.target.value)}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"
-                                        />
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                            <SparklesIcon className="text-body-color w-5 h-5"/>
-                                        </div>
-                                    </div>
-                                    <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">
-                                        Ask AI
-                                    </Button>
-                                </form>
+                            <div className="p-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark mb-4">
+                                <div className="flex flex-col gap-4">
+                                    {/* AI Search */}
+                                    {isAiEnabled && (
+                                        <form onSubmit={handleAiSearch} className="flex items-center gap-2">
+                                            <div className="relative flex-grow">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')"
+                                                    value={aiSearchQuery}
+                                                    onChange={e => setAiSearchQuery(e.target.value)}
+                                                    className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white"
+                                                />
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                                    <SparklesIcon className="text-body-color w-5 h-5"/>
+                                                </div>
+                                            </div>
+                                            <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">
+                                                Ask AI
+                                            </Button>
+                                        </form>
+                                    )}
 
-                                <div className="border-t border-stroke dark:border-strokedark"></div>
-
-                                {/* Standard Search and Filters */}
-                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                                    <div className="relative w-full sm:flex-grow">
-                                        <input
-                                            type="text"
-                                            placeholder="Search by name, ID, school..."
-                                            value={searchTerm}
-                                            onChange={e => setSearchTerm(e.target.value)}
-                                            className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white"
-                                        />
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                            <SearchIcon className="w-5 h-5 text-body-color" />
+                                    {/* Standard Search and Filters */}
+                                    <div className="flex flex-row justify-between items-center gap-4">
+                                        <div className="relative w-full sm:flex-grow">
+                                            <input
+                                                type="text"
+                                                placeholder="Search by name, ID, school..."
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                                className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white"
+                                            />
+                                            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                                <SearchIcon className="w-5 h-5 text-body-color" />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex-shrink-0">
-                                        <AdvancedFilter
-                                            filterOptions={filterOptions}
-                                            currentFilters={filters}
-                                            onApply={applyFilters}
-                                            onClear={() => {
-                                                clearFilters();
-                                                setSearchTerm('');
-                                                setAiSearchQuery('');
-                                            }}
-                                        />
+                                        <div className="flex-shrink-0">
+                                            <AdvancedFilter
+                                                filterOptions={filterOptions}
+                                                currentFilters={filters}
+                                                onApply={applyFilters}
+                                                onClear={() => {
+                                                    clearFilters();
+                                                    setSearchTerm('');
+                                                    setAiSearchQuery('');
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
+                                <ActiveFiltersDisplay 
+                                    activeFilters={{...filters, search: searchTerm}}
+                                    onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} 
+                                    customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }}
+                                />
                             </div>
-
-
-                            <ActiveFiltersDisplay 
-                                activeFilters={{...filters, search: searchTerm}}
-                                onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} 
-                                customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }}
-                            />
                             
                             {isInitialLoadAndEmpty ? (
                                 <div className="mt-4">
@@ -326,7 +327,7 @@ const StudentsPage: React.FC = () => {
                             ) : (
                                 <>
                                     {/* Desktop Table View */}
-                                    <div className="mt-4 hidden md:block overflow-x-auto">
+                                    <div className="hidden md:block overflow-x-auto">
                                         <table className="w-full text-left">
                                             <thead>
                                                 <tr className="bg-gray-2 dark:bg-box-dark-2">

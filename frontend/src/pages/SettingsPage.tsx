@@ -4,14 +4,17 @@ import { Card, CardContent } from '@/components/ui/Card.tsx';
 import { useTheme } from '@/contexts/ThemeContext.tsx';
 import { SunIcon, MoonIcon } from '@/components/Icons.tsx';
 import ColumnOrderManager from '@/components/settings/ColumnOrderManager.tsx';
+import { useSettings } from '@/contexts/SettingsContext.tsx';
+import ToggleSwitch from '@/components/ui/ToggleSwitch.tsx';
 
 const SettingsPage: React.FC = () => {
     const { theme, setTheme } = useTheme();
+    const { isAiEnabled, setIsAiEnabled } = useSettings();
 
     return (
         <div className="space-y-6">
             <PageHeader title="Settings" />
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                     <CardContent>
                         <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Appearance</h3>
@@ -56,8 +59,26 @@ const SettingsPage: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                <ColumnOrderManager />
+                <Card>
+                    <CardContent>
+                        <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Feature Settings</h3>
+                        <p className="text-sm text-body-color dark:text-gray-300 mb-6">
+                            Enable or disable features across the application. This setting is saved locally in your browser.
+                        </p>
+                        <div className="flex items-center justify-between">
+                            <span className="font-medium text-black dark:text-white">AI Assistant & Features</span>
+                            <ToggleSwitch
+                                id="ai-toggle"
+                                checked={isAiEnabled}
+                                onChange={setIsAiEnabled}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
 
+                <div className="md:col-span-2">
+                    <ColumnOrderManager />
+                </div>
             </div>
         </div>
     );

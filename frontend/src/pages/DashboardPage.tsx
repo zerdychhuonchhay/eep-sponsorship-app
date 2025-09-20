@@ -6,6 +6,7 @@ import { SkeletonCard } from '../components/SkeletonLoader.tsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import PageHeader from '@/components/layout/PageHeader.tsx';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card.tsx';
+import Select from '@/components/ui/Select.tsx';
 
 interface DashboardStats {
     stats: {
@@ -50,6 +51,11 @@ const dateRanges: Record<DateRangeOption, { label: string, getRange: () => { sta
         return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
     }},
 };
+
+const dateRangeOptions = (Object.keys(dateRanges) as DateRangeOption[]).map(key => ({
+    value: key,
+    label: dateRanges[key].label,
+}));
 
 const StatCard: React.FC<{
     title: string;
@@ -162,16 +168,12 @@ const DashboardPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title="Dashboard">
-                <div className="flex items-center bg-white dark:bg-box-dark rounded-md border border-stroke dark:border-strokedark">
-                    {(Object.keys(dateRanges) as DateRangeOption[]).map(rangeKey => (
-                         <button 
-                            key={rangeKey} 
-                            onClick={() => handleRangeChange(rangeKey)}
-                            className={`px-4 py-2 text-sm font-medium border-r border-stroke dark:border-strokedark last:border-r-0 rounded-l-md last:rounded-r-md transition-colors ${selectedRange === rangeKey ? 'bg-primary text-white' : 'text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2'}`}
-                        >
-                            {dateRanges[rangeKey].label}
-                        </button>
-                    ))}
+                <div className="w-48">
+                    <Select
+                        options={dateRangeOptions}
+                        value={selectedRange}
+                        onChange={(value) => handleRangeChange(value as DateRangeOption)}
+                    />
                 </div>
             </PageHeader>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">

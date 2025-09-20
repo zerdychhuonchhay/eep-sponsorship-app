@@ -29,7 +29,7 @@ const Header: React.FC = () => {
                     <button
                         id="sidebar-toggle"
                         onClick={toggleSidebar}
-                        className="block rounded-sm border border-stroke bg-white p-1.5 shadow-sm dark:border-strokedark dark:bg-box-dark"
+                        className="block rounded-sm border border-stroke bg-white p-2 shadow-sm dark:border-strokedark dark:bg-box-dark"
                         aria-controls="application-sidebar"
                         aria-expanded={isSidebarOpen}
                     >
@@ -40,7 +40,7 @@ const Header: React.FC = () => {
                 <div className="flex items-center gap-3 2xsm:gap-7">
                      <ul className="flex items-center gap-2 2xsm:gap-4">
                         <li className="relative" ref={debugRef}>
-                            <button id="debug-trigger" onClick={() => setIsDebugOpen(p => !p)} className="text-black dark:text-white">
+                            <button id="debug-trigger" onClick={() => setIsDebugOpen(p => !p)} className="p-2 rounded-full text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
                                 <BugIcon className="w-6 h-6" />
                             </button>
                             <NotificationCenter isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} />
