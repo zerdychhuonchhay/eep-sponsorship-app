@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { SortConfig } from '../types.ts';
 
 interface UseTableControlsProps<T> {
@@ -9,8 +9,27 @@ interface UseTableControlsProps<T> {
 export const useTableControls = <T>({ initialSortConfig, initialFilters = {} }: UseTableControlsProps<T>) => {
     const [sortConfig, setSortConfig] = useState<SortConfig<T>>(initialSortConfig);
     const [currentPage, setCurrentPage] = useState(1);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(''); // This is the live value from the input
     const [filters, setFilters] = useState<Record<string, string>>(initialFilters);
+    
+    // This state holds the search term that is actually used for the API query, after debouncing.
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+    // This effect debounces the user's input. When the user stops typing,
+    // it updates the API search term and resets the page number *at the same time*.
+    // This prevents a race condition where a fetch is triggered with a new search term but an old page number.
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            if (searchTerm !== debouncedSearchTerm) {
+                setDebouncedSearchTerm(searchTerm);
+                setCurrentPage(1);
+            }
+        }, 300);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchTerm, debouncedSearchTerm]);
 
     const handleSort = useCallback((key: keyof T | string) => {
         setSortConfig(prev => ({
@@ -47,6 +66,7 @@ export const useTableControls = <T>({ initialSortConfig, initialFilters = {} }: 
 
     const clearFilters = useCallback(() => {
         setFilters({});
+        setSearchTerm(''); // Also clear search term on full clear
         setCurrentPage(1);
     }, []);
 
@@ -72,8 +92,8 @@ export const useTableControls = <T>({ initialSortConfig, initialFilters = {} }: 
             
             params.append('ordering', `${orderPrefix}${orderingKey}`);
         }
-        if (searchTerm) {
-            params.append('search', searchTerm);
+        if (debouncedSearchTerm) {
+            params.append('search', debouncedSearchTerm);
         }
         Object.entries(filters).forEach(([key, value]) => {
             if (value && value !== 'all' && value !== '') {
@@ -81,17 +101,17 @@ export const useTableControls = <T>({ initialSortConfig, initialFilters = {} }: 
             }
         });
         return params.toString();
-    }, [currentPage, sortConfig, searchTerm, filters]);
+    }, [currentPage, sortConfig, debouncedSearchTerm, filters]);
 
     return {
         sortConfig,
         currentPage,
-        searchTerm,
+        searchTerm, // The live value for the input
         filters,
         apiQueryString,
         handleSort,
         setCurrentPage,
-        setSearchTerm,
+        setSearchTerm, // The setter for the live value
         handleFilterChange,
         applyFilters,
         clearFilters,

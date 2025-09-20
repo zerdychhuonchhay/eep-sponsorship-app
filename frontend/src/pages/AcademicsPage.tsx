@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { AcademicReport, PaginatedResponse } from '../types.ts';
@@ -104,15 +100,6 @@ const AcademicsPage: React.FC = () => {
     const allReports = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    if (loading && !paginatedData) {
-        return (
-            <>
-                <PageHeader title="Academics" />
-                <SkeletonTable rows={10} cols={6} />
-            </>
-        )
-    };
-
     return (
         <div className="space-y-6">
             <PageHeader title="Academics">
@@ -136,57 +123,63 @@ const AcademicsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                 <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                    {(['studentName', 'reportPeriod', 'gradeLevel', 'overallAverage', 'passFailStatus'] as (keyof AcademicReport)[]).map(key => (
-                                        <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
-                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                            </button>
-                                        </th>
-                                    ))}
-                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {allReports.length > 0 ? allReports.map(report => {
-                                    const actionItems = [];
-                                    if (canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
-                                    }
-                                    if (canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
-                                    }
-
-                                    return (
-                                        <tr key={report.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                            <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{report.studentName}</td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.reportPeriod}</td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.gradeLevel}</td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <Badge type={report.passFailStatus} />
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                            </td>
+                    {loading ? (
+                        <SkeletonTable rows={10} cols={6} />
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="ui-table">
+                                    <thead>
+                                        <tr>
+                                            {(['studentName', 'reportPeriod', 'gradeLevel', 'overallAverage', 'passFailStatus'] as (keyof AcademicReport)[]).map(key => (
+                                                <th key={key as string}>
+                                                    <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                        {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                    </button>
+                                                </th>
+                                            ))}
+                                            <th className="text-center">Actions</th>
                                         </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan={6}>
-                                            <EmptyState title="No Academic Reports Found" />
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    {allReports.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                    </thead>
+                                    <tbody>
+                                        {allReports.length > 0 ? allReports.map(report => {
+                                            const actionItems = [];
+                                            if (canUpdate) {
+                                                actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
+                                            }
+                                            if (canDelete) {
+                                                actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
+                                            }
+
+                                            return (
+                                                <tr key={report.id}>
+                                                    <td className="font-medium">{report.studentName}</td>
+                                                    <td className="text-body-color">{report.reportPeriod}</td>
+                                                    <td className="text-body-color">{report.gradeLevel}</td>
+                                                    <td className="text-body-color">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
+                                                    <td>
+                                                        <Badge type={report.passFailStatus} />
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr>
+                                                <td colSpan={6}>
+                                                    <EmptyState title="No Academic Reports Found" />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {allReports.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                        </>
+                    )}
                 </CardContent>
             </Card>
             

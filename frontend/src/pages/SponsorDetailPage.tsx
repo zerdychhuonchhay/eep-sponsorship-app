@@ -133,31 +133,33 @@ const SponsorDetailPage: React.FC = () => {
                     {students.length > 0 ? (
                         <>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left">
+                                <table className="ui-table">
                                     <thead>
-                                        <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                            <th className="py-4 px-4 font-medium text-black dark:text-white">Name</th>
-                                            <th className="py-4 px-4 font-medium text-black dark:text-white">Student ID</th>
-                                            <th className="py-4 px-4 font-medium text-black dark:text-white">Age</th>
-                                            <th className="py-4 px-4 font-medium text-black dark:text-white">Status</th>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Student ID</th>
+                                            <th>Age</th>
+                                            <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {students.map(s => (
-                                            <tr key={s.studentId} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                                <td className="py-5 px-4 flex items-center gap-3 border-b border-stroke dark:border-strokedark">
-                                                    {s.profilePhoto ? (
-                                                        <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-10 h-10 rounded-full object-cover"/>
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
-                                                            <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                                                        </div>
-                                                    )}
-                                                    <p className="font-medium text-black dark:text-white">{s.firstName} {s.lastName}</p>
+                                            <tr key={s.studentId}>
+                                                <td>
+                                                    <div className="flex items-center gap-3">
+                                                        {s.profilePhoto ? (
+                                                            <img src={s.profilePhoto} alt={`${s.firstName}`} className="w-10 h-10 rounded-full object-cover"/>
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                                                <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                                                            </div>
+                                                        )}
+                                                        <p className="font-medium text-black dark:text-white">{s.firstName} {s.lastName}</p>
+                                                    </div>
                                                 </td>
-                                                <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{s.studentId}</td>
-                                                <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{calculateAge(s.dateOfBirth)}</td>
-                                                <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={s.studentStatus} /></td>
+                                                <td className="text-body-color">{s.studentId}</td>
+                                                <td className="text-body-color">{calculateAge(s.dateOfBirth)}</td>
+                                                <td><Badge type={s.studentStatus} /></td>
                                             </tr>
                                         ))}
                                     </tbody>

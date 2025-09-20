@@ -159,22 +159,22 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                     </div>
                     {student.academicReports && student.academicReports.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-2 dark:bg-box-dark-2">
+                            <table className="ui-table">
+                                <thead>
                                     <tr>
-                                        <th className="py-2 px-4 font-medium text-black dark:text-white">Period</th>
-                                        <th className="py-2 px-4 font-medium text-black dark:text-white">Grade</th>
-                                        <th className="py-2 px-4 font-medium text-black dark:text-white">Average</th>
-                                        <th className="py-2 px-4 font-medium text-black dark:text-white">Status</th>
+                                        <th>Period</th>
+                                        <th>Grade</th>
+                                        <th>Average</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {student.academicReports.sort((a,b) => a.reportPeriod < b.reportPeriod ? 1 : -1).map(report => (
-                                        <tr key={report.id} className="border-b border-stroke dark:border-strokedark last:border-b-0">
-                                            <td className="py-3 px-4 text-black dark:text-white">{report.reportPeriod}</td>
-                                            <td className="py-3 px-4 text-body-color dark:text-gray-300">{report.gradeLevel}</td>
-                                            <td className="py-3 px-4 text-body-color dark:text-gray-300">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
-                                            <td className="py-3 px-4"><Badge type={report.passFailStatus} /></td>
+                                        <tr key={report.id}>
+                                            <td>{report.reportPeriod}</td>
+                                            <td className="text-body-color">{report.gradeLevel}</td>
+                                            <td className="text-body-color">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
+                                            <td><Badge type={report.passFailStatus} /></td>
                                         </tr>
                                     ))}
                                 </tbody>

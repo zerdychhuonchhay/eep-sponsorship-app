@@ -160,15 +160,6 @@ const TransactionsPage: React.FC = () => {
     const transactions = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    if (loading && !paginatedData) {
-        return (
-            <>
-                <PageHeader title="Transactions" />
-                <SkeletonTable rows={10} cols={5} />
-            </>
-        )
-    };
-
     return (
         <div className="space-y-6">
             <PageHeader title="Transactions">
@@ -192,67 +183,73 @@ const TransactionsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                    {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
-                                        <th key={key as string} className={`py-4 px-4 font-medium text-black dark:text-white ${key === 'amount' ? 'text-right' : ''}`}>
-                                            <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
-                                                {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                            </button>
-                                        </th>
-                                    ))}
-                                     <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {transactions.length > 0 ? transactions.map((t) => {
-                                    const student = students.find(s => s.studentId === t.studentId);
-                                    const actionItems = [];
-                                    if (canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
-                                    }
-                                    if (canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
-                                    }
-
-                                    return (
-                                        <tr key={t.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                            <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">{new Date(t.date).toLocaleDateString()}</td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <p className="font-medium text-black dark:text-white">{t.description}</p>
-                                                {student && (
-                                                    <p className="text-sm text-body-color dark:text-gray-300">
-                                                        For: {student.firstName} {student.lastName}
-                                                    </p>
-                                                )}
-                                            </td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{t.category}</td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <Badge type={t.type} />
-                                            </td>
-                                            <td className={`py-5 px-4 font-medium text-right border-b border-stroke dark:border-strokedark ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
-                                                ${Number(t.amount).toFixed(2)}
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                            </td>
+                    {loading ? (
+                        <SkeletonTable rows={10} cols={6} />
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="ui-table">
+                                    <thead>
+                                        <tr>
+                                            {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
+                                                <th key={key as string} className={`${key === 'amount' ? 'text-right' : ''}`}>
+                                                    <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
+                                                        {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                    </button>
+                                                </th>
+                                            ))}
+                                            <th className="text-center">Actions</th>
                                         </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan={6}>
-                                            <EmptyState title="No Transactions Found" />
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.length > 0 ? transactions.map((t) => {
+                                            const student = students.find(s => s.studentId === t.studentId);
+                                            const actionItems = [];
+                                            if (canUpdate) {
+                                                actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
+                                            }
+                                            if (canDelete) {
+                                                actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
+                                            }
 
-                    {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                            return (
+                                                <tr key={t.id}>
+                                                    <td>{new Date(t.date).toLocaleDateString()}</td>
+                                                    <td>
+                                                        <p className="font-medium text-black dark:text-white">{t.description}</p>
+                                                        {student && (
+                                                            <p className="text-sm text-body-color">
+                                                                For: {student.firstName} {student.lastName}
+                                                            </p>
+                                                        )}
+                                                    </td>
+                                                    <td className="text-body-color">{t.category}</td>
+                                                    <td>
+                                                        <Badge type={t.type} />
+                                                    </td>
+                                                    <td className={`font-medium text-right ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
+                                                        ${Number(t.amount).toFixed(2)}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr>
+                                                <td colSpan={6}>
+                                                    <EmptyState title="No Transactions Found" />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                        </>
+                    )}
                 </CardContent>
             </Card>
 
