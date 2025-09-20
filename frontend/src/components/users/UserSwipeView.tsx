@@ -1,6 +1,5 @@
 import React, { useState, useEffect, TouchEvent, useCallback } from 'react';
 import { AppUser, UserStatus, User } from '@/types.ts';
-import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import { ChevronLeftIcon, ChevronRightIcon, UserIcon, TrashIcon, KeyIcon } from '@/components/Icons.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
 import Badge from '@/components/ui/Badge.tsx';
