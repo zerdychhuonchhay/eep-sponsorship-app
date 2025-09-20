@@ -170,15 +170,6 @@ const TasksPage: React.FC = () => {
     const tasks = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    if (loading && !paginatedData) {
-        return (
-            <>
-                <PageHeader title="Tasks" />
-                <SkeletonTable rows={5} cols={5} />
-            </>
-        )
-    };
-
     return (
         <div className="space-y-6">
             <PageHeader title="Tasks">
@@ -202,67 +193,73 @@ const TasksPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                    {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
-                                        <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
-                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                            </button>
-                                        </th>
-                                    ))}
-                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tasks.length > 0 ? tasks.map((task) => {
-                                    const actionItems = [];
-                                    if (canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
-                                    }
-                                    if (canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' });
-                                    }
-
-                                    return (
-                                        <tr key={task.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                            <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
-                                                <p className="font-medium">{task.title}</p>
-                                                {task.description && <p className="text-sm text-body-color dark:text-gray-400 mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
-                                            </td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(task.dueDate).toLocaleDateString()}</td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={task.priority} /></td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <select 
-                                                    value={task.status} 
-                                                    onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
-                                                    className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    disabled={!canUpdate}
-                                                >
-                                                    {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
-                                                </select>
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                            </td>
+                    {loading ? (
+                        <SkeletonTable rows={5} cols={5} />
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="ui-table">
+                                    <thead>
+                                        <tr>
+                                            {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
+                                                <th key={key}>
+                                                    <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                        {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                    </button>
+                                                </th>
+                                            ))}
+                                            <th className="text-center">Actions</th>
                                         </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan={5}>
-                                            <EmptyState title="No Tasks Found" />
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    {tasks.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                    </thead>
+                                    <tbody>
+                                        {tasks.length > 0 ? tasks.map((task) => {
+                                            const actionItems = [];
+                                            if (canUpdate) {
+                                                actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
+                                            }
+                                            if (canDelete) {
+                                                actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' });
+                                            }
+
+                                            return (
+                                                <tr key={task.id}>
+                                                    <td>
+                                                        <p className="font-medium">{task.title}</p>
+                                                        {task.description && <p className="text-sm text-body-color mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
+                                                    </td>
+                                                    <td className="text-body-color">{new Date(task.dueDate).toLocaleDateString()}</td>
+                                                    <td><Badge type={task.priority} /></td>
+                                                    <td>
+                                                        <select 
+                                                            value={task.status} 
+                                                            onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
+                                                            className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            disabled={!canUpdate}
+                                                        >
+                                                            {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr>
+                                                <td colSpan={5}>
+                                                    <EmptyState title="No Tasks Found" />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {tasks.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                        </>
+                    )}
                 </CardContent>
             </Card>
 

@@ -31,6 +31,30 @@
   }
 }
 
+@layer components {
+  .ui-table {
+    @apply w-full text-left;
+  }
+  .ui-table thead th {
+    @apply py-4 px-4 font-medium uppercase tracking-wider text-xs text-slate-500 dark:text-gray-400 bg-gray-2 dark:bg-box-dark-2;
+  }
+  .ui-table tbody tr {
+    @apply border-b border-stroke dark:border-strokedark;
+  }
+  .ui-table tbody tr:nth-child(even) {
+     @apply bg-gray-2/50 dark:bg-box-dark-2/50;
+  }
+  .ui-table tbody tr:hover {
+    @apply bg-slate-100 dark:bg-box-dark-2;
+  }
+  .ui-table td {
+    @apply py-5 px-4 text-black dark:text-white align-middle;
+  }
+  .ui-table td .text-body-color {
+    @apply text-slate-600 dark:text-gray-300;
+  }
+}
+
 
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {

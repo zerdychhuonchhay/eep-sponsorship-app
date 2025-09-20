@@ -165,15 +165,6 @@ const FilingsPage: React.FC = () => {
     const filings = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    if (loading && !paginatedData) {
-        return (
-            <>
-                <PageHeader title="Government Filings" />
-                <SkeletonTable rows={5} cols={5} />
-            </>
-        );
-    }
-
     return (
         <div className="space-y-6">
             <PageHeader title="Government Filings">
@@ -197,55 +188,61 @@ const FilingsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                    {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
-                                        <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
-                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                            </button>
-                                        </th>
-                                    ))}
-                                    <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filings.length > 0 ? filings.map((f) => {
-                                    const actionItems = [];
-                                    if(canUpdate) {
-                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
-                                    }
-                                    if(canDelete) {
-                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
-                                    }
-                                    return (
-                                        <tr key={f.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                            <td className="py-5 px-4 font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark">{f.documentName}</td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{f.authority}</td>
-                                            <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(f.dueDate).toLocaleDateString()}</td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                                <Badge type={f.status} />
-                                            </td>
-                                            <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                            </td>
+                    {loading ? (
+                        <SkeletonTable rows={5} cols={5} />
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="ui-table">
+                                    <thead>
+                                        <tr>
+                                            {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
+                                                <th key={key}>
+                                                    <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                    </button>
+                                                </th>
+                                            ))}
+                                            <th className="text-center">Actions</th>
                                         </tr>
-                                    );
-                                }) : (
-                                    <tr>
-                                        <td colSpan={5}>
-                                            <EmptyState title="No Filings Found" />
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {filings.length > 0 ? filings.map((f) => {
+                                            const actionItems = [];
+                                            if(canUpdate) {
+                                                actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
+                                            }
+                                            if(canDelete) {
+                                                actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
+                                            }
+                                            return (
+                                                <tr key={f.id}>
+                                                    <td className="font-medium">{f.documentName}</td>
+                                                    <td className="text-body-color">{f.authority}</td>
+                                                    <td className="text-body-color">{new Date(f.dueDate).toLocaleDateString()}</td>
+                                                    <td>
+                                                        <Badge type={f.status} />
+                                                    </td>
+                                                    <td className="text-center">
+                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr>
+                                                <td colSpan={5}>
+                                                    <EmptyState title="No Filings Found" />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                    {filings.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                            {filings.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                        </>
+                    )}
                 </CardContent>
             </Card>
 

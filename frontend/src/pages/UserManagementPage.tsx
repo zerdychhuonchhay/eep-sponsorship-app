@@ -3,22 +3,27 @@ import { api } from '@/services/api.ts';
 import { AppUser, PaginatedResponse, UserStatus } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
-import { SkeletonTable } from '@/components/SkeletonLoader.tsx';
+import { SkeletonCard, SkeletonTable } from '@/components/SkeletonLoader.tsx';
 import PageHeader from '@/components/layout/PageHeader.tsx';
 import Pagination from '@/components/Pagination.tsx';
 import Modal from '@/components/Modal.tsx';
 import Button from '@/components/ui/Button.tsx';
-import Badge from '@/components/ui/Badge.tsx';
 import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
-import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, UserIcon, TrashIcon, KeyIcon } from '@/components/Icons.tsx';
-import ActionDropdown from '@/components/ActionDropdown.tsx';
+import { PlusIcon, UserIcon, TrashIcon, KeyIcon, ArrowUpIcon, ArrowDownIcon } from '@/components/Icons.tsx';
 import UserForm from '@/components/users/UserForm.tsx';
-import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import { useAuth, usePermissions } from '@/contexts/AuthContext.tsx';
 import ConfirmationModal from '@/components/ConfirmationModal.tsx';
 import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
 import PermissionsManager from '@/components/PermissionsManager.tsx';
+import UserCard from '@/components/users/UserCard.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import UserSwipeView from '@/components/users/UserSwipeView.tsx';
+import { useSettings } from '@/contexts/SettingsContext.tsx';
+import ViewToggle from '@/components/ui/ViewToggle.tsx';
+import ActionDropdown, { ActionItem } from '@/components/ActionDropdown.tsx';
+import { formatDateForDisplay } from '@/utils/dateUtils.ts';
+import Badge from '@/components/ui/Badge.tsx';
 
 const UsersList: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AppUser> | null>(null);
@@ -31,10 +36,12 @@ const UsersList: React.FC = () => {
     const { showToast } = useNotification();
     const { user: currentUser } = useAuth();
     const { canCreate, canUpdate, canDelete } = usePermissions('users');
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const [allFetchedUsers, setAllFetchedUsers] = useState<AppUser[]>([]);
+    const { userViewMode, setUserViewMode } = useSettings();
 
     const {
-        sortConfig, currentPage, apiQueryString,
-        handleSort, setCurrentPage
+        currentPage, apiQueryString, setCurrentPage, handleSort, sortConfig
     } = useTableControls<AppUser>({
         initialSortConfig: { key: 'username', order: 'asc' }
     });
@@ -44,13 +51,30 @@ const UsersList: React.FC = () => {
         try {
             const data = await api.getUsers(apiQueryString);
             setPaginatedData(data);
+             if (isMobile) {
+                if (currentPage === 1) {
+                    setAllFetchedUsers(data.results);
+                } else {
+                    setAllFetchedUsers(prev => {
+                        const existingIds = new Set(prev.map(u => u.id));
+                        const newUsers = data.results.filter(u => !existingIds.has(u.id));
+                        return [...prev, ...newUsers];
+                    });
+                }
+            }
         } catch (error: any)
 {
             showToast(error.message || 'Failed to load user data.', 'error');
         } finally {
             setLoading(false);
         }
-    }, [apiQueryString, showToast]);
+    }, [apiQueryString, showToast, isMobile, currentPage]);
+
+    useEffect(() => {
+        if (currentPage === 1) {
+            setAllFetchedUsers([]);
+        }
+    }, [apiQueryString]);
 
     useEffect(() => {
         fetchData();
@@ -115,109 +139,131 @@ const UsersList: React.FC = () => {
     const users = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    if (loading && !paginatedData) {
-        return <SkeletonTable rows={10} cols={5} />;
-    }
+    const renderDesktopSkeletons = () => {
+        if (userViewMode === 'card') {
+            return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+            );
+        }
+        return <SkeletonTable rows={5} cols={6} />;
+    };
 
     return (
-         <Card>
-            <CardContent>
-                <div className="flex justify-end mb-4">
-                     {canCreate && (
-                        <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} size="sm">
-                            Invite User
-                        </Button>
-                    )}
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                {(['username', 'role', 'status', 'lastLogin'] as (keyof AppUser)[]).map(key => (
-                                    <th key={key as string} className="py-4 px-4 font-medium text-black dark:text-white">
-                                        <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                            {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                            {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                        </button>
-                                    </th>
-                                ))}
-                                <th className="py-4 px-4 font-medium text-black dark:text-white text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.length > 0 ? users.map((user) => {
-                                const isCurrentUser = currentUser?.id === user.id;
-                                const actionItems: { label: string; icon: React.ReactNode; onClick: () => void; className?: string }[] = [];
-
-                                if(canUpdate) {
-                                    actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
-                                }
-                                if (canUpdate && user.status === UserStatus.ACTIVE && !isCurrentUser) {
-                                    actionItems.push({ 
-                                        label: 'Send Password Set', 
-                                        icon: <KeyIcon className="w-4 h-4" />, 
-                                        onClick: () => handleSendPasswordReset(user) 
-                                    });
-                                }
-                                if (!isCurrentUser && canDelete) {
-                                    actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
-                                }
-
-                                return (
-                                    <tr key={user.id} className="hover:bg-gray-2 dark:hover:bg-box-dark-2">
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                            <p className="font-medium text-black dark:text-white">{user.username}</p>
-                                            <p className="text-sm text-body-color dark:text-gray-300">{user.email}</p>
-                                        </td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                            <Badge type={user.role} />
-                                        </td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark">
-                                            <Badge type={user.status} />
-                                        </td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">
-                                            {formatDateForDisplay(user.lastLogin || undefined)}
-                                        </td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark text-center">
-                                            {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                        </td>
-                                    </tr>
-                                );
-                            }) : (
-                                <tr>
-                                    <td colSpan={5}>
-                                        <EmptyState title="No Users Found" icon={<UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />} />
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                {users.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
-
-                 <Modal isOpen={isInviting || !!editingUser} onClose={() => { setIsInviting(false); setEditingUser(null); }}>
-                    <UserForm
-                        key={editingUser ? editingUser.id : 'invite'}
-                        user={editingUser}
-                        currentUserId={currentUser?.id}
-                        onInvite={handleInviteUser}
-                        onUpdate={handleUpdateUser}
-                        onCancel={() => { setIsInviting(false); setEditingUser(null); }}
-                        isSubmitting={isSubmitting}
-                    />
-                </Modal>
-
-                <ConfirmationModal
-                    isOpen={!!deletingUser}
-                    onClose={() => setDeletingUser(null)}
-                    onConfirm={handleConfirmDelete}
-                    title="Delete User"
-                    message={`Are you sure you want to permanently delete the user "${deletingUser?.username}"? This action cannot be undone.`}
-                    confirmText="Delete"
-                    isConfirming={isSubmittingDelete}
+        <>
+            {isMobile ? (
+                <UserSwipeView
+                    users={allFetchedUsers}
+                    isLoading={loading && allFetchedUsers.length === 0}
+                    loadMore={() => {
+                        if (!loading && currentPage < totalPages) {
+                            setCurrentPage(prev => prev + 1);
+                        }
+                    }}
+                    hasMore={currentPage < totalPages}
+                    onEditUser={setEditingUser}
+                    onDeleteUser={handleDeleteUser}
+                    onSendPasswordReset={handleSendPasswordReset}
+                    currentUser={currentUser}
+                    canUpdate={canUpdate}
+                    canDelete={canDelete}
                 />
-            </CardContent>
-        </Card>
+            ) : (
+                <Card>
+                    <CardContent>
+                        <div className="flex justify-between items-center mb-4 p-4">
+                            <ViewToggle view={userViewMode} onChange={setUserViewMode} />
+                             {canCreate && (
+                                <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} size="sm">
+                                    Invite User
+                                </Button>
+                            )}
+                        </div>
+                        {loading ? renderDesktopSkeletons() : users.length > 0 ? (
+                            <>
+                                {userViewMode === 'card' ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {users.map((user) => {
+                                            const isCurrentUser = currentUser?.id === user.id;
+                                            const actionItems: ActionItem[] = [];
+
+                                            if(canUpdate) actionItems.push({ label: 'Edit', icon: <UserIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
+                                            if (canUpdate && user.status === UserStatus.ACTIVE && !isCurrentUser) actionItems.push({ label: 'Send Password Set', icon: <KeyIcon className="w-4 h-4" />, onClick: () => handleSendPasswordReset(user) });
+                                            if (!isCurrentUser && canDelete) actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
+                                            
+                                            return <UserCard key={user.id} user={user} actionItems={actionItems} />;
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="ui-table">
+                                            <thead>
+                                                <tr>
+                                                    {(['username', 'email', 'role', 'status', 'lastLogin'] as const).map(key => (
+                                                        <th key={key}>
+                                                            <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(key)}>
+                                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                            </button>
+                                                        </th>
+                                                    ))}
+                                                     <th className="text-center">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {users.map(user => {
+                                                    const isCurrentUser = currentUser?.id === user.id;
+                                                    const actionItems: ActionItem[] = [];
+                                                    if (canUpdate) actionItems.push({ label: 'Edit', icon: <UserIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
+                                                    if (canUpdate && user.status === UserStatus.ACTIVE && !isCurrentUser) actionItems.push({ label: 'Send Password Set', icon: <KeyIcon className="w-4 h-4" />, onClick: () => handleSendPasswordReset(user) });
+                                                    if (!isCurrentUser && canDelete) actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
+
+                                                    return (
+                                                        <tr key={user.id}>
+                                                            <td className="font-medium">{user.username}</td>
+                                                            <td className="text-body-color">{user.email}</td>
+                                                            <td><Badge type={user.role} /></td>
+                                                            <td><Badge type={user.status} /></td>
+                                                            <td className="text-body-color">{user.lastLogin ? formatDateForDisplay(user.lastLogin) : 'Never'}</td>
+                                                            <td className="text-center">{actionItems.length > 0 && <ActionDropdown items={actionItems} />}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                            </>
+                        ) : (
+                            <EmptyState title="No Users Found" icon={<UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />} />
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+             <Modal isOpen={isInviting || !!editingUser} onClose={() => { setIsInviting(false); setEditingUser(null); }}>
+                <UserForm
+                    key={editingUser ? editingUser.id : 'invite'}
+                    user={editingUser}
+                    currentUserId={currentUser?.id}
+                    onInvite={handleInviteUser}
+                    onUpdate={handleUpdateUser}
+                    onCancel={() => { setIsInviting(false); setEditingUser(null); }}
+                    isSubmitting={isSubmitting}
+                />
+            </Modal>
+
+            <ConfirmationModal
+                isOpen={!!deletingUser}
+                onClose={() => setDeletingUser(null)}
+                onConfirm={handleConfirmDelete}
+                title="Delete User"
+                message={`Are you sure you want to permanently delete the user "${deletingUser?.username}"? This action cannot be undone.`}
+                confirmText="Delete"
+                isConfirming={isSubmittingDelete}
+            />
+        </>
     );
 };
 

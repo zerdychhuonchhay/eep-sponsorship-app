@@ -61,15 +61,6 @@ const AuditLogPage: React.FC = () => {
     
     const logs = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
-
-    if (loading && !paginatedData) {
-        return (
-            <>
-                <PageHeader title="Audit Log" />
-                <SkeletonTable rows={15} cols={5} />
-            </>
-        );
-    }
     
     const renderChangesSummary = (log: AuditLog) => {
         if (log.action === 'CREATE') return 'Record created.';
@@ -99,55 +90,58 @@ const AuditLogPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-gray-2 dark:bg-box-dark-2">
-                                    {(['timestamp', 'userIdentifier', 'action', 'objectRepr', 'changes'] as const).map(key => (
-                                        <th key={key} className="py-4 px-4 font-medium text-black dark:text-white">
-                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key === 'objectRepr' ? 'object_repr' : key)}>
-                                                {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                            </button>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                             <tbody>
-                                {logs.length > 0 ? logs.map((log) => (
-                                    <tr 
-                                        key={log.id} 
-                                        className="hover:bg-gray-2 dark:hover:bg-box-dark-2"
-                                    >
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{new Date(log.timestamp).toLocaleString()}</td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark">{log.userIdentifier}</td>
-                                        <td className="py-5 px-4 border-b border-stroke dark:border-strokedark"><Badge type={log.action} /></td>
-                                        <td className="py-5 px-4 text-black dark:text-white border-b border-stroke dark:border-strokedark">
-                                            <div>
-                                                {log.action === 'UPDATE' && log.changes ? (
-                                                     <button onClick={() => setSelectedLog(log)} className="font-medium text-primary hover:underline text-left">
-                                                        {log.objectRepr}
+                    {loading ? (
+                        <SkeletonTable rows={15} cols={5} />
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="ui-table">
+                                    <thead>
+                                        <tr>
+                                            {(['timestamp', 'userIdentifier', 'action', 'objectRepr', 'changes'] as const).map(key => (
+                                                <th key={key}>
+                                                    <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key === 'objectRepr' ? 'object_repr' : key)}>
+                                                        {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
                                                     </button>
-                                                ) : (
-                                                    <p className="font-medium">{log.objectRepr}</p>
-                                                )}
-                                                <p className="text-sm text-body-color dark:text-gray-400 capitalize">{log.contentType.replace('report', ' report')}</p>
-                                            </div>
-                                        </td>
-                                        <td className="py-5 px-4 text-body-color dark:text-gray-300 border-b border-stroke dark:border-strokedark text-sm italic">{renderChangesSummary(log)}</td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan={5}>
-                                            <EmptyState title="No Audit Logs Found" />
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {logs.length > 0 ? logs.map((log) => (
+                                            <tr key={log.id}>
+                                                <td className="text-body-color">{new Date(log.timestamp).toLocaleString()}</td>
+                                                <td className="text-body-color">{log.userIdentifier}</td>
+                                                <td><Badge type={log.action} /></td>
+                                                <td>
+                                                    <div>
+                                                        {log.action === 'UPDATE' && log.changes ? (
+                                                            <button onClick={() => setSelectedLog(log)} className="font-medium text-primary hover:underline text-left">
+                                                                {log.objectRepr}
+                                                            </button>
+                                                        ) : (
+                                                            <p className="font-medium">{log.objectRepr}</p>
+                                                        )}
+                                                        <p className="text-sm text-body-color capitalize">{log.contentType.replace('report', ' report')}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="text-body-color text-sm italic">{renderChangesSummary(log)}</td>
+                                            </tr>
+                                        )) : (
+                                            <tr>
+                                                <td colSpan={5}>
+                                                    <EmptyState title="No Audit Logs Found" />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                    {logs.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                            {logs.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                        </>
+                    )}
                 </CardContent>
             </Card>
             
