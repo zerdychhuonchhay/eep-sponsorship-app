@@ -357,7 +357,7 @@ const StudentsPage: React.FC = () => {
                                                                             <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-10 h-10 rounded-full object-cover"/>
                                                                         ) : (
                                                                             <div className="w-10 h-10 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
-                                                                                <UserIcon className="w-6 h-6 text-gray-500" />
+                                                                                <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
                                                                             </div>
                                                                         )
                                                                     )}
@@ -386,7 +386,7 @@ const StudentsPage: React.FC = () => {
                                                         <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-16 h-16 rounded-full object-cover"/>
                                                     ) : (
                                                         <div className="w-16 h-16 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
-                                                            <UserIcon className="w-10 h-10 text-gray-500" />
+                                                            <UserIcon className="w-10 h-10 text-gray-500 dark:text-gray-400" />
                                                         </div>
                                                     )}
                                                     <div>

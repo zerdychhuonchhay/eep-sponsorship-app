@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, UserIcon, ProfileIcon, LogoutIcon } from '@/components/Icons.tsx';
 import { usePermissions, useAuth } from '@/contexts/AuthContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
+import ThemeToggle from '@/components/ui/ThemeToggle.tsx';
 
 interface NavLinkItemProps {
     item: {
@@ -21,7 +22,7 @@ const NavLinkItem: React.FC<NavLinkItemProps> = ({ item, onClick }) => {
     const linkClasses = `group relative flex items-center rounded-md font-medium duration-300 ease-in-out py-2 px-4 gap-2.5 ${
         isActive
             ? 'bg-primary text-white'
-            : 'text-gray-400 hover:bg-white/10 hover:text-white'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-primary dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white'
     }`;
 
     return (
@@ -133,14 +134,14 @@ const Sidebar: React.FC = () => {
             <aside
                 ref={sidebar}
                 id="application-sidebar"
-                className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col overflow-y-hidden bg-box-dark duration-300 ease-in-out no-print transition-transform ${
+                className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col overflow-y-hidden bg-white dark:bg-box-dark duration-300 ease-in-out no-print transition-transform ${
                     isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
                 <div className="flex items-center justify-between gap-2 px-4 py-4">
                     <NavLink to="/" className="flex items-center gap-2">
                         <img src="/logo.png" alt="Logo" className="h-8 w-auto flex-shrink-0" />
-                        <span className="text-white text-xl font-bold whitespace-nowrap">Dashboard</span>
+                        <span className="text-black dark:text-white text-xl font-bold whitespace-nowrap">Dashboard</span>
                     </NavLink>
                 </div>
                 <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto duration-300 ease-linear">
@@ -150,7 +151,7 @@ const Sidebar: React.FC = () => {
                             if (visibleItems.length === 0) return null;
                             return (
                                 <div key={group.title}>
-                                    <h3 className="mb-2 ml-4 text-sm font-semibold text-gray-300 whitespace-nowrap">
+                                    <h3 className="mb-2 ml-4 text-sm font-semibold text-slate-500 dark:text-gray-400 whitespace-nowrap">
                                         {group.title}
                                     </h3>
                                     <ul className="mb-2 flex flex-col gap-1.5 px-4">
@@ -164,24 +165,29 @@ const Sidebar: React.FC = () => {
                             );
                         })}
                     </nav>
-                     <div className="mt-auto px-4 py-2">
-                        <button
-                            ref={profileTriggerRef}
-                            onClick={() => setIsProfileMenuOpen(p => !p)}
-                            className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors"
-                        >
-                             {user?.profilePhoto ? (
-                                <img src={user.profilePhoto} alt="User" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                            ) : (
-                                <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                    <UserIcon className="w-6 h-6 text-gray-400" />
+                     <div className="mt-auto px-4 py-4">
+                        <div className="flex items-center justify-between gap-2">
+                             {/* Profile Trigger */}
+                            <button
+                                ref={profileTriggerRef}
+                                onClick={() => setIsProfileMenuOpen(p => !p)}
+                                className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors flex-1"
+                            >
+                                 {user?.profilePhoto ? (
+                                    <img src={user.profilePhoto} alt="User" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                        <UserIcon className="w-6 h-6 text-slate-500 dark:text-gray-400" />
+                                    </div>
+                                )}
+                                 <div className="overflow-hidden">
+                                    <h4 className="font-semibold text-black dark:text-white text-left truncate">{user?.username || 'User'}</h4>
+                                    <p className="text-sm text-slate-500 dark:text-gray-400 text-left truncate">{user?.role || 'Viewer'}</p>
                                 </div>
-                            )}
-                             <div className="overflow-hidden">
-                                <h4 className="font-semibold text-white text-left truncate">{user?.username || 'User'}</h4>
-                                <p className="text-sm text-gray-400 text-left truncate">{user?.role || 'Viewer'}</p>
-                            </div>
-                        </button>
+                            </button>
+                            {/* Theme Toggle */}
+                            <ThemeToggle />
+                        </div>
                     </div>
                 </div>
             </aside>

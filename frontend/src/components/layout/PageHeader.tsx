@@ -23,7 +23,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, children }) => {
                             <li key={index} className="flex items-center gap-2">
                                 <ChevronRightIcon className="w-4 h-4" />
                                 <span
-                                    className={`font-medium ${index === breadcrumbs.length - 2 ? 'text-black dark:text-white' : 'text-body-color'}`}
+                                    className={`font-medium ${index === breadcrumbs.length - 2 ? 'text-black dark:text-white' : 'text-body-color dark:text-gray-300'}`}
                                 >
                                     {crumb.name}
                                 </span>
