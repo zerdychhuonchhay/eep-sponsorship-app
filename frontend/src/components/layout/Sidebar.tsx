@@ -144,7 +144,7 @@ const Sidebar: React.FC = () => {
                         <span className="text-black dark:text-white text-xl font-bold whitespace-nowrap">Dashboard</span>
                     </NavLink>
                 </div>
-                <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto duration-300 ease-linear">
+                <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto duration-300 ease-linear min-h-0">
                     <nav className="mt-2 py-4">
                         {navGroups.map((group) => {
                             const visibleItems = group.items.filter(item => item.permission);
