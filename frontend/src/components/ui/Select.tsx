@@ -8,7 +8,7 @@ interface SelectOption {
 }
 
 interface SelectProps {
-    label: string;
+    label?: string;
     options: SelectOption[];
     value?: string;
     onChange: (value: string) => void;
@@ -91,7 +91,7 @@ const Select: React.FC<SelectProps> = ({ label, options, value, onChange, placeh
 
     return (
         <div className={className}>
-            <label className="mb-2 block text-black dark:text-white">{label}</label>
+            {label && <label className="mb-2 block text-black dark:text-white">{label}</label>}
             <div className="relative">
                 <button
                     ref={buttonRef}

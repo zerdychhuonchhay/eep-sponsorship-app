@@ -11,7 +11,7 @@ interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({ title, children }) => {
     const breadcrumbs = useBreadcrumbs();
     return (
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 flex flex-row items-center justify-between gap-3">
             <div>
                 <h2 className="text-2xl font-semibold text-black dark:text-white">{title}</h2>
                 <nav>
@@ -32,7 +32,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, children }) => {
                     </ol>
                 </nav>
             </div>
-            {children && <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">{children}</div>}
+            {children && <div className="flex items-center">{children}</div>}
         </div>
     );
 };

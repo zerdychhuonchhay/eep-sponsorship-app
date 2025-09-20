@@ -80,7 +80,7 @@ const ActionDropdown: React.FC<ActionDropdownProps> = ({ items }) => {
             <button
                 ref={buttonRef}
                 onClick={() => setIsOpen(!isOpen)}
-                className="hover:text-primary p-1 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
+                className="hover:text-primary p-2 rounded-full hover:bg-gray dark:hover:bg-box-dark-2"
                 aria-haspopup="true"
                 aria-expanded={isOpen}
             >

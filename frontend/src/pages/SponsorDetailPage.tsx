@@ -17,6 +17,7 @@ import Badge from '@/components/ui/Badge.tsx';
 import Pagination from '@/components/Pagination.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const SponsorDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -103,8 +104,10 @@ const SponsorDetailPage: React.FC = () => {
     return (
         <div className="space-y-6">
             <PageHeader title={sponsor.name}>
-                {canUpdate && <Button onClick={() => setIsEditing(true)} variant="secondary" icon={<EditIcon className="w-5 h-5" />}>Edit Sponsor</Button>}
-                {canDelete && <Button onClick={handleDeleteSponsor} variant="danger" icon={<TrashIcon className="w-5 h-5" />}>Delete Sponsor</Button>}
+                <PageActions>
+                    {canUpdate && <Button onClick={() => setIsEditing(true)} variant="secondary" icon={<EditIcon className="w-5 h-5" />}>Edit Sponsor</Button>}
+                    {canDelete && <Button onClick={handleDeleteSponsor} variant="danger" icon={<TrashIcon className="w-5 h-5" />}>Delete Sponsor</Button>}
+                </PageActions>
             </PageHeader>
             
             <Card>

@@ -6,6 +6,7 @@ import { useUI } from '@/contexts/UIContext.tsx';
 import Button from './ui/Button.tsx';
 import { exportToCsv, exportToPdf, exportFinancialCsvWithSummary } from '@/utils/exportUtils.ts';
 import { Transaction, TransactionType } from '@/types.ts';
+import { useSettings } from '@/contexts/SettingsContext.tsx';
 
 interface Message {
     role: 'user' | 'model';
@@ -19,6 +20,7 @@ const AIAssistant: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const { showToast } = useNotification();
     const { isBulkActionBarVisible } = useUI();
+    const { isAiEnabled } = useSettings();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -148,6 +150,10 @@ const AIAssistant: React.FC = () => {
         "Summarize our finances for last month.",
         "Generate a CSV report of all active students.",
     ];
+
+    if (!isAiEnabled) {
+        return null;
+    }
 
     return (
         <>

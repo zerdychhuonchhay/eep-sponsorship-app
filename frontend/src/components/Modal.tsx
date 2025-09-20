@@ -2,14 +2,27 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { CloseIcon } from './Icons.tsx';
 
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+
 interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     title?: string;
     children: React.ReactNode;
+    size?: ModalSize;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const sizeClasses: Record<ModalSize, string> = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+};
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = '4xl' }) => {
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -32,7 +45,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
             role="dialog"
         >
             <div 
-                className="relative w-full max-w-4xl mx-auto my-6 bg-white dark:bg-box-dark rounded-lg shadow-xl flex flex-col"
+                className={`relative w-full mx-auto my-6 bg-white dark:bg-box-dark rounded-lg shadow-xl flex flex-col ${sizeClasses[size]}`}
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex items-start justify-between p-5 border-b border-stroke dark:border-strokedark rounded-t">

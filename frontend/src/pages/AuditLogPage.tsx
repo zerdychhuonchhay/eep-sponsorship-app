@@ -87,20 +87,19 @@ const AuditLogPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Audit Log" />
             <Card>
-                <CardContent className="flex flex-col sm:flex-row justify-start items-center gap-4">
-                    <AdvancedFilter
-                        filterOptions={filterOptions}
-                        currentFilters={filters}
-                        onApply={applyFilters}
-                        onClear={clearFilters}
-                    />
-                </CardContent>
-            </Card>
-            
-            <Card>
                 <CardContent>
-                    <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
-                    <div className="overflow-x-auto mt-4">
+                     <div className="p-4 mb-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark">
+                        <div className="flex justify-end">
+                            <AdvancedFilter
+                                filterOptions={filterOptions}
+                                currentFilters={filters}
+                                onApply={applyFilters}
+                                onClear={clearFilters}
+                            />
+                        </div>
+                        <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
+                    </div>
+                    <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-2 dark:bg-box-dark-2">

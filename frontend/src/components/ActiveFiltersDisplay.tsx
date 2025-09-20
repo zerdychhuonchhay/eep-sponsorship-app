@@ -26,7 +26,7 @@ const ActiveFiltersDisplay: React.FC<ActiveFiltersDisplayProps> = ({ activeFilte
     };
 
     return (
-        <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-stroke dark:border-strokedark mt-4">
+        <div className="flex flex-wrap items-center gap-2 mt-4">
             <span className="text-sm font-medium text-black dark:text-white">Active Filters:</span>
             {activeFilterEntries.map(([key, value]) => (
                 <div key={key} className="flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-medium px-2 py-1 rounded-full">
