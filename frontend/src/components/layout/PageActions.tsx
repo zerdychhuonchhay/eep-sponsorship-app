@@ -22,16 +22,15 @@ const PageActions: React.FC<PageActionsProps> = ({ children }) => {
             return null;
         }
         
-        // FIX: Cast child.props to access properties without TypeScript errors.
-        // This is necessary because TypeScript doesn't know the specific props of the children components.
         const props = child.props as { children?: ReactNode, icon?: ReactNode, onClick: () => void, variant?: string };
 
-        // This check ensures we only process components that look like our Button
-        if (!props.children) {
+        // Ensure we only process buttons with simple string/number labels
+        if (typeof props.children !== 'string' && typeof props.children !== 'number') {
             return null;
         }
+        
         return {
-            label: props.children,
+            label: String(props.children), // Ensure the label is a string
             icon: props.icon,
             onClick: props.onClick,
             className: props.variant === 'danger' ? 'text-danger' : '',
