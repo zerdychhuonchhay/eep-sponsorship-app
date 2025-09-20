@@ -134,7 +134,7 @@ const Sidebar: React.FC = () => {
             <aside
                 ref={sidebar}
                 id="application-sidebar"
-                className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col overflow-y-hidden bg-white dark:bg-box-dark duration-300 ease-in-out no-print transition-transform ${
+                className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-white dark:bg-box-dark duration-300 ease-in-out no-print transition-transform ${
                     isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
