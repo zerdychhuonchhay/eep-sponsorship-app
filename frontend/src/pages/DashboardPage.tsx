@@ -211,11 +211,13 @@ const DashboardPage: React.FC = () => {
                     <CardContent className="h-[calc(100%-4rem)]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={stats?.monthlyBreakdown}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--stroke-color, #E2E8F0)" />
-                                <XAxis dataKey="month" tick={{ fill: 'var(--text-color-secondary, #64748B)', fontSize: 12 }} />
-                                <YAxis tick={{ fill: 'var(--text-color-secondary, #64748B)', fontSize: 12 }} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--stroke-color)" />
+                                <XAxis dataKey="month" tick={{ fill: 'var(--text-color-secondary)', fontSize: 12 }} axisLine={{ stroke: 'var(--stroke-color)' }} tickLine={{ stroke: 'var(--stroke-color)' }} />
+                                <YAxis tick={{ fill: 'var(--text-color-secondary)', fontSize: 12 }} axisLine={{ stroke: 'var(--stroke-color)' }} tickLine={{ stroke: 'var(--stroke-color)' }} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: 'var(--box-dark)', border: '1px solid var(--stroke-color)', borderRadius: '8px' }}
+                                    contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--stroke-color)', borderRadius: '8px' }}
+                                    labelStyle={{ color: 'var(--text-color)' }}
+                                    itemStyle={{ color: 'var(--text-color-secondary)' }}
                                     cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
                                     formatter={(value) => `$${Number(value).toLocaleString()}`}
                                 />
@@ -236,7 +238,10 @@ const DashboardPage: React.FC = () => {
                                     <Pie data={statusPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                                         {statusPieData.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                                     </Pie>
-                                    <Tooltip formatter={(value) => `${value} students`} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--stroke-color)', borderRadius: '8px' }}
+                                        formatter={(value) => `${value} students`}
+                                    />
                                     <Legend />
                                 </PieChart>
                             </ResponsiveContainer>

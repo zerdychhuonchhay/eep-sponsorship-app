@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MenuIcon, MoonIcon, SunIcon, BugIcon } from '@/components/Icons.tsx';
+import { MenuIcon, BugIcon } from '@/components/Icons.tsx';
 import NotificationCenter from '@/components/debug/NotificationCenter.tsx';
-import { useTheme } from '@/contexts/ThemeContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 
 const Header: React.FC = () => {
-    const { theme, setTheme } = useTheme();
     const { isSidebarOpen, toggleSidebar } = useUI();
-    const isDarkMode = theme === 'dark';
     const [isDebugOpen, setIsDebugOpen] = useState(false);
     const debugRef = useRef<HTMLLIElement>(null);
 
@@ -42,11 +39,6 @@ const Header: React.FC = () => {
                 
                 <div className="flex items-center gap-3 2xsm:gap-7">
                      <ul className="flex items-center gap-2 2xsm:gap-4">
-                        <li>
-                            <button onClick={() => setTheme(isDarkMode ? 'light' : 'dark')} className="text-black dark:text-white">
-                                {isDarkMode ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
-                            </button>
-                        </li>
                         <li className="relative" ref={debugRef}>
                             <button id="debug-trigger" onClick={() => setIsDebugOpen(p => !p)} className="text-black dark:text-white">
                                 <BugIcon className="w-6 h-6" />

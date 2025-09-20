@@ -116,7 +116,7 @@ const ProfilePage: React.FC = () => {
                                     <img src={photoPreview} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
                                 ) : (
                                     <div className="w-20 h-20 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
-                                        <UserIcon className="w-10 h-10 text-gray-500" />
+                                        <UserIcon className="w-10 h-10 text-gray-500 dark:text-gray-400" />
                                     </div>
                                 )}
                                 <FormInput
