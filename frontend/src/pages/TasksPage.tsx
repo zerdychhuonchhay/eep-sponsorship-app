@@ -20,6 +20,7 @@ import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { taskSchema, TaskFormData } from '@/components/schemas/taskSchema.ts';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
@@ -174,13 +175,15 @@ const TasksPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Tasks">
                 {canCreate && (
-                    <Button 
-                        onClick={() => setIsAdding(true)} 
-                        icon={<PlusIcon className="w-5 h-5" />}
-                        aria-label="Add Task"
-                    >
-                        <span className="hidden sm:inline">Add Task</span>
-                    </Button>
+                    <PageActions>
+                        <Button 
+                            onClick={() => setIsAdding(true)} 
+                            icon={<PlusIcon className="w-5 h-5" />}
+                            aria-label="Add Task"
+                        >
+                            <span className="hidden sm:inline">Add Task</span>
+                        </Button>
+                    </PageActions>
                 )}
             </PageHeader>
 

@@ -21,6 +21,7 @@ import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { transactionSchema, TransactionFormData } from '@/components/schemas/transaction.ts';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const TransactionForm: React.FC<{ 
     onSave: (transaction: TransactionFormData) => void; 
@@ -164,13 +165,15 @@ const TransactionsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Transactions">
                 {canCreate && (
-                    <Button 
-                        onClick={() => setIsAdding(true)} 
-                        icon={<PlusIcon className="w-5 h-5" />}
-                        aria-label="Log Transaction"
-                    >
-                        <span className="hidden sm:inline">Log Transaction</span>
-                    </Button>
+                    <PageActions>
+                        <Button 
+                            onClick={() => setIsAdding(true)} 
+                            icon={<PlusIcon className="w-5 h-5" />}
+                            aria-label="Log Transaction"
+                        >
+                            <span className="hidden sm:inline">Log Transaction</span>
+                        </Button>
+                    </PageActions>
                 )}
             </PageHeader>
            
