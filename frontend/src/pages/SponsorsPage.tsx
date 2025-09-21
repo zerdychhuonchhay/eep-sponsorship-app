@@ -109,8 +109,12 @@ const SponsorsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Sponsors">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
-                        Add Sponsor
+                    <Button 
+                        onClick={() => setIsAdding(true)} 
+                        icon={<PlusIcon className="w-5 h-5" />}
+                        aria-label="Add Sponsor"
+                    >
+                        <span className="hidden sm:inline">Add Sponsor</span>
                     </Button>
                 )}
             </PageHeader>

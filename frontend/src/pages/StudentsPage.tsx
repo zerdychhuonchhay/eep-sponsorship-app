@@ -255,11 +255,20 @@ const StudentsPage: React.FC = () => {
             <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
                 {!selectedStudent && canCreate && (
                     <PageActions>
-                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>
-                            Import
+                        <Button 
+                            onClick={() => setIsShowingImportModal(true)} 
+                            variant="secondary" 
+                            icon={<UploadIcon className="w-5 h-5" />}
+                            aria-label="Import"
+                        >
+                            <span className="hidden sm:inline">Import</span>
                         </Button>
-                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>
-                            Add Student
+                        <Button 
+                            onClick={() => setEditingStudent({} as Student)} 
+                            icon={<PlusIcon className="w-5 h-5" />}
+                            aria-label="Add Student"
+                        >
+                           <span className="hidden sm:inline">Add Student</span>
                         </Button>
                     </PageActions>
                 )}

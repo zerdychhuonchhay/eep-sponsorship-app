@@ -23,12 +23,14 @@ const PageActions: React.FC<PageActionsProps> = ({ children }) => {
             return null;
         }
 
-        const props = child.props as { children?: ReactNode; icon?: ReactNode; onClick: () => void; variant?: string };
+        const props = child.props as { 'aria-label'?: string; children?: ReactNode; icon?: ReactNode; onClick: () => void; variant?: string };
         
-        // Ensure the button has simple text content to use as a label.
-        if (typeof props.children === 'string' || typeof props.children === 'number') {
+        // Prioritize aria-label for the dropdown text to support icon-only buttons.
+        const label = props['aria-label'];
+
+        if (label) {
             const actionItem: ActionItem = {
-                label: String(props.children),
+                label: label,
                 icon: props.icon,
                 onClick: props.onClick,
                 className: props.variant === 'danger' ? 'text-danger' : '',
