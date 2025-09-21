@@ -19,11 +19,13 @@ interface UserSwipeViewProps {
 }
 
 const SWIPE_THRESHOLD = 50;
+const GESTURE_LOCK_THRESHOLD = 10;
 
 const UserSwipeView: React.FC<UserSwipeViewProps> = ({ users, isLoading, loadMore, hasMore, onEditUser, onDeleteUser, onSendPasswordReset, currentUser, canUpdate, canDelete }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [touchStart, setTouchStart] = useState(0);
-    const [touchEnd, setTouchEnd] = useState(0);
+    const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+    const [touchMove, setTouchMove] = useState<{ x: number, y: number } | null>(null);
+    const [swipeDirection, setSwipeDirection] = useState<'horizontal' | 'vertical' | null>(null);
 
     const goToNext = useCallback(() => {
         if (currentIndex < users.length - 1) setCurrentIndex(prev => prev + 1);
@@ -49,19 +51,46 @@ const UserSwipeView: React.FC<UserSwipeViewProps> = ({ users, isLoading, loadMor
     }, [goToNext, goToPrev]);
 
     const handleTouchStart = (e: TouchEvent) => {
-        setTouchEnd(0);
-        setTouchStart(e.targetTouches[0].clientX);
+        setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+        setTouchMove(null);
+        setSwipeDirection(null);
     };
 
-    const handleTouchMove = (e: TouchEvent) => setTouchEnd(e.targetTouches[0].clientX);
+    const handleTouchMove = (e: TouchEvent) => {
+        if (!touchStart) return;
+        const currentX = e.targetTouches[0].clientX;
+        const currentY = e.targetTouches[0].clientY;
+        setTouchMove({ x: currentX, y: currentY });
+
+        if (!swipeDirection) {
+            const deltaX = Math.abs(currentX - touchStart.x);
+            const deltaY = Math.abs(currentY - touchStart.y);
+
+            if (deltaX > GESTURE_LOCK_THRESHOLD || deltaY > GESTURE_LOCK_THRESHOLD) {
+                setSwipeDirection(deltaX > deltaY ? 'horizontal' : 'vertical');
+            }
+        }
+
+        if (swipeDirection === 'horizontal') {
+            e.preventDefault();
+        }
+    };
 
     const handleTouchEnd = () => {
-        if (touchStart === 0 || touchEnd === 0) return;
-        const distance = touchStart - touchEnd;
-        if (distance > SWIPE_THRESHOLD) goToNext();
-        else if (distance < -SWIPE_THRESHOLD) goToPrev();
-        setTouchStart(0);
-        setTouchEnd(0);
+        if (!touchStart || !touchMove || swipeDirection !== 'horizontal') {
+            setTouchStart(null);
+            setTouchMove(null);
+            setSwipeDirection(null);
+            return;
+        }
+
+        const distance = touchMove.x - touchStart.x;
+        if (distance < -SWIPE_THRESHOLD) goToNext();
+        else if (distance > SWIPE_THRESHOLD) goToPrev();
+        
+        setTouchStart(null);
+        setTouchMove(null);
+        setSwipeDirection(null);
     };
 
     if (isLoading && users.length === 0) {
@@ -76,7 +105,7 @@ const UserSwipeView: React.FC<UserSwipeViewProps> = ({ users, isLoading, loadMor
         return <EmptyState title="No Users Found" />;
     }
 
-    const swipeDistance = touchEnd !== 0 ? touchEnd - touchStart : 0;
+    const swipeDistance = touchStart && touchMove && swipeDirection === 'horizontal' ? touchMove.x - touchStart.x : 0;
 
     return (
         <div className="relative h-[calc(100dvh-8rem)] w-full overflow-hidden">
@@ -97,7 +126,7 @@ const UserSwipeView: React.FC<UserSwipeViewProps> = ({ users, isLoading, loadMor
                     <div
                         key={user.id}
                         className="absolute inset-0 flex flex-col items-center justify-center p-2 transition-all duration-300 ease-in-out"
-                        style={{ transform, zIndex, opacity: isCurrent || isNext ? 1 : 0, transition: touchEnd !== 0 ? 'none' : 'all 0.3s ease-out' }}
+                        style={{ transform, zIndex, opacity: isCurrent || isNext ? 1 : 0, transition: touchStart ? 'none' : 'all 0.3s ease-out' }}
                         onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
                     >
                         <div className="w-full h-full max-w-sm mx-auto bg-white dark:bg-box-dark rounded-xl shadow-lg border border-stroke dark:border-strokedark flex flex-col p-6 relative">
