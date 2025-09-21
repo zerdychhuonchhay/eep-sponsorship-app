@@ -24,6 +24,7 @@ import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import ActionDropdown, { ActionItem } from '@/components/ActionDropdown.tsx';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import Badge from '@/components/ui/Badge.tsx';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const UsersList: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AppUser> | null>(null);
@@ -175,9 +176,16 @@ const UsersList: React.FC = () => {
                         <div className="flex justify-between items-center mb-4 p-4">
                             <ViewToggle view={userViewMode} onChange={setUserViewMode} />
                              {canCreate && (
-                                <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} size="sm">
-                                    Invite User
-                                </Button>
+                                <PageActions>
+                                    <Button
+                                        onClick={() => setIsInviting(true)}
+                                        icon={<PlusIcon className="w-5 h-5" />}
+                                        size="sm"
+                                        aria-label="Invite User"
+                                    >
+                                       <span className="hidden sm:inline">Invite User</span>
+                                    </Button>
+                                </PageActions>
                             )}
                         </div>
                         {loading ? renderDesktopSkeletons() : users.length > 0 ? (

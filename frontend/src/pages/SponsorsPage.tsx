@@ -21,6 +21,7 @@ import SponsorSwipeView from '@/components/sponsors/SponsorSwipeView.tsx';
 import { useSettings } from '@/contexts/SettingsContext.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const SponsorsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Sponsor> | null>(null);
@@ -109,13 +110,15 @@ const SponsorsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Sponsors">
                 {canCreate && (
-                    <Button 
-                        onClick={() => setIsAdding(true)} 
-                        icon={<PlusIcon className="w-5 h-5" />}
-                        aria-label="Add Sponsor"
-                    >
-                        <span className="hidden sm:inline">Add Sponsor</span>
-                    </Button>
+                    <PageActions>
+                        <Button 
+                            onClick={() => setIsAdding(true)} 
+                            icon={<PlusIcon className="w-5 h-5" />}
+                            aria-label="Add Sponsor"
+                        >
+                            <span className="hidden sm:inline">Add Sponsor</span>
+                        </Button>
+                    </PageActions>
                 )}
             </PageHeader>
            

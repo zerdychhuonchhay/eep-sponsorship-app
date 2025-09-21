@@ -18,6 +18,7 @@ import EmptyState from '@/components/EmptyState.tsx';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const AcademicsPage: React.FC = () => {
     const [paginatedData, setPaginatedData] = useState<PaginatedResponse<AcademicReport> | null>(null);
@@ -104,13 +105,15 @@ const AcademicsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Academics">
                 {canCreate && (
-                    <Button 
-                        onClick={() => { setSelectedReport(null); setModalState('add'); }} 
-                        icon={<PlusIcon className="w-5 h-5" />}
-                        aria-label="Add Report"
-                    >
-                        <span className="hidden sm:inline">Add Report</span>
-                    </Button>
+                    <PageActions>
+                        <Button 
+                            onClick={() => { setSelectedReport(null); setModalState('add'); }} 
+                            icon={<PlusIcon className="w-5 h-5" />}
+                            aria-label="Add Report"
+                        >
+                            <span className="hidden sm:inline">Add Report</span>
+                        </Button>
+                    </PageActions>
                 )}
             </PageHeader>
            

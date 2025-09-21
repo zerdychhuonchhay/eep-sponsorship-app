@@ -20,6 +20,7 @@ import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { filingSchema, FilingFormData } from '@/components/schemas/filingSchema.ts';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
@@ -169,13 +170,15 @@ const FilingsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Government Filings">
                 {canCreate && (
-                    <Button 
-                        onClick={() => setIsAdding(true)} 
-                        icon={<PlusIcon className="w-5 h-5" />}
-                        aria-label="New Filing"
-                    >
-                        <span className="hidden sm:inline">New Filing</span>
-                    </Button>
+                    <PageActions>
+                        <Button 
+                            onClick={() => setIsAdding(true)} 
+                            icon={<PlusIcon className="w-5 h-5" />}
+                            aria-label="New Filing"
+                        >
+                            <span className="hidden sm:inline">New Filing</span>
+                        </Button>
+                    </PageActions>
                 )}
             </PageHeader>
             
