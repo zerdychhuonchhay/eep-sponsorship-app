@@ -174,8 +174,12 @@ const TasksPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Tasks">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
-                        Add Task
+                    <Button 
+                        onClick={() => setIsAdding(true)} 
+                        icon={<PlusIcon className="w-5 h-5" />}
+                        aria-label="Add Task"
+                    >
+                        <span className="hidden sm:inline">Add Task</span>
                     </Button>
                 )}
             </PageHeader>

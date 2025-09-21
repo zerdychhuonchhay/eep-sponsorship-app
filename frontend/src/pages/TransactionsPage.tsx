@@ -164,8 +164,12 @@ const TransactionsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Transactions">
                 {canCreate && (
-                    <Button onClick={() => setIsAdding(true)} icon={<PlusIcon className="w-5 h-5" />}>
-                        Log Transaction
+                    <Button 
+                        onClick={() => setIsAdding(true)} 
+                        icon={<PlusIcon className="w-5 h-5" />}
+                        aria-label="Log Transaction"
+                    >
+                        <span className="hidden sm:inline">Log Transaction</span>
                     </Button>
                 )}
             </PageHeader>

@@ -104,8 +104,12 @@ const AcademicsPage: React.FC = () => {
         <div className="space-y-6">
             <PageHeader title="Academics">
                 {canCreate && (
-                    <Button onClick={() => { setSelectedReport(null); setModalState('add'); }} icon={<PlusIcon className="w-5 h-5" />}>
-                        Add Report
+                    <Button 
+                        onClick={() => { setSelectedReport(null); setModalState('add'); }} 
+                        icon={<PlusIcon className="w-5 h-5" />}
+                        aria-label="Add Report"
+                    >
+                        <span className="hidden sm:inline">Add Report</span>
                     </Button>
                 )}
             </PageHeader>
