@@ -15,11 +15,13 @@ interface StudentSwipeViewProps {
 }
 
 const SWIPE_THRESHOLD = 50; // Min pixels for a swipe to register
+const GESTURE_LOCK_THRESHOLD = 10; // Min pixels to determine swipe direction
 
 const StudentSwipeView: React.FC<StudentSwipeViewProps> = ({ students, isLoading, loadMore, hasMore, onViewProfile }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [touchStart, setTouchStart] = useState(0);
-    const [touchEnd, setTouchEnd] = useState(0);
+    const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+    const [touchMove, setTouchMove] = useState<{ x: number, y: number } | null>(null);
+    const [swipeDirection, setSwipeDirection] = useState<'horizontal' | 'vertical' | null>(null);
     const cardRef = useRef<HTMLDivElement>(null);
 
     const goToNext = useCallback(() => {
@@ -35,52 +37,69 @@ const StudentSwipeView: React.FC<StudentSwipeViewProps> = ({ students, isLoading
     }, [currentIndex]);
 
     useEffect(() => {
-        // Preload next page if near the end
         if (students.length > 0 && currentIndex >= students.length - 3 && hasMore && !isLoading) {
             loadMore();
         }
     }, [currentIndex, students.length, hasMore, isLoading, loadMore]);
 
-    // Keyboard navigation effect
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight') {
-                goToNext();
-            } else if (e.key === 'ArrowLeft') {
-                goToPrev();
-            }
+            if (e.key === 'ArrowRight') goToNext();
+            else if (e.key === 'ArrowLeft') goToPrev();
         };
-
         window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [goToNext, goToPrev]);
-
+    
     const handleTouchStart = (e: TouchEvent) => {
-        setTouchEnd(0);
-        setTouchStart(e.targetTouches[0].clientX);
+        setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+        setTouchMove(null);
+        setSwipeDirection(null);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
+        if (!touchStart) return;
+
+        const currentX = e.targetTouches[0].clientX;
+        const currentY = e.targetTouches[0].clientY;
+        setTouchMove({ x: currentX, y: currentY });
+
+        if (!swipeDirection) {
+            const deltaX = Math.abs(currentX - touchStart.x);
+            const deltaY = Math.abs(currentY - touchStart.y);
+
+            if (deltaX > GESTURE_LOCK_THRESHOLD || deltaY > GESTURE_LOCK_THRESHOLD) {
+                if (deltaX > deltaY) {
+                    setSwipeDirection('horizontal');
+                } else {
+                    setSwipeDirection('vertical');
+                }
+            }
+        }
+
+        if (swipeDirection === 'horizontal') {
+            e.preventDefault(); // Prevent vertical scroll when swiping horizontally
+        }
     };
 
     const handleTouchEnd = () => {
-        if (touchStart === 0 || touchEnd === 0) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > SWIPE_THRESHOLD;
-        const isRightSwipe = distance < -SWIPE_THRESHOLD;
+        if (!touchStart || !touchMove || swipeDirection !== 'horizontal') {
+            setTouchStart(null);
+            setTouchMove(null);
+            setSwipeDirection(null);
+            return;
+        }
 
-        if (isLeftSwipe) {
+        const distance = touchMove.x - touchStart.x;
+        if (distance < -SWIPE_THRESHOLD) {
             goToNext();
-        } else if (isRightSwipe) {
+        } else if (distance > SWIPE_THRESHOLD) {
             goToPrev();
         }
         
-        // Reset touch coordinates for the next interaction
-        setTouchStart(0);
-        setTouchEnd(0);
+        setTouchStart(null);
+        setTouchMove(null);
+        setSwipeDirection(null);
     };
     
     if (isLoading && students.length === 0) {
@@ -95,7 +114,7 @@ const StudentSwipeView: React.FC<StudentSwipeViewProps> = ({ students, isLoading
         return <EmptyState title="No Students Found" message="Try adjusting your filters to find students." />;
     }
 
-    const swipeDistance = touchEnd !== 0 ? touchEnd - touchStart : 0;
+    const swipeDistance = touchStart && touchMove && swipeDirection === 'horizontal' ? touchMove.x - touchStart.x : 0;
 
     return (
         <div className="relative h-[calc(100dvh-12rem)] w-full overflow-hidden">
@@ -121,7 +140,7 @@ const StudentSwipeView: React.FC<StudentSwipeViewProps> = ({ students, isLoading
                             transform,
                             zIndex,
                             opacity: isCurrent || isNext ? 1 : 0,
-                            transition: touchEnd !== 0 ? 'none' : 'all 0.3s ease-out',
+                            transition: touchStart ? 'none' : 'all 0.3s ease-out',
                         }}
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
