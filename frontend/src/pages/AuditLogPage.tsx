@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '@/services/api.ts';
 import { AuditLog, AuditAction } from '@/types.ts';
-import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
@@ -18,7 +17,6 @@ import DataWrapper from '@/components/DataWrapper.tsx';
 
 const AuditLogPage: React.FC = () => {
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-    const { showToast } = useNotification();
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
