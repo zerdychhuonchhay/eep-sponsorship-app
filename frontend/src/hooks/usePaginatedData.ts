@@ -91,7 +91,7 @@ export const usePaginatedData = <T extends { id?: any; studentId?: any; }>({
                 clearTimeout(staleTimeoutRef.current);
             }
         };
-    }, [apiQueryString, fetcher, keepDataWhileRefetching, version, currentPage, data]);
+    }, [apiQueryString, fetcher, keepDataWhileRefetching, version, currentPage]);
 
     return { data, error, isLoading, isStale, refetch };
 };
