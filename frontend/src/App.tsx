@@ -1,6 +1,7 @@
 import React from 'react';
 // FIX: Standardizing react-router-dom imports to named imports, which is the correct syntax for v6.
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import DashboardPage from '@/pages/DashboardPage.tsx';
 import StudentsPage from '@/pages/StudentsPage.tsx';
 import TransactionsPage from '@/pages/TransactionsPage.tsx';
@@ -12,7 +13,7 @@ import { UIProvider } from '@/contexts/UIContext.tsx';
 import Toast from '@/components/Toast.tsx';
 import Header from '@/components/layout/Header.tsx';
 import Sidebar from '@/components/layout/Sidebar.tsx';
-import { SkeletonTable } from './components/SkeletonLoader.tsx';
+import PageLoader from './components/PageLoader.tsx';
 import AIAssistant from './components/AIAssistant.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
@@ -33,6 +34,7 @@ const UsersAndRolesPage = React.lazy(() => import('@/pages/UserManagementPage.ts
 const ProfilePage = React.lazy(() => import('@/pages/ProfilePage.tsx'));
 
 const AppContent: React.FC = () => {
+    const location = useLocation();
     return (
         <div className="flex h-screen overflow-hidden">
             <Sidebar />
@@ -40,49 +42,57 @@ const AppContent: React.FC = () => {
                 <Header />
                 <main>
                     <div className="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-                        <Routes>
-                            <Route index element={<DashboardPage />} />
-                            <Route path="students" element={<StudentsPage />} />
-                            <Route path="transactions" element={<TransactionsPage />} />
-                            <Route path="filings" element={<FilingsPage />} />
-                            <Route path="tasks" element={<TasksPage />} />
-                            <Route path="academics" element={<AcademicsPage />} />
-                             <Route path="sponsors" element={
-                                <React.Suspense fallback={<SkeletonTable rows={15} cols={5} />}>
-                                    <SponsorsPage />
-                                </React.Suspense>
-                            } />
-                            <Route path="sponsors/:id" element={
-                                <React.Suspense fallback={<SkeletonTable rows={15} cols={5} />}>
-                                    <SponsorDetailPage />
-                                </React.Suspense>
-                            } />
-                             <Route path="reports" element={
-                                <React.Suspense fallback={<SkeletonTable rows={5} cols={1} />}>
-                                    <ReportsPage />
-                                </React.Suspense>
-                            } />
-                            <Route path="audit" element={
-                                <React.Suspense fallback={<SkeletonTable rows={15} cols={5} />}>
-                                    <AuditLogPage />
-                                </React.Suspense>
-                            } />
-                             <Route path="users" element={
-                                <React.Suspense fallback={<SkeletonTable rows={10} cols={5} />}>
-                                    <UsersAndRolesPage />
-                                </React.Suspense>
-                            } />
-                             <Route path="settings" element={
-                                <React.Suspense fallback={<SkeletonTable rows={5} cols={1} />}>
-                                    <SettingsPage />
-                                </React.Suspense>
-                            } />
-                            <Route path="profile" element={
-                                <React.Suspense fallback={<SkeletonTable rows={5} cols={1} />}>
-                                    <ProfilePage />
-                                </React.Suspense>
-                            } />
-                        </Routes>
+                        <TransitionGroup>
+                            <CSSTransition
+                                key={location.pathname}
+                                classNames="page-fade"
+                                timeout={300}
+                            >
+                                <Routes location={location}>
+                                    <Route index element={<DashboardPage />} />
+                                    <Route path="students" element={<StudentsPage />} />
+                                    <Route path="transactions" element={<TransactionsPage />} />
+                                    <Route path="filings" element={<FilingsPage />} />
+                                    <Route path="tasks" element={<TasksPage />} />
+                                    <Route path="academics" element={<AcademicsPage />} />
+                                     <Route path="sponsors" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <SponsorsPage />
+                                        </React.Suspense>
+                                    } />
+                                    <Route path="sponsors/:id" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <SponsorDetailPage />
+                                        </React.Suspense>
+                                    } />
+                                     <Route path="reports" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <ReportsPage />
+                                        </React.Suspense>
+                                    } />
+                                    <Route path="audit" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <AuditLogPage />
+                                        </React.Suspense>
+                                    } />
+                                     <Route path="users" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <UsersAndRolesPage />
+                                        </React.Suspense>
+                                    } />
+                                     <Route path="settings" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <SettingsPage />
+                                        </React.Suspense>
+                                    } />
+                                    <Route path="profile" element={
+                                        <React.Suspense fallback={<PageLoader />}>
+                                            <ProfilePage />
+                                        </React.Suspense>
+                                    } />
+                                </Routes>
+                            </CSSTransition>
+                        </TransitionGroup>
                     </div>
                 </main>
             </div>
