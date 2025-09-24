@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
-import { GovernmentFiling, FilingStatus, PaginatedResponse } from '../types.ts';
+import { GovernmentFiling, FilingStatus } from '../types.ts';
 import Modal from '../components/Modal.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { ArrowUpIcon, ArrowDownIcon, PlusIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
@@ -21,6 +21,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { filingSchema, FilingFormData } from '@/components/schemas/filingSchema.ts';
 import PageActions from '@/components/layout/PageActions.tsx';
+import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
+import DataWrapper from '@/components/DataWrapper.tsx';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
@@ -95,8 +97,6 @@ const FilingForm: React.FC<{
 };
 
 const FilingsPage: React.FC = () => {
-    const [paginatedData, setPaginatedData] = useState<PaginatedResponse<GovernmentFiling> | null>(null);
-    const [loading, setLoading] = useState(true);
     const [isApiSubmitting, setIsApiSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [selectedFiling, setSelectedFiling] = useState<GovernmentFiling | null>(null);
@@ -111,25 +111,17 @@ const FilingsPage: React.FC = () => {
         initialFilters: { status: '' }
     });
 
+    const { 
+        data: paginatedData, isLoading, isStale, refetch 
+    } = usePaginatedData<GovernmentFiling>({
+        fetcher: api.getFilings,
+        apiQueryString,
+        currentPage,
+    });
+
     const filterOptions: FilterOption[] = [
         { id: 'status', label: 'Status', options: Object.values(FilingStatus).map(s => ({ value: s, label: s }))}
     ];
-
-    const fetchFilings = useCallback(async () => {
-        setLoading(true);
-        try {
-            const data = await api.getFilings(apiQueryString);
-            setPaginatedData(data);
-        } catch (error: any) {
-            showToast(error.message || 'Failed to load filings.', 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, [apiQueryString, showToast]);
-
-    useEffect(() => {
-        fetchFilings();
-    }, [fetchFilings]);
     
     const handleSave = async (filingData: GovernmentFiling | Omit<GovernmentFiling, 'id'>) => {
         setIsApiSubmitting(true);
@@ -143,7 +135,7 @@ const FilingsPage: React.FC = () => {
             }
             setSelectedFiling(null);
             setIsAdding(false);
-            fetchFilings();
+            refetch();
         } catch (error: any) {
             showToast(error.message || 'Failed to save filing.', 'error');
         } finally {
@@ -156,7 +148,7 @@ const FilingsPage: React.FC = () => {
             try {
                 await api.deleteFiling(filingId);
                 showToast('Filing deleted successfully.', 'success');
-                fetchFilings();
+                refetch();
             } catch (error: any) {
                 showToast(error.message || 'Failed to delete filing.', 'error');
             }
@@ -195,60 +187,59 @@ const FilingsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    {loading ? (
+                    {isLoading ? (
                         <SkeletonTable rows={5} cols={5} />
                     ) : (
-                        <>
-                            <div className="overflow-x-auto">
-                                <table className="ui-table">
-                                    <thead>
-                                        <tr>
-                                            {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
-                                                <th key={key}>
-                                                    <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                    </button>
-                                                </th>
-                                            ))}
-                                            <th className="text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filings.length > 0 ? filings.map((f) => {
-                                            const actionItems = [];
-                                            if(canUpdate) {
-                                                actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
-                                            }
-                                            if(canDelete) {
-                                                actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
-                                            }
-                                            return (
-                                                <tr key={f.id}>
-                                                    <td className="font-medium">{f.documentName}</td>
-                                                    <td className="text-body-color">{f.authority}</td>
-                                                    <td className="text-body-color">{new Date(f.dueDate).toLocaleDateString()}</td>
-                                                    <td>
-                                                        <Badge type={f.status} />
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                                    </td>
+                        <DataWrapper isStale={isStale}>
+                            {filings.length > 0 ? (
+                                <>
+                                    <div className="overflow-x-auto">
+                                        <table className="ui-table">
+                                            <thead>
+                                                <tr>
+                                                    {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
+                                                        <th key={key}>
+                                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                            </button>
+                                                        </th>
+                                                    ))}
+                                                    <th className="text-center">Actions</th>
                                                 </tr>
-                                            );
-                                        }) : (
-                                            <tr>
-                                                <td colSpan={5}>
-                                                    <EmptyState title="No Filings Found" />
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {filings.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
-                        </>
+                                            </thead>
+                                            <tbody>
+                                                {filings.map((f) => {
+                                                    const actionItems = [];
+                                                    if(canUpdate) {
+                                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
+                                                    }
+                                                    if(canDelete) {
+                                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
+                                                    }
+                                                    return (
+                                                        <tr key={f.id}>
+                                                            <td className="font-medium">{f.documentName}</td>
+                                                            <td className="text-body-color">{f.authority}</td>
+                                                            <td className="text-body-color">{new Date(f.dueDate).toLocaleDateString()}</td>
+                                                            <td>
+                                                                <Badge type={f.status} />
+                                                            </td>
+                                                            <td className="text-center">
+                                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                </>
+                            ) : (
+                                <EmptyState title="No Filings Found" />
+                            )}
+                        </DataWrapper>
                     )}
                 </CardContent>
             </Card>

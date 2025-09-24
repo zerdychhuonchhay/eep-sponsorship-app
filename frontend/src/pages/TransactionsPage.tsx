@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
-import { Transaction, TransactionType, PaginatedResponse, StudentLookup } from '../types.ts';
+import { Transaction, TransactionType, StudentLookup } from '../types.ts';
 import Modal from '../components/Modal.tsx';
 import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
@@ -22,6 +22,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { transactionSchema, TransactionFormData } from '@/components/schemas/transaction.ts';
 import PageActions from '@/components/layout/PageActions.tsx';
+import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
+import DataWrapper from '@/components/DataWrapper.tsx';
 
 const TransactionForm: React.FC<{ 
     onSave: (transaction: TransactionFormData) => void; 
@@ -33,6 +35,7 @@ const TransactionForm: React.FC<{
 }> = ({ onSave, onCancel, students, categories, initialData, isSubmitting: isApiSubmitting }) => {
     const isEdit = !!initialData;
     
+    // FIX: Removed `useEffect` from `useForm` destructuring as it's a React hook, not a `useForm` return property.
     const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<TransactionFormData>({
       resolver: zodResolver(transactionSchema),
       defaultValues: {
@@ -83,10 +86,8 @@ const TransactionForm: React.FC<{
 };
 
 const TransactionsPage: React.FC = () => {
-    const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Transaction> | null>(null);
     const { studentLookup: students } = useData();
     const [categories, setCategories] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isApiSubmitting, setIsApiSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -101,30 +102,22 @@ const TransactionsPage: React.FC = () => {
         initialFilters: { type: '', category: '' }
     });
     
+    const { 
+        data: paginatedData, isLoading, isStale, refetch 
+    } = usePaginatedData<Transaction>({
+        fetcher: api.getTransactions,
+        apiQueryString,
+        currentPage,
+    });
+    
+    useEffect(() => {
+        api.getTransactionFilterOptions().then(data => setCategories(data.categories));
+    }, []);
+
     const filterOptions: FilterOption[] = [
         { id: 'type', label: 'Type', options: Object.values(TransactionType).map(t => ({ value: t, label: t })) },
         { id: 'category', label: 'Category', options: categories.map(c => ({ value: c, label: c })) }
     ];
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [transData, filterOptionsData] = await Promise.all([
-                api.getTransactions(apiQueryString),
-                api.getTransactionFilterOptions()
-            ]);
-            setPaginatedData(transData);
-            setCategories(filterOptionsData.categories);
-        } catch (error: any) {
-            showToast(error.message || 'Failed to load transaction data.', 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, [apiQueryString, showToast]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
 
     const handleSave = async (transaction: TransactionFormData) => {
         setIsApiSubmitting(true);
@@ -138,7 +131,7 @@ const TransactionsPage: React.FC = () => {
             }
             setEditingTransaction(null);
             setIsAdding(false);
-            fetchData();
+            refetch();
         } catch (error: any) {
             showToast(error.message || 'Failed to save transaction.', 'error');
         } finally {
@@ -151,7 +144,7 @@ const TransactionsPage: React.FC = () => {
             try {
                 await api.deleteTransaction(transactionId);
                 showToast('Transaction deleted.', 'success');
-                fetchData();
+                refetch();
             } catch (error: any) {
                 showToast(error.message || 'Failed to delete transaction.', 'error');
             }
@@ -190,72 +183,72 @@ const TransactionsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    {loading ? (
+                    {isLoading ? (
                         <SkeletonTable rows={10} cols={6} />
                     ) : (
-                        <>
-                            <div className="overflow-x-auto">
-                                <table className="ui-table">
-                                    <thead>
-                                        <tr>
-                                            {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
-                                                <th key={key as string} className={`${key === 'amount' ? 'text-right' : ''}`}>
-                                                    <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
-                                                        {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                    </button>
-                                                </th>
-                                            ))}
-                                            <th className="text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {transactions.length > 0 ? transactions.map((t) => {
-                                            const student = students.find(s => s.studentId === t.studentId);
-                                            const actionItems = [];
-                                            if (canUpdate) {
-                                                actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
-                                            }
-                                            if (canDelete) {
-                                                actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
-                                            }
-
-                                            return (
-                                                <tr key={t.id}>
-                                                    <td>{new Date(t.date).toLocaleDateString()}</td>
-                                                    <td>
-                                                        <p className="font-medium text-black dark:text-white">{t.description}</p>
-                                                        {student && (
-                                                            <p className="text-sm text-body-color">
-                                                                For: {student.firstName} {student.lastName}
-                                                            </p>
-                                                        )}
-                                                    </td>
-                                                    <td className="text-body-color">{t.category}</td>
-                                                    <td>
-                                                        <Badge type={t.type} />
-                                                    </td>
-                                                    <td className={`font-medium text-right ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
-                                                        ${Number(t.amount).toFixed(2)}
-                                                    </td>
-                                                    <td className="text-center">
-                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                                    </td>
+                        <DataWrapper isStale={isStale}>
+                            {transactions.length > 0 ? (
+                                <>
+                                    <div className="overflow-x-auto">
+                                        <table className="ui-table">
+                                            <thead>
+                                                <tr>
+                                                    {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
+                                                        <th key={key as string} className={`${key === 'amount' ? 'text-right' : ''}`}>
+                                                            <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
+                                                                {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                            </button>
+                                                        </th>
+                                                    ))}
+                                                    <th className="text-center">Actions</th>
                                                 </tr>
-                                            );
-                                        }) : (
-                                            <tr>
-                                                <td colSpan={6}>
-                                                    <EmptyState title="No Transactions Found" />
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                            </thead>
+                                            <tbody>
+                                                {transactions.map((t) => {
+                                                    const student = students.find(s => s.studentId === t.studentId);
+                                                    const actionItems = [];
+                                                    if (canUpdate) {
+                                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
+                                                    }
+                                                    if (canDelete) {
+                                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
+                                                    }
 
-                            {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
-                        </>
+                                                    return (
+                                                        <tr key={t.id}>
+                                                            <td>{new Date(t.date).toLocaleDateString()}</td>
+                                                            <td>
+                                                                <p className="font-medium text-black dark:text-white">{t.description}</p>
+                                                                {student && (
+                                                                    <p className="text-sm text-body-color">
+                                                                        For: {student.firstName} {student.lastName}
+                                                                    </p>
+                                                                )}
+                                                            </td>
+                                                            <td className="text-body-color">{t.category}</td>
+                                                            <td>
+                                                                <Badge type={t.type} />
+                                                            </td>
+                                                            <td className={`font-medium text-right ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
+                                                                ${Number(t.amount).toFixed(2)}
+                                                            </td>
+                                                            <td className="text-center">
+                                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                </>
+                             ) : (
+                                <EmptyState title="No Transactions Found" />
+                            )}
+                        </DataWrapper>
                     )}
                 </CardContent>
             </Card>

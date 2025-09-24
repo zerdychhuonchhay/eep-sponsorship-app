@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/services/api.ts';
-import { Sponsor, PaginatedResponse } from '@/types.ts';
+import { Sponsor } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
 import { PlusIcon, ArrowUpIcon, ArrowDownIcon } from '@/components/Icons.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
@@ -22,17 +22,16 @@ import { useSettings } from '@/contexts/SettingsContext.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import PageActions from '@/components/layout/PageActions.tsx';
+import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
+import DataWrapper from '@/components/DataWrapper.tsx';
 
 const SponsorsPage: React.FC = () => {
-    const [paginatedData, setPaginatedData] = useState<PaginatedResponse<Sponsor> | null>(null);
-    const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const { showToast } = useNotification();
     const { refetchSponsorLookup } = useData();
     const { canCreate } = usePermissions('sponsors');
     const isMobile = useMediaQuery('(max-width: 767px)');
-    const [allFetchedSponsors, setAllFetchedSponsors] = useState<Sponsor[]>([]);
     const { sponsorViewMode, setSponsorViewMode } = useSettings();
     const navigate = useNavigate();
 
@@ -41,39 +40,15 @@ const SponsorsPage: React.FC = () => {
     } = useTableControls<Sponsor>({
         initialSortConfig: { key: 'name', order: 'asc' },
     });
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const data = await api.getSponsors(apiQueryString);
-            setPaginatedData(data);
-            if (isMobile) {
-                if (currentPage === 1) {
-                    setAllFetchedSponsors(data.results);
-                } else {
-                    setAllFetchedSponsors(prev => {
-                        const existingIds = new Set(prev.map(s => s.id));
-                        const newSponsors = data.results.filter(s => !existingIds.has(s.id));
-                        return [...prev, ...newSponsors];
-                    });
-                }
-            }
-        } catch (error: any) {
-            showToast(error.message || 'Failed to load sponsor data.', 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, [apiQueryString, showToast, isMobile, currentPage]);
-
-    useEffect(() => {
-        if (currentPage === 1) {
-            setAllFetchedSponsors([]);
-        }
-    }, [apiQueryString]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    
+    const { 
+        data: paginatedData, isLoading, isStale, refetch 
+    } = usePaginatedData<Sponsor>({
+        fetcher: api.getSponsors,
+        apiQueryString,
+        currentPage,
+        keepDataWhileRefetching: isMobile,
+    });
 
     const handleSave = async (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
         setIsSubmitting(true);
@@ -81,7 +56,7 @@ const SponsorsPage: React.FC = () => {
             await api.addSponsor(sponsor);
             showToast('Sponsor added successfully!', 'success');
             setIsAdding(false);
-            fetchData();
+            refetch();
             refetchSponsorLookup();
         } catch (error: any) {
             showToast(error.message || 'Failed to save sponsor.', 'error');
@@ -104,7 +79,7 @@ const SponsorsPage: React.FC = () => {
         return <SkeletonTable rows={10} cols={4} />;
     };
     
-    const isInitialLoadAndEmpty = !loading && sponsors.length === 0;
+    const isInitialLoadAndEmpty = !isLoading && sponsors.length === 0;
 
     return (
         <div className="space-y-6">
@@ -123,59 +98,65 @@ const SponsorsPage: React.FC = () => {
             </PageHeader>
            
             {isMobile ? (
-                <SponsorSwipeView
-                    sponsors={allFetchedSponsors}
-                    isLoading={loading && allFetchedSponsors.length === 0}
-                    loadMore={() => {
-                        if (!loading && currentPage < totalPages) {
-                            setCurrentPage(prev => prev + 1);
-                        }
-                    }}
-                    hasMore={currentPage < totalPages}
-                />
+                 <DataWrapper isStale={isStale && sponsors.length > 0}>
+                    <SponsorSwipeView
+                        sponsors={sponsors}
+                        isLoading={isLoading && sponsors.length === 0}
+                        loadMore={() => {
+                            if (!isStale && currentPage < totalPages) {
+                                setCurrentPage(prev => prev + 1);
+                            }
+                        }}
+                        hasMore={currentPage < totalPages}
+                    />
+                </DataWrapper>
             ) : (
                 <Card>
                     <CardContent>
                         <div className="flex justify-end p-4">
                             <ViewToggle view={sponsorViewMode} onChange={setSponsorViewMode} />
                         </div>
-                        {loading ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
-                            <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
-                        ) : sponsorViewMode === 'card' ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {sponsors.map((sponsor) => (
-                                    <SponsorCard key={sponsor.id} sponsor={sponsor} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="ui-table">
-                                    <thead>
-                                        <tr>
-                                            {(['name', 'email', 'sponsorshipStartDate', 'sponsoredStudentCount'] as const).map(key => (
-                                                <th key={key}>
-                                                    <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(key)}>
-                                                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                        {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                    </button>
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sponsors.map(sponsor => (
-                                            <tr key={sponsor.id} className="cursor-pointer" onClick={() => navigate(`/sponsors/${sponsor.id}`)}>
-                                                <td className="font-medium">{sponsor.name}</td>
-                                                <td className="text-body-color">{sponsor.email}</td>
-                                                <td className="text-body-color">{formatDateForDisplay(sponsor.sponsorshipStartDate)}</td>
-                                                <td className="text-body-color">{sponsor.sponsoredStudentCount}</td>
-                                            </tr>
+                        {isLoading ? renderDesktopSkeletons() : (
+                            <DataWrapper isStale={isStale}>
+                                {isInitialLoadAndEmpty ? (
+                                    <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
+                                ) : sponsorViewMode === 'card' ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {sponsors.map((sponsor) => (
+                                            <SponsorCard key={sponsor.id} sponsor={sponsor} />
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="ui-table">
+                                            <thead>
+                                                <tr>
+                                                    {(['name', 'email', 'sponsorshipStartDate', 'sponsoredStudentCount'] as const).map(key => (
+                                                        <th key={key}>
+                                                            <button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(key)}>
+                                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                            </button>
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {sponsors.map(sponsor => (
+                                                    <tr key={sponsor.id} className="cursor-pointer" onClick={() => navigate(`/sponsors/${sponsor.id}`)}>
+                                                        <td className="font-medium">{sponsor.name}</td>
+                                                        <td className="text-body-color">{sponsor.email}</td>
+                                                        <td className="text-body-color">{formatDateForDisplay(sponsor.sponsorshipStartDate)}</td>
+                                                        <td className="text-body-color">{sponsor.sponsoredStudentCount}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                {!isInitialLoadAndEmpty && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                            </DataWrapper>
                         )}
-                        {!loading && sponsors.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
                     </CardContent>
                 </Card>
             )}
