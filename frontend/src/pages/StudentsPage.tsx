@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { api } from '@/services/api.ts';
 import { Student, StudentStatus, SponsorshipStatus, Gender } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
