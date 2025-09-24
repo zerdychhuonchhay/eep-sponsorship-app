@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
-import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, UserIcon, ProfileIcon, LogoutIcon } from '@/components/Icons.tsx';
+import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, UserIcon, ProfileIcon, LogoutIcon, CloseIcon } from '@/components/Icons.tsx';
 import { usePermissions, useAuth } from '@/contexts/AuthContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 import ThemeToggle from '@/components/ui/ThemeToggle.tsx';
@@ -143,6 +143,14 @@ const Sidebar: React.FC = () => {
                         <img src="/logo.png" alt="Logo" className="h-8 w-auto flex-shrink-0" />
                         <span className="text-black dark:text-white text-xl font-bold whitespace-nowrap">Dashboard</span>
                     </NavLink>
+                     {/* <!-- Close button for sidebar --> */}
+                    <button
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="p-1.5 rounded-lg hover:bg-gray-2 dark:hover:bg-box-dark-2"
+                        aria-label="Close sidebar"
+                    >
+                        <CloseIcon className="w-6 h-6 text-black dark:text-white" />
+                    </button>
                 </div>
                 <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto duration-300 ease-linear min-h-0">
                     <nav className="mt-2 py-4">
