@@ -184,6 +184,33 @@ const prepareStudentData = (studentData: any) => {
     return data;
 };
 
+// Centralized helper to create FormData for student, ensuring correct JSON stringification
+const createStudentFormData = (data: Record<string, any>): FormData => {
+    const formData = new FormData();
+    const jsonFields = ['father_details', 'mother_details', 'previous_schooling_details'];
+
+    Object.entries(data).forEach(([key, value]) => {
+        if (value === undefined) {
+            return; // Skip undefined values
+        }
+
+        if (jsonFields.includes(key)) {
+            // For JSON fields, stringify the object. If the value is nullish, stringify null.
+            formData.append(key, JSON.stringify(value ?? null));
+        } else if (value === null) {
+            // For other nullable fields, Django's multipart parser interprets an empty string as null.
+            formData.append(key, '');
+        } else if (typeof value === 'boolean') {
+            formData.append(key, value ? 'true' : 'false');
+        } else {
+            // Append all other values as strings.
+            formData.append(key, String(value));
+        }
+    });
+
+    return formData;
+};
+
 const prepareTransactionData = (data: any) => {
     const snakeData = convertKeysToSnake(data);
     if ('student_id' in snakeData) {
@@ -378,37 +405,26 @@ export const api = {
         const { profilePhoto, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
-        const formData = new FormData();
-        Object.entries(snakeCaseData).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-                 if (typeof value === 'object' && !(value instanceof File)) {
-                    formData.append(key, JSON.stringify(value));
-                 } else {
-                    formData.append(key, String(value));
-                 }
-            }
-        });
-        if (profilePhoto) formData.append('profile_photo', profilePhoto);
+        
+        const formData = createStudentFormData(snakeCaseData);
+
+        if (profilePhoto) {
+            formData.append('profile_photo', profilePhoto);
+        }
+        
         return apiClient('/students/', { method: 'POST', body: formData });
     },
     updateStudent: async (studentData: StudentFormData) => {
         const { profilePhoto, studentId, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
-        const formData = new FormData();
-        Object.entries(snakeCaseData).forEach(([key, value]) => {
-             if (value !== undefined) { // Send null values
-                 if (typeof value === 'object' && value !== null && !(value instanceof File)) {
-                    formData.append(key, JSON.stringify(value));
-                 } else if (value === null) {
-                    formData.append(key, ''); // Django multipart forms interpret empty string as null for non-file fields
-                 }
-                 else {
-                    formData.append(key, String(value));
-                 }
-            }
-        });
-        if (profilePhoto instanceof File) formData.append('profile_photo', profilePhoto);
+        
+        const formData = createStudentFormData(snakeCaseData);
+
+        if (profilePhoto instanceof File) {
+            formData.append('profile_photo', profilePhoto);
+        }
+        
         return apiClient(`/students/${studentId}/`, { method: 'PATCH', body: formData });
     },
     deleteStudent: async (studentId: string) => apiClient(`/students/${studentId}/`, { method: 'DELETE' }),

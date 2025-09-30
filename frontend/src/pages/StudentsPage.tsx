@@ -96,19 +96,35 @@ const StudentsPage: React.FC = () => {
         setSelectedStudentIds(prev => new Set([...prev].filter(id => currentPageIds.has(id))));
     }, [studentsList]);
 
+    const refetchListData = useCallback(() => {
+        refetch();
+        refetchStudentLookup();
+    }, [refetch, refetchStudentLookup]);
+
+    const handleEditSave = (updatedStudent: Student) => {
+        // Update the student being edited in the modal to ensure the form
+        // reflects the newly saved data without needing to close and reopen.
+        setEditingStudent(updatedStudent);
+
+        // If the student being viewed in the detail page is the one we just edited,
+        // update its state as well to instantly reflect changes.
+        if (selectedStudent && selectedStudent.studentId === updatedStudent.studentId) {
+            setSelectedStudent(updatedStudent);
+        }
+
+        // Refetch the list in the background to keep the main list view in sync.
+        refetchListData();
+    };
+
+
     const handleSaveStudent = async (studentData: any) => {
         setIsSubmitting(true);
         try {
-            if (editingStudent?.studentId) {
-                await api.updateStudent({ ...studentData, studentId: editingStudent.studentId });
-                showToast('Student updated successfully!', 'success');
-            } else {
-                await api.addStudent(studentData);
-                showToast('Student added successfully!', 'success');
-            }
+            // This handler is now only for CREATING students
+            await api.addStudent(studentData);
+            showToast('Student added successfully!', 'success');
             setEditingStudent(null);
-            refetch();
-            refetchStudentLookup();
+            refetchListData();
         } catch (error: any) {
             showToast(error.message || 'Failed to save student.', 'error');
         } finally {
@@ -122,8 +138,7 @@ const StudentsPage: React.FC = () => {
                 await api.deleteStudent(studentId);
                 showToast('Student deleted.', 'success');
                 setSelectedStudent(null);
-                refetch();
-                refetchStudentLookup();
+                refetchListData();
             } catch (error: any) {
                 showToast(error.message || 'Failed to delete student.', 'error');
             }
@@ -135,16 +150,17 @@ const StudentsPage: React.FC = () => {
         try {
             const updatedStudent = await api.getStudentById(selectedStudent.studentId);
             setSelectedStudent(updatedStudent);
+            // Also refetch the main list data to ensure it's in sync when the user navigates back.
+            refetchListData();
         } catch(e) {
             showToast("Could not refresh student data.", 'error');
             setSelectedStudent(null);
         }
-    }, [selectedStudent, showToast]);
+    }, [selectedStudent, showToast, refetchListData]);
 
     const handleImportFinished = () => {
         setIsShowingImportModal(false);
-        refetch();
-        refetchStudentLookup();
+        refetchListData();
     };
 
     const handleSelectStudent = (studentId: string, isSelected: boolean) => {
@@ -303,7 +319,16 @@ const StudentsPage: React.FC = () => {
             )}
 
             <Modal isOpen={!!editingStudent} onClose={() => setEditingStudent(null)} title={editingStudent?.studentId ? 'Edit Student' : 'Add New Student'}>
-                <Suspense fallback={<FormLoader />}><StudentForm key={editingStudent?.studentId || 'new'} student={editingStudent!} onSave={handleSaveStudent} onCancel={() => setEditingStudent(null)} isSaving={isSubmitting} /></Suspense>
+                <Suspense fallback={<FormLoader />}>
+                    <StudentForm 
+                        key={editingStudent?.studentId || 'new'} 
+                        student={editingStudent!} 
+                        onSave={handleSaveStudent} 
+                        onCancel={() => setEditingStudent(null)} 
+                        isSaving={isSubmitting}
+                        onEditSave={handleEditSave}
+                    />
+                </Suspense>
             </Modal>
             
             {isShowingImportModal && (<StudentImportModal existingStudents={[]} studentsOnPage={studentsList} onFinished={handleImportFinished} />)}

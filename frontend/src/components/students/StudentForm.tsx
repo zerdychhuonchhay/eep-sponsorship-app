@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, Gender, StudentStatus, SponsorshipStatus, YesNo, HealthStatus, InteractionStatus, TransportationType } from '@/types.ts';
 import { FormInput, FormSelect, FormTextArea, FormCheckbox, FormSection, FormSubSection, YesNoNASelect } from '@/components/forms/FormControls.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
 import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
 import Button from '@/components/ui/Button.tsx';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserIcon } from '../Icons.tsx';
+import { UserIcon } from '@/components/Icons.tsx';
+import { useNotification } from '@/contexts/NotificationContext.tsx';
+import { api } from '@/services/api.ts';
 
 const formatDateForInput = (dateStr?: string | null) => {
     if (!dateStr || isNaN(new Date(dateStr).getTime())) return '';
@@ -21,6 +23,16 @@ const parentDetailsSchema = z.object({
     occupation: z.string().optional(),
     skills: z.string().optional(),
 });
+
+const nullableInt = z.preprocess(
+    (val) => (typeof val === 'number' && isNaN(val) ? null : val),
+    z.number().int().min(0).nullable().optional()
+);
+
+const nullableFloat = z.preprocess(
+    (val) => (typeof val === 'number' && isNaN(val) ? null : val),
+    z.number().min(0).nullable().optional()
+);
 
 const studentSchema = z.object({
     studentId: z.string().min(1, 'Student ID is required.'),
@@ -38,8 +50,8 @@ const studentSchema = z.object({
     sponsor: z.string().optional(),
     applicationDate: z.string().optional(),
     hasBirthCertificate: z.boolean(),
-    siblingsCount: z.number().int().min(0).optional(),
-    householdMembersCount: z.number().int().min(0).optional(),
+    siblingsCount: nullableInt,
+    householdMembersCount: nullableInt,
     city: z.string().optional(),
     villageSlum: z.string().optional(),
     guardianName: z.string().optional(),
@@ -47,9 +59,18 @@ const studentSchema = z.object({
     homeLocation: z.string().optional(),
     fatherDetails: parentDetailsSchema,
     motherDetails: parentDetailsSchema,
-    annualIncome: z.number().min(0).optional(),
+    annualIncome: nullableFloat,
     guardianIfNotParents: z.string().optional(),
-    parentSupportLevel: z.number().min(1).max(5),
+    // FIX: Replaced z.coerce.number() with a more explicit z.preprocess and z.number() combination. This resolves a complex TypeScript type inference issue where two different `Resolver` types were conflicting, which can be caused by some of zod's coercion methods.
+    parentSupportLevel: z.preprocess(
+        (val) => (typeof val === 'number' && isNaN(val) ? undefined : val),
+        z.number({
+            required_error: "Value must be between 1 and 5.",
+            invalid_type_error: "Value must be a number.",
+        })
+        .min(1, "Value must be between 1 and 5.")
+        .max(5, "Value must be between 1 and 5.")
+    ),
     closestPrivateSchool: z.string().optional(),
     currentlyInSchool: z.nativeEnum(YesNo),
     previousSchooling: z.nativeEnum(YesNo),
@@ -66,7 +87,16 @@ const studentSchema = z.object({
     interactionIssues: z.string().optional(),
     childStory: z.string().optional(),
     otherNotes: z.string().optional(),
-    riskLevel: z.number().min(1).max(5),
+    // FIX: Replaced z.coerce.number() with a more explicit z.preprocess and z.number() combination. This resolves a complex TypeScript type inference issue where two different `Resolver` types were conflicting, which can be caused by some of zod's coercion methods.
+    riskLevel: z.preprocess(
+        (val) => (typeof val === 'number' && isNaN(val) ? undefined : val),
+        z.number({
+            required_error: "Value must be between 1 and 5.",
+            invalid_type_error: "Value must be a number.",
+        })
+        .min(1, "Value must be between 1 and 5.")
+        .max(5, "Value must be between 1 and 5.")
+    ),
     transportation: z.nativeEnum(TransportationType),
     hasSponsorshipContract: z.boolean(),
     profilePhoto: z.any().optional().nullable()
@@ -78,67 +108,120 @@ interface StudentFormProps {
     student: Student;
     onSave: (student: any) => void;
     onCancel: () => void;
-    isSaving: boolean;
+    isSaving: boolean; // For create mode
+    onEditSave: (updatedStudent: Student) => void; // For edit mode
 }
 
-const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, isSaving }) => {
+const SECTION_FIELDS = {
+    basic: ['studentId', 'firstName', 'lastName', 'dateOfBirth', 'gender', 'profilePhoto'],
+    program: ['school', 'currentGrade', 'eepEnrollDate', 'outOfProgramDate', 'studentStatus', 'sponsorshipStatus', 'hasHousingSponsorship', 'sponsor', 'hasSponsorshipContract'],
+    details: ['applicationDate', 'hasBirthCertificate', 'siblingsCount', 'householdMembersCount', 'city', 'villageSlum', 'guardianName', 'guardianContactInfo', 'homeLocation', 'fatherDetails', 'motherDetails', 'annualIncome', 'guardianIfNotParents', 'parentSupportLevel'],
+    narrative: ['closestPrivateSchool', 'currentlyInSchool', 'previousSchooling', 'previousSchoolingDetails', 'gradeLevelBeforeEep', 'childResponsibilities', 'healthStatus', 'healthIssues', 'interactionWithOthers', 'interactionIssues', 'childStory', 'otherNotes', 'riskLevel', 'transportation'],
+};
+
+const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, isSaving, onEditSave }) => {
     const isEdit = !!student.studentId;
     const { sponsorLookup: sponsors } = useData();
-    const [photoPreview, setPhotoPreview] = useState<string | null>(student?.profilePhoto || null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [savingSection, setSavingSection] = useState<string | null>(null);
+    const { showToast } = useNotification();
     
-    const { register, handleSubmit, formState: { errors }, watch } = useForm<StudentFormData>({
+    const { register, handleSubmit, formState: { errors }, watch, trigger, getValues, reset } = useForm<StudentFormData>({
         resolver: zodResolver(studentSchema),
-        defaultValues: {
-            studentId: student?.studentId || '',
-            firstName: student?.firstName || '',
-            lastName: student?.lastName || '',
-            dateOfBirth: formatDateForInput(student?.dateOfBirth),
-            gender: student?.gender || Gender.MALE,
-            school: student?.school || '',
-            currentGrade: student?.currentGrade || '',
-            eepEnrollDate: formatDateForInput(student?.eepEnrollDate) || formatDateForInput(new Date().toISOString()),
-            outOfProgramDate: formatDateForInput(student?.outOfProgramDate),
-            studentStatus: student?.studentStatus || StudentStatus.ACTIVE,
-            sponsorshipStatus: student?.sponsorshipStatus || SponsorshipStatus.UNSPONSORED,
-            hasHousingSponsorship: student?.hasHousingSponsorship || false,
-            sponsor: student?.sponsor || '',
-            applicationDate: formatDateForInput(student?.applicationDate),
-            hasBirthCertificate: student?.hasBirthCertificate || false,
-            siblingsCount: student?.siblingsCount || 0,
-            householdMembersCount: student?.householdMembersCount || 0,
-            city: student?.city || '',
-            villageSlum: student?.villageSlum || '',
-            guardianName: student?.guardianName || '',
-            guardianContactInfo: student?.guardianContactInfo || '',
-            homeLocation: student?.homeLocation || '',
-            fatherDetails: student?.fatherDetails || { isLiving: YesNo.NA, isAtHome: YesNo.NA, isWorking: YesNo.NA, occupation: '', skills: '' },
-            motherDetails: student?.motherDetails || { isLiving: YesNo.NA, isAtHome: YesNo.NA, isWorking: YesNo.NA, occupation: '', skills: '' },
-            annualIncome: student?.annualIncome || 0,
-            guardianIfNotParents: student?.guardianIfNotParents || '',
-            parentSupportLevel: student?.parentSupportLevel || 3,
-            closestPrivateSchool: student?.closestPrivateSchool || '',
-            currentlyInSchool: student?.currentlyInSchool || YesNo.NA,
-            previousSchooling: student?.previousSchooling || YesNo.NA,
-            previousSchoolingDetails: student?.previousSchoolingDetails || { when: '', howLong: '', where: '' },
-            gradeLevelBeforeEep: student?.gradeLevelBeforeEep || '',
-            childResponsibilities: student?.childResponsibilities || '',
-            healthStatus: student?.healthStatus || HealthStatus.GOOD,
-            healthIssues: student?.healthIssues || '',
-            interactionWithOthers: student?.interactionWithOthers || InteractionStatus.GOOD,
-            interactionIssues: student?.interactionIssues || '',
-            childStory: student?.childStory || '',
-            otherNotes: student?.otherNotes || '',
-            riskLevel: student?.riskLevel || 3,
-            transportation: student?.transportation || TransportationType.WALKING,
-            hasSponsorshipContract: student?.hasSponsorshipContract || false,
-        }
     });
+
+    useEffect(() => {
+        // This effect syncs the form with the student prop.
+        // This is crucial for when a section is saved, the parent state updates,
+        // and the new data needs to be reflected in the form without losing unsaved changes in other sections.
+        if (student) {
+            const defaultVals = {
+                studentId: student.studentId || '',
+                firstName: student.firstName || '',
+                lastName: student.lastName || '',
+                dateOfBirth: formatDateForInput(student.dateOfBirth),
+                gender: student.gender || Gender.MALE,
+                school: student.school || '',
+                currentGrade: student.currentGrade || '',
+                eepEnrollDate: formatDateForInput(student.eepEnrollDate) || formatDateForInput(new Date().toISOString()),
+                outOfProgramDate: formatDateForInput(student.outOfProgramDate),
+                studentStatus: student.studentStatus || StudentStatus.ACTIVE,
+                sponsorshipStatus: student.sponsorshipStatus || SponsorshipStatus.UNSPONSORED,
+                hasHousingSponsorship: student.hasHousingSponsorship || false,
+                sponsor: student.sponsor || '',
+                applicationDate: formatDateForInput(student.applicationDate),
+                hasBirthCertificate: student.hasBirthCertificate || false,
+                siblingsCount: student.siblingsCount ?? null,
+                householdMembersCount: student.householdMembersCount ?? null,
+                city: student.city || '',
+                villageSlum: student.villageSlum || '',
+                guardianName: student.guardianName || '',
+                guardianContactInfo: student.guardianContactInfo || '',
+                homeLocation: student.homeLocation || '',
+                fatherDetails: student.fatherDetails || { isLiving: YesNo.NA, isAtHome: YesNo.NA, isWorking: YesNo.NA, occupation: '', skills: '' },
+                motherDetails: student.motherDetails || { isLiving: YesNo.NA, isAtHome: YesNo.NA, isWorking: YesNo.NA, occupation: '', skills: '' },
+                annualIncome: student.annualIncome ?? null,
+                guardianIfNotParents: student.guardianIfNotParents || '',
+                parentSupportLevel: student.parentSupportLevel || 3,
+                closestPrivateSchool: student.closestPrivateSchool || '',
+                currentlyInSchool: student.currentlyInSchool || YesNo.NA,
+                previousSchooling: student.previousSchooling || YesNo.NA,
+                previousSchoolingDetails: student.previousSchoolingDetails || { when: '', howLong: '', where: '' },
+                gradeLevelBeforeEep: student.gradeLevelBeforeEep || '',
+                childResponsibilities: student.childResponsibilities || '',
+                healthStatus: student.healthStatus || HealthStatus.GOOD,
+                healthIssues: student.healthIssues || '',
+                interactionWithOthers: student.interactionWithOthers || InteractionStatus.GOOD,
+                interactionIssues: student.interactionIssues || '',
+                childStory: student.childStory || '',
+                otherNotes: student.otherNotes || '',
+                riskLevel: student.riskLevel || 3,
+                transportation: student.transportation || TransportationType.WALKING,
+                hasSponsorshipContract: student.hasSponsorshipContract || false,
+            };
+            reset(defaultVals);
+            setPhotoPreview(student.profilePhoto || null);
+        }
+    }, [student, reset]);
     
     const watchPreviousSchooling = watch('previousSchooling');
 
-    const onSubmit = (data: StudentFormData) => {
+    const handleCreateSubmit: SubmitHandler<StudentFormData> = (data) => {
         const file = data.profilePhoto instanceof FileList ? data.profilePhoto[0] : undefined;
         onSave({ ...data, profilePhoto: file });
+    };
+
+    const handlePartialSave = async (sectionKey: keyof typeof SECTION_FIELDS) => {
+        setSavingSection(sectionKey);
+        const fieldsToValidate = SECTION_FIELDS[sectionKey] as (keyof StudentFormData)[];
+        const isValid = await trigger(fieldsToValidate);
+
+        if (!isValid) {
+            showToast('Please fix the errors in this section before saving.', 'error');
+            setSavingSection(null);
+            return;
+        }
+
+        const allData = getValues();
+        const file = allData.profilePhoto instanceof FileList ? allData.profilePhoto[0] : undefined;
+        
+        // Construct a partial payload for the patch operation
+        const payload: any = { studentId: student.studentId };
+        fieldsToValidate.forEach(field => {
+            if (field in allData) {
+                payload[field] = allData[field as keyof typeof allData];
+            }
+        });
+        
+        try {
+            const updatedStudent = await api.updateStudent({ ...payload, profilePhoto: file });
+            showToast(`${sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1)} section updated!`, 'success');
+            onEditSave(updatedStudent);
+        } catch (error: any) {
+            showToast(error.message || 'Failed to update section.', 'error');
+        } finally {
+            setSavingSection(null);
+        }
     };
 
     const { onChange: onFormPhotoChange, ...photoRegisterProps } = register('profilePhoto');
@@ -155,6 +238,16 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
             setPhotoPreview(student?.profilePhoto || null);
         }
     };
+
+    const SectionSaveButton: React.FC<{section: keyof typeof SECTION_FIELDS, children: React.ReactNode}> = ({ section, children }) => (
+        isEdit ? (
+            <div className="md:col-span-2 flex justify-end mt-4">
+                <Button type="button" onClick={() => handlePartialSave(section)} isLoading={savingSection === section} size="sm">
+                    {children}
+                </Button>
+            </div>
+        ) : null
+    );
 
     const CoreProgramData = (
         <FormSection title="Core Program Data">
@@ -173,8 +266,9 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
             <FormInput label="Current Grade" id="currentGrade" {...register('currentGrade')} error={errors.currentGrade?.message} />
             <FormInput label="EEP Enroll Date" id="eepEnrollDate" type="date" {...register('eepEnrollDate')} error={errors.eepEnrollDate?.message} />
             <FormInput label="Out of Program Date" id="outOfProgramDate" type="date" {...register('outOfProgramDate')} error={errors.outOfProgramDate?.message} />
-            <FormCheckbox label="Has Housing Sponsorship?" id="hasHousingSponsorship" {...register('hasHousingSponsorship')} />
-            <FormCheckbox label="Has Sponsorship Contract?" id="hasSponsorshipContract" {...register('hasSponsorshipContract')} />
+            <FormCheckbox label="Has Housing Sponsorship?" id="hasHousingSponsorship" {...register('hasHousingSponsorship')} checked={watch('hasHousingSponsorship')} />
+            <FormCheckbox label="Has Sponsorship Contract?" id="hasSponsorshipContract" {...register('hasSponsorshipContract')} checked={watch('hasSponsorshipContract')} />
+            <SectionSaveButton section="program">Save Program Data</SectionSaveButton>
         </FormSection>
     );
 
@@ -182,7 +276,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
         <div className="space-y-4">
             <FormSection title="Personal & Family Details">
                 <FormInput label="Application Date" id="applicationDate" type="date" {...register('applicationDate')} error={errors.applicationDate?.message} />
-                <FormCheckbox label="Has Birth Certificate?" id="hasBirthCertificate" {...register('hasBirthCertificate')} />
+                <FormCheckbox label="Has Birth Certificate?" id="hasBirthCertificate" {...register('hasBirthCertificate')} checked={watch('hasBirthCertificate')} />
                 <FormInput label="Number of Siblings" id="siblingsCount" type="number" {...register('siblingsCount', { valueAsNumber: true })} error={errors.siblingsCount?.message} />
                 <FormInput label="Household Members" id="householdMembersCount" type="number" {...register('householdMembersCount', { valueAsNumber: true })} error={errors.householdMembersCount?.message} />
                 <FormInput label="City" id="city" {...register('city')} error={errors.city?.message} />
@@ -210,6 +304,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                     <FormInput label="Skills" id="motherSkills" {...register('motherDetails.skills')} />
                 </FormSubSection>
             </FormSection>
+            <SectionSaveButton section="details">Save Detailed Info</SectionSaveButton>
         </div>
     );
     
@@ -245,6 +340,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                 <FormTextArea label="Child's Story" id="childStory" className="md:col-span-2" {...register('childStory')} error={errors.childStory?.message} />
                 <FormTextArea label="Other Notes" id="otherNotes" className="md:col-span-2" {...register('otherNotes')} error={errors.otherNotes?.message} />
             </FormSection>
+            <SectionSaveButton section="narrative">Save Narrative & Health</SectionSaveButton>
         </div>
     );
 
@@ -255,7 +351,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
     ];
     
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={!isEdit ? handleSubmit(handleCreateSubmit) : (e) => e.preventDefault()}>
             <div className="p-4 space-y-4">
                  <FormSection title="Basic Information">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
@@ -288,12 +384,19 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                             {Object.values(Gender).map((g: string) => <option key={g} value={g}>{g}</option>)}
                         </FormSelect>
                     </div>
+                    <SectionSaveButton section="basic">Save Basic Info</SectionSaveButton>
                 </FormSection>
                 <Tabs tabs={tabs} />
             </div>
             <div className="flex justify-end space-x-2 p-4 border-t border-stroke dark:border-strokedark">
-                <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-                <Button type="submit" isLoading={isSaving}>{isEdit ? 'Update Student' : 'Save Student'}</Button>
+                {isEdit ? (
+                    <Button type="button" variant="ghost" onClick={onCancel}>Close</Button>
+                ) : (
+                    <>
+                        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+                        <Button type="submit" isLoading={isSaving}>Save Student</Button>
+                    </>
+                )}
             </div>
         </form>
     );

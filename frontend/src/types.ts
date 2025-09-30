@@ -148,8 +148,8 @@ export interface Student {
     // --- Merged from Risk Assessment ---
     applicationDate: string;
     hasBirthCertificate: boolean;
-    siblingsCount: number;
-    householdMembersCount: number;
+    siblingsCount: number | null;
+    householdMembersCount: number | null;
     city: string;
     villageSlum: string;
     guardianName: string;
@@ -157,7 +157,7 @@ export interface Student {
     homeLocation: string;
     fatherDetails: ParentDetails;
     motherDetails: ParentDetails;
-    annualIncome: number;
+    annualIncome: number | null;
     guardianIfNotParents: string;
     parentSupportLevel: number; // 1-5
     closestPrivateSchool: string;

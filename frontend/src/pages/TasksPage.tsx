@@ -32,7 +32,6 @@ const TaskForm: React.FC<{
 }> = ({ onSave, onCancel, initialData, isApiSubmitting }) => {
     const isEdit = !!initialData;
     
-    // FIX: Removed `useEffect` from `useForm` destructuring as it's a React hook, not a `useForm` return property.
     const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<TaskFormData>({
         resolver: zodResolver(taskSchema),
         defaultValues: {

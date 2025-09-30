@@ -35,7 +35,6 @@ const TransactionForm: React.FC<{
 }> = ({ onSave, onCancel, students, categories, initialData, isSubmitting: isApiSubmitting }) => {
     const isEdit = !!initialData;
     
-    // FIX: Removed `useEffect` from `useForm` destructuring as it's a React hook, not a `useForm` return property.
     const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<TransactionFormData>({
       resolver: zodResolver(transactionSchema),
       defaultValues: {
