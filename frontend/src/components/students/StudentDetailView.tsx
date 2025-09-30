@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Student, FollowUpRecord } from '@/types.ts';
+import { Student, FollowUpRecord, AcademicReport } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
 import { EditIcon, TrashIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
@@ -16,6 +16,7 @@ import Badge from '../ui/Badge.tsx';
 import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { AcademicReportFormData } from '../schemas/academicReportSchema.ts';
+import ActionDropdown from '@/components/ActionDropdown.tsx';
 
 interface StudentDetailViewProps {
     student: Student;
@@ -43,16 +44,17 @@ const NarrativeDetailCard: React.FC<{ title: string; data: Record<string, any> }
 const StudentDetailView: React.FC<StudentDetailViewProps> = ({ 
     student, onBack, onEdit, onDelete, onDataChange,
 }) => {
-    const [modal, setModal] = useState<'add_report' | 'add_follow_up' | 'edit_follow_up' | null>(null);
+    const [modal, setModal] = useState<'add_report' | 'edit_report' | 'add_follow_up' | 'edit_follow_up' | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [editingFollowUp, setEditingFollowUp] = useState<FollowUpRecord | null>(null);
+    const [editingReport, setEditingReport] = useState<AcademicReport | null>(null);
     const [openFollowUpId, setOpenFollowUpId] = useState<string | null>(null);
     const [recordForPdf, setRecordForPdf] = useState<FollowUpRecord | null>(null);
     const printableRef = React.useRef<HTMLDivElement>(null);
     const { isGenerating: isGeneratingPdf, generatePdf } = usePdfGenerator(printableRef);
     const { showToast } = useNotification();
     const { canUpdate, canDelete } = usePermissions('students');
-    const { canCreate: canCreateAcademics } = usePermissions('academics');
+    const { canCreate: canCreateAcademics, canUpdate: canUpdateAcademics, canDelete: canDeleteAcademics } = usePermissions('academics');
 
     const handleDownloadPdf = (record: FollowUpRecord) => {
         setRecordForPdf(record);
@@ -74,14 +76,32 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
         setIsSaving(true);
         try {
             const { studentId, ...reportData } = formData;
-            await api.addAcademicReport(studentId, reportData);
-            showToast('Academic report added!', 'success');
+            if (editingReport) {
+                await api.updateAcademicReport(editingReport.id, { ...reportData, student: studentId });
+                showToast('Academic report updated!', 'success');
+            } else {
+                await api.addAcademicReport(studentId, reportData);
+                showToast('Academic report added!', 'success');
+            }
             setModal(null);
+            setEditingReport(null);
             onDataChange();
         } catch (error: any) {
             showToast(error.message || 'Failed to add report.', 'error');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDeleteAcademicReport = async (reportId: string) => {
+        if (window.confirm('Are you sure you want to delete this academic report?')) {
+            try {
+                await api.deleteAcademicReport(reportId);
+                showToast('Academic report deleted.', 'success');
+                onDataChange();
+            } catch (error: any) {
+                showToast(error.message || 'Failed to delete report.', 'error');
+            }
         }
     };
 
@@ -155,7 +175,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Academic Reports</h3>
-                        {canCreateAcademics && <Button onClick={() => setModal('add_report')} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">Add Report</Button>}
+                        {canCreateAcademics && <Button onClick={() => { setEditingReport(null); setModal('add_report'); }} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">Add Report</Button>}
                     </div>
                     {student.academicReports && student.academicReports.length > 0 ? (
                         <div className="overflow-x-auto">
@@ -166,17 +186,33 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                                         <th>Grade</th>
                                         <th>Average</th>
                                         <th>Status</th>
+                                        {(canUpdateAcademics || canDeleteAcademics) && <th className="text-center">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {student.academicReports.sort((a,b) => a.reportPeriod < b.reportPeriod ? 1 : -1).map(report => (
-                                        <tr key={report.id}>
-                                            <td>{report.reportPeriod}</td>
-                                            <td className="text-body-color">{report.gradeLevel}</td>
-                                            <td className="text-body-color">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
-                                            <td><Badge type={report.passFailStatus} /></td>
-                                        </tr>
-                                    ))}
+                                    {student.academicReports.sort((a,b) => a.reportPeriod < b.reportPeriod ? 1 : -1).map(report => {
+                                        const actionItems = [];
+                                        if (canUpdateAcademics) {
+                                            actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => { setEditingReport(report); setModal('edit_report'); } });
+                                        }
+                                        if (canDeleteAcademics) {
+                                            actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteAcademicReport(report.id), className: 'text-danger' });
+                                        }
+
+                                        return (
+                                            <tr key={report.id}>
+                                                <td>{report.reportPeriod}</td>
+                                                <td className="text-body-color">{report.gradeLevel}</td>
+                                                <td className="text-body-color">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
+                                                <td><Badge type={report.passFailStatus} /></td>
+                                                {(canUpdateAcademics || canDeleteAcademics) && (
+                                                    <td className="text-center">
+                                                        {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -232,13 +268,15 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
 
             <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-center">
-                    {student.profilePhoto ? (
-                        <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-32 h-32 rounded-full object-cover" />
-                    ) : (
-                        <div className="w-32 h-32 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
-                            <UserIcon className="w-16 h-16 text-gray-500 dark:text-gray-400" />
-                        </div>
-                    )}
+                     <div className="relative group flex-shrink-0">
+                        {student.profilePhoto ? (
+                            <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-32 h-32 rounded-full object-cover" />
+                        ) : (
+                            <div className="w-32 h-32 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                <UserIcon className="w-16 h-16 text-gray-500 dark:text-gray-400" />
+                            </div>
+                        )}
+                    </div>
                     <div className="flex-grow text-center md:text-left">
                         <h2 className="text-2xl font-bold text-black dark:text-white">{student.firstName} {student.lastName}</h2>
                         <p className="text-body-color dark:text-gray-300">{student.studentId}</p>
@@ -249,12 +287,13 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
             
             <Tabs tabs={tabs} />
             
-            {modal === 'add_report' && (
-                <Modal isOpen={true} onClose={() => setModal(null)} title="Add Academic Report">
+            {(modal === 'add_report' || modal === 'edit_report') && (
+                <Modal isOpen={true} onClose={() => setModal(null)} title={editingReport ? "Edit Academic Report" : "Add Academic Report"}>
                     <AcademicReportForm 
                         studentId={student.studentId}
+                        initialData={editingReport}
                         onSave={handleSaveAcademicReport} 
-                        onCancel={() => setModal(null)}
+                        onCancel={() => { setModal(null); setEditingReport(null); }}
                         isSaving={isSaving}
                     />
                 </Modal>
@@ -270,6 +309,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                     />
                 </Modal>
             )}
+
             {recordForPdf && (
                  <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '210mm' }} ref={printableRef}>
                     <PrintableFollowUpRecord record={recordForPdf} student={student} />

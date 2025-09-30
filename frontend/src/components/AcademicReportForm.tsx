@@ -11,7 +11,7 @@ interface AcademicReportFormProps {
     onSave: (data: AcademicReportFormData) => void;
     onCancel: () => void;
     initialData?: AcademicReport | null;
-    studentId?: string; // Pre-selected student ID
+    studentId?: string; // Pre-selected student ID, required for new reports in context
     isSaving: boolean;
 }
 
@@ -19,7 +19,7 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
     onSave, 
     onCancel, 
     initialData, 
-    studentId: preselectedStudentId,
+    studentId,
     isSaving
 }) => {
     const isEdit = !!initialData;
@@ -28,7 +28,7 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
     const { register, handleSubmit, formState: { errors } } = useForm<AcademicReportFormData>({
         resolver: zodResolver(academicReportSchema),
         defaultValues: {
-            studentId: preselectedStudentId || initialData?.student || '',
+            studentId: studentId || initialData?.student || '',
             reportPeriod: initialData?.reportPeriod || '',
             gradeLevel: initialData?.gradeLevel || '',
             subjectsAndGrades: initialData?.subjectsAndGrades || '',
@@ -55,7 +55,7 @@ const AcademicReportForm: React.FC<AcademicReportFormProps> = ({
                     id="studentId" 
                     {...register('studentId')} 
                     required 
-                    disabled={isEdit || !!preselectedStudentId}
+                    disabled={isEdit || !!studentId}
                     error={errors.studentId?.message}
                 >
                     <option value="">-- Select Student --</option>

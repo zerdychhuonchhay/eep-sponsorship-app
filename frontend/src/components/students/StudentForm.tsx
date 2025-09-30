@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Student, Gender, StudentStatus, SponsorshipStatus, YesNo, HealthStatus, InteractionStatus, TransportationType } from '@/types.ts';
 import { FormInput, FormSelect, FormTextArea, FormCheckbox, FormSection, FormSubSection, YesNoNASelect } from '@/components/forms/FormControls.tsx';
 import { useData } from '@/contexts/DataContext.tsx';
@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button.tsx';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { UserIcon } from '../Icons.tsx';
 
 const formatDateForInput = (dateStr?: string | null) => {
     if (!dateStr || isNaN(new Date(dateStr).getTime())) return '';
@@ -83,6 +84,7 @@ interface StudentFormProps {
 const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, isSaving }) => {
     const isEdit = !!student.studentId;
     const { sponsorLookup: sponsors } = useData();
+    const [photoPreview, setPhotoPreview] = useState<string | null>(student?.profilePhoto || null);
     
     const { register, handleSubmit, formState: { errors }, watch } = useForm<StudentFormData>({
         resolver: zodResolver(studentSchema),
@@ -137,6 +139,21 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
     const onSubmit = (data: StudentFormData) => {
         const file = data.profilePhoto instanceof FileList ? data.profilePhoto[0] : undefined;
         onSave({ ...data, profilePhoto: file });
+    };
+
+    const { onChange: onFormPhotoChange, ...photoRegisterProps } = register('profilePhoto');
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onFormPhotoChange(e); // Propagate to react-hook-form
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setPhotoPreview(student?.profilePhoto || null);
+        }
     };
 
     const CoreProgramData = (
@@ -241,13 +258,36 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
         <form onSubmit={handleSubmit(onSubmit)}>
             <div className="p-4 space-y-4">
                  <FormSection title="Basic Information">
-                    <FormInput label="First Name" id="firstName" {...register('firstName')} error={errors.firstName?.message} />
-                    <FormInput label="Last Name" id="lastName" {...register('lastName')} error={errors.lastName?.message} />
-                    <FormInput label="Date of Birth" id="dateOfBirth" type="date" {...register('dateOfBirth')} error={errors.dateOfBirth?.message} />
-                    <FormSelect label="Gender" id="gender" {...register('gender')} error={errors.gender?.message}>
-                        {Object.values(Gender).map((g: string) => <option key={g} value={g}>{g}</option>)}
-                    </FormSelect>
-                    <FormInput label="Profile Photo" id="profilePhoto" type="file" accept="image/*" {...register('profilePhoto')} error={errors.profilePhoto?.message} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                        <div className="space-y-4">
+                            <FormInput label="First Name" id="firstName" {...register('firstName')} error={errors.firstName?.message} />
+                            <FormInput label="Last Name" id="lastName" {...register('lastName')} error={errors.lastName?.message} />
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                            {photoPreview ? (
+                                <img src={photoPreview} alt="Profile Preview" className="w-24 h-24 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-24 h-24 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center">
+                                    <UserIcon className="w-12 h-12 text-gray-500" />
+                                </div>
+                            )}
+                            <FormInput
+                                label=""
+                                id="profilePhoto"
+                                type="file"
+                                accept="image/*"
+                                {...photoRegisterProps}
+                                onChange={handlePhotoChange}
+                                error={errors.profilePhoto?.message}
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormInput label="Date of Birth" id="dateOfBirth" type="date" {...register('dateOfBirth')} error={errors.dateOfBirth?.message} />
+                        <FormSelect label="Gender" id="gender" {...register('gender')} error={errors.gender?.message}>
+                            {Object.values(Gender).map((g: string) => <option key={g} value={g}>{g}</option>)}
+                        </FormSelect>
+                    </div>
                 </FormSection>
                 <Tabs tabs={tabs} />
             </div>
