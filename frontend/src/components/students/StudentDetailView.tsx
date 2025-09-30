@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Student, FollowUpRecord, AcademicReport } from '@/types.ts';
+import { Student, FollowUpRecord, AcademicReport, DocumentType } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
-import { EditIcon, TrashIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
+import { EditIcon, TrashIcon, DocumentAddIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, DownloadIcon } from '@/components/Icons.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { api } from '@/services/api.ts';
 import DetailCard from './DetailCard.tsx';
@@ -251,6 +251,48 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                             <p className="text-body-color dark:text-gray-300 text-center py-4">No follow-up records found for this student.</p>
                         )}
                     </div>
+                </div>
+            )
+        },
+        // --- NEW: Documents Tab ---
+        {
+            id: 'documents',
+            label: 'Documents',
+            content: (
+                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
+                    <h3 className="text-xl font-semibold text-black dark:text-white mb-4">Uploaded Documents</h3>
+                     {student.documents && student.documents.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="ui-table">
+                                <thead>
+                                    <tr>
+                                        <th>Document Type</th>
+                                        <th>File Name</th>
+                                        <th>Uploaded On</th>
+                                        <th className="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {student.documents.map(doc => (
+                                        <tr key={doc.id}>
+                                            <td className="font-medium">{doc.documentType.replace(/_/g, ' ')}</td>
+                                            <td className="text-body-color">{doc.originalFilename}</td>
+                                            <td className="text-body-color">{formatDateForDisplay(doc.uploadedAt)}</td>
+                                            <td className="text-center">
+                                                <a href={doc.file} target="_blank" rel="noopener noreferrer" download>
+                                                    <Button size="sm" variant="ghost" icon={<DownloadIcon className="w-4 h-4"/>}>
+                                                        Download
+                                                    </Button>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="text-body-color dark:text-gray-300 text-center py-4">No documents have been uploaded for this student.</p>
+                    )}
                 </div>
             )
         }

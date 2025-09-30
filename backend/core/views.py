@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import (
     Student, AcademicReport, FollowUpRecord, Transaction, 
-    GovernmentFiling, Task, StudentStatus, AuditLog, Sponsor, RoleProfile
+    GovernmentFiling, Task, StudentStatus, AuditLog, Sponsor, RoleProfile, StudentDocument
 )
 from .serializers import (
     StudentSerializer, AcademicReportSerializer, FollowUpRecordSerializer,
@@ -26,7 +26,7 @@ from .serializers import (
     StudentLookupSerializer, StudentListSerializer, AuditLogSerializer, 
     SponsorSerializer, SponsorLookupSerializer, UserRegistrationSerializer, 
     UserSerializer, InviteUserSerializer, RoleSerializer, GroupSerializer,
-    ChangePasswordSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer
+    ChangePasswordSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer, StudentDocumentSerializer
 )
 from .pagination import StandardResultsSetPagination
 from . import ai_assistant
@@ -101,6 +101,14 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all().exclude(name='Administrator').order_by('name')
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAdminUser] # Only Admins can manage roles
+
+# --- NEW: StudentDocumentViewSet for handling document deletion ---
+class StudentDocumentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
+    permission_classes = [HasModulePermission]
+    module_name = 'students'  # Re-use students permissions
+    queryset = StudentDocument.objects.all()
+    serializer_class = StudentDocumentSerializer
+    http_method_names = ['delete', 'head', 'options']  # Only allow deletion via this endpoint
 class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     # --- MODIFIED: Corrected permission class usage ---
     permission_classes = [HasModulePermission]
@@ -260,6 +268,33 @@ class StudentViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
             self._log_action(request, instance, AuditLog.AuditAction.CREATE)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+# --- NEW: Action to add a document to a student ---
+    @action(detail=True, methods=['post'], url_path='documents', parser_classes=[MultiPartParser])
+    def add_document(self, request, pk=None):
+        student = self.get_object()
+        file = request.data.get('file')
+        doc_type = request.data.get('document_type')
+
+        if not file or not doc_type:
+            return Response({'error': 'File and document_type are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # If a document of this type already exists, replace it by deleting the old one.
+        StudentDocument.objects.filter(student=student, document_type=doc_type).delete()
+        
+        document = StudentDocument.objects.create(
+            student=student,
+            document_type=doc_type,
+            file=file,
+            original_filename=file.name
+        )
+        serializer = StudentDocumentSerializer(document)
+        
+        self._log_action(request, document, AuditLog.AuditAction.CREATE)
+        
+        # Return the full student object so the frontend can update its state
+        student_serializer = self.get_serializer(student)
+        return Response(student_serializer.data, status=status.HTTP_201_CREATED)
 
 class SponsorViewSet(AuditLoggingMixin, viewsets.ModelViewSet):
     # --- MODIFIED: Corrected permission class usage ---

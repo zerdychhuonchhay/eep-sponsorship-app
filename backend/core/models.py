@@ -14,7 +14,6 @@ from django.dispatch import receiver
 class Gender(models.TextChoices):
     MALE = 'Male', 'Male'
     FEMALE = 'Female', 'Female'
-    OTHER = 'Other', 'Other'
 
 class StudentStatus(models.TextChoices):
     PENDING_QUALIFICATION = 'Pending Qualification', 'Pending Qualification'
@@ -53,6 +52,12 @@ class TransportationType(models.TextChoices):
     WALKING = 'Walking', 'Walking'
     OTHER = 'Other', 'Other'
 
+# --- NEW: DocumentType Choices ---
+class DocumentType(models.TextChoices):
+    BIRTH_CERTIFICATE = 'BIRTH_CERTIFICATE', 'Birth Certificate'
+    SPONSORSHIP_CONTRACT = 'SPONSORSHIP_CONTRACT', 'Sponsorship Contract'
+
+
 # --- Default Functions for JSONFields ---
 
 def default_parent_details():
@@ -76,7 +81,7 @@ class Student(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     date_of_birth = models.DateField()
-    gender = models.CharField(max_length=20, choices=Gender.choices, default=Gender.OTHER)
+    gender = models.CharField(max_length=20, choices=Gender.choices, default=Gender.MALE)
     profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
     school = models.CharField(max_length=255, blank=True)
     current_grade = models.CharField(max_length=50, blank=True)
@@ -118,6 +123,17 @@ class Student(models.Model):
     transportation = models.CharField(max_length=50, choices=TransportationType.choices, default=TransportationType.WALKING)
     has_sponsorship_contract = models.BooleanField(default=False)
     def __str__(self): return f"{self.first_name} {self.last_name} ({self.student_id})"
+
+# --- NEW: StudentDocument Model ---
+class StudentDocument(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents', to_field='student_id')
+    document_type = models.CharField(max_length=50, choices=DocumentType.choices)
+    file = models.FileField(upload_to='student_documents/')
+    original_filename = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} for {self.student.first_name} {self.student.last_name}"
 
 class AcademicReport(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='academic_reports', to_field='student_id')

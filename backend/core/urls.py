@@ -1,4 +1,4 @@
-# --- File: backend/core/urls.py ---
+# backend/core/urls.py
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
@@ -16,6 +16,9 @@ router.register(r'audit-logs', views.AuditLogViewSet, basename='auditlog')
 router.register(r'users', views.UserViewSet, basename='user')
 router.register(r'roles', views.RoleViewSet, basename='role')
 router.register(r'groups', views.GroupViewSet, basename='group')
+# --- NEW: Register the StudentDocumentViewSet ---
+router.register(r'documents', views.StudentDocumentViewSet, basename='studentdocument')
+
 
 # FIX: Reordered urlpatterns to place specific user-related paths BEFORE the general router.
 # This prevents the router from incorrectly matching 'users/request-password-reset/' as a user detail view.

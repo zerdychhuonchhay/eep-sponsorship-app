@@ -9,7 +9,14 @@ from django.conf import settings
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
 import json
-from .models import Student, AcademicReport, FollowUpRecord, Transaction, GovernmentFiling, Task, AuditLog, Sponsor, RoleProfile
+from .models import Student, AcademicReport, FollowUpRecord, Transaction, GovernmentFiling, Task, AuditLog, Sponsor, RoleProfile, StudentDocument
+
+# --- NEW: StudentDocumentSerializer ---
+class StudentDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentDocument
+        fields = ['id', 'student', 'document_type', 'file', 'original_filename', 'uploaded_at']
+        read_only_fields = ['student', 'uploaded_at', 'original_filename']
 
 class AcademicReportSerializer(serializers.ModelSerializer):
     student_name = serializers.ReadOnlyField()
@@ -73,11 +80,13 @@ class SponsorLookupSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     academic_reports = AcademicReportSerializer(many=True, read_only=True)
     follow_up_records = FollowUpRecordSerializer(many=True, read_only=True)
+    documents = StudentDocumentSerializer(many=True, read_only=True) # --- NEW: Add documents ---
     sponsor = serializers.PrimaryKeyRelatedField(queryset=Sponsor.objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = Student
-        fields = [f.name for f in Student._meta.fields] + ['academic_reports', 'follow_up_records']
+        # --- MODIFIED: Add 'documents' to fields list ---
+        fields = [f.name for f in Student._meta.fields] + ['academic_reports', 'follow_up_records', 'documents']
 
     def to_internal_value(self, data):
         json_fields = ['father_details', 'mother_details', 'previous_schooling_details']

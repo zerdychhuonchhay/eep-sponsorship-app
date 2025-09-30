@@ -60,7 +60,6 @@ export type SponsorLookup = Pick<Sponsor, 'id' | 'name'>;
 export enum Gender {
     MALE = 'Male',
     FEMALE = 'Female',
-    OTHER = 'Other',
 }
 
 export enum StudentStatus {
@@ -126,6 +125,22 @@ export interface ParentDetails {
     skills: string;
 }
 
+// --- NEW: Document Types ---
+export enum DocumentType {
+    BIRTH_CERTIFICATE = 'BIRTH_CERTIFICATE',
+    SPONSORSHIP_CONTRACT = 'SPONSORSHIP_CONTRACT',
+}
+
+export interface StudentDocument {
+    id: number;
+    student: string;
+    documentType: DocumentType;
+    file: string; // URL to the file
+    originalFilename: string;
+    uploadedAt: string;
+}
+// --- END: Document Types ---
+
 export interface Student {
     studentId: string;
     firstName: string;
@@ -146,7 +161,6 @@ export interface Student {
     sponsorName?: string; // Read-only from backend
     
     // --- Merged from Risk Assessment ---
-    applicationDate: string;
     hasBirthCertificate: boolean;
     siblingsCount: number | null;
     householdMembersCount: number | null;
@@ -184,6 +198,7 @@ export interface Student {
     // Follow-ups and reports
     academicReports?: AcademicReport[];
     followUpRecords?: FollowUpRecord[];
+    documents?: StudentDocument[]; // --- NEW ---
 }
 
 

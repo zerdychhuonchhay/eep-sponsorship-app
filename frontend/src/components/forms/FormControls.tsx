@@ -134,12 +134,12 @@ export const FormCheckbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
 ));
 FormCheckbox.displayName = 'FormCheckbox';
 
-export const FormSection: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
+export const FormSection: React.FC<{ title: string; children: React.ReactNode; className?: string; useDefaultGrid?: boolean }> = ({ title, children, className, useDefaultGrid = true }) => (
     <div className="rounded-sm border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-box-dark p-4">
         <div className="border-b border-stroke py-2 px-4 dark:border-strokedark mb-4">
             <h3 className="font-medium text-black dark:text-white">{title}</h3>
         </div>
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 p-4 ${className}`}>
+        <div className={`p-4 ${useDefaultGrid ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''} ${className || ''}`}>
             {children}
         </div>
     </div>

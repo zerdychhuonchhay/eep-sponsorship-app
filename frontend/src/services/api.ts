@@ -1,4 +1,4 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, DocumentType, StudentDocument } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
@@ -141,10 +141,13 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
 
         const data = await response.json();
         
-        const fixPhotoUrl = (obj: any) => {
+        const fixFileUrl = (obj: any) => {
+            const baseUrl = new URL(API_BASE_URL).origin;
             if (obj && obj.profile_photo && !obj.profile_photo.startsWith('http')) {
-                const baseUrl = new URL(API_BASE_URL).origin;
                 obj.profile_photo = `${baseUrl}${obj.profile_photo}`;
+            }
+            if (obj && obj.file && !obj.file.startsWith('http')) {
+                obj.file = `${baseUrl}${obj.file}`;
             }
             return obj;
         };
@@ -157,7 +160,11 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
                     data.results = data.results.map(fixUrlsInData);
                     return data;
                 }
-                return fixPhotoUrl(data);
+                // Handle student object with nested documents
+                if (data.documents && Array.isArray(data.documents)) {
+                    data.documents = data.documents.map(fixUrlsInData);
+                }
+                return fixFileUrl(data);
             }
             return data;
         };
@@ -173,7 +180,7 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
     }
 };
 
-type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate'> & { profilePhoto?: File; outOfProgramDate?: string | null };
+type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate' | 'documents'> & { profilePhoto?: File; outOfProgramDate?: string | null };
 
 const prepareStudentData = (studentData: any) => {
     const data = { ...studentData };
@@ -415,16 +422,23 @@ export const api = {
         return apiClient('/students/', { method: 'POST', body: formData });
     },
     updateStudent: async (studentData: StudentFormData) => {
-        const { profilePhoto, studentId, ...rest } = studentData;
+        const { studentId, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
         
-        const formData = createStudentFormData(snakeCaseData);
+        const { profile_photo, ...snakeRest } = snakeCaseData;
 
-        if (profilePhoto instanceof File) {
-            formData.append('profile_photo', profilePhoto);
+        const formData = createStudentFormData(snakeRest);
+
+        if (profile_photo instanceof File) {
+            formData.append('profile_photo', profile_photo);
+        } else if (profile_photo === null) {
+            // This indicates the user wants to remove the photo.
+            formData.append('profile_photo', '');
         }
-        
+        // If profile_photo is a string (URL of existing photo) or undefined, we do nothing.
+        // The field won't be in the FormData, and the backend PATCH won't update it.
+
         return apiClient(`/students/${studentId}/`, { method: 'PATCH', body: formData });
     },
     deleteStudent: async (studentId: string) => apiClient(`/students/${studentId}/`, { method: 'DELETE' }),
@@ -444,6 +458,18 @@ export const api = {
             method: 'POST',
             body: JSON.stringify(payload),
         });
+    },
+    // --- NEW: Student Document Endpoints ---
+    addStudentDocument: async (studentId: string, documentType: DocumentType, file: File): Promise<Student> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('document_type', documentType);
+        return apiClient(`/students/${studentId}/documents/`, { method: 'POST', body: formData });
+    },
+    deleteStudentDocument: async (documentId: number, studentId: string): Promise<Student> => {
+        await apiClient(`/documents/${documentId}/`, { method: 'DELETE' });
+        // After deletion, refetch the full student object to get the updated documents list
+        return apiClient(`/students/${studentId}/`);
     },
 
     // Academic Report Endpoints
