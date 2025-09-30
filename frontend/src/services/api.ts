@@ -1,4 +1,4 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, DocumentType, StudentDocument } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, DocumentType, StudentDocument, Sponsorship } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
@@ -180,7 +180,7 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
     }
 };
 
-type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate' | 'documents'> & { profilePhoto?: File; outOfProgramDate?: string | null };
+type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate' | 'documents' | 'sponsorships'> & { profilePhoto?: File; outOfProgramDate?: string | null };
 
 const prepareStudentData = (studentData: any) => {
     const data = { ...studentData };
@@ -408,7 +408,7 @@ export const api = {
         return apiClient(`/students/all/?${queryString}`);
     },
     getStudentById: async (id: string): Promise<Student> => apiClient(`/students/${id}/`),
-    addStudent: async (studentData: Omit<Student, 'academicReports' | 'followUpRecords'> & { profilePhoto?: File }) => {
+    addStudent: async (studentData: Omit<Student, 'academicReports' | 'followUpRecords' | 'sponsorships'> & { profilePhoto?: File }) => {
         const { profilePhoto, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
@@ -459,12 +459,14 @@ export const api = {
             body: JSON.stringify(payload),
         });
     },
-    // --- NEW: Student Document Endpoints ---
+    // --- Student Document Endpoints ---
     addStudentDocument: async (studentId: string, documentType: DocumentType, file: File): Promise<Student> => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('document_type', documentType);
-        return apiClient(`/students/${studentId}/documents/`, { method: 'POST', body: formData });
+        // The POST returns a stale student object, so we discard it and re-fetch.
+        await apiClient(`/students/${studentId}/documents/`, { method: 'POST', body: formData });
+        return apiClient(`/students/${studentId}/`);
     },
     deleteStudentDocument: async (documentId: number, studentId: string): Promise<Student> => {
         await apiClient(`/documents/${documentId}/`, { method: 'DELETE' });
@@ -538,6 +540,17 @@ export const api = {
         return apiClient(`/sponsors/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(rest)) });
     },
     deleteSponsor: async (id: string) => apiClient(`/sponsors/${id}/`, { method: 'DELETE' }),
+
+    // Sponsorship endpoints
+    addSponsorship: async (data: any): Promise<Sponsorship> => {
+        return apiClient('/sponsorships/', { method: 'POST', body: JSON.stringify(convertKeysToSnake(data)) });
+    },
+    updateSponsorship: async (id: number, data: any): Promise<Sponsorship> => {
+        return apiClient(`/sponsorships/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(data)) });
+    },
+    deleteSponsorship: async (id: number): Promise<void> => {
+        return apiClient(`/sponsorships/${id}/`, { method: 'DELETE' });
+    },
 
     // AI Assistant
     queryAIAssistant: async (prompt: string, conversationHistory: any[]): Promise<{ response: string }> => {

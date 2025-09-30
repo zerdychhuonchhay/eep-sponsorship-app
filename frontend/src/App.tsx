@@ -17,7 +17,7 @@ import PageLoader from './components/PageLoader.tsx';
 import AIAssistant from './components/AIAssistant.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
-import { AuthProvider } from './contexts/AuthContext.tsx';
+import { AuthProvider } from '@/contexts/AuthContext.tsx';
 import { SettingsProvider } from './contexts/SettingsContext.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';

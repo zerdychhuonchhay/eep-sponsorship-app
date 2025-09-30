@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import Group
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 # --- Choices Enums ---
@@ -52,7 +52,6 @@ class TransportationType(models.TextChoices):
     WALKING = 'Walking', 'Walking'
     OTHER = 'Other', 'Other'
 
-# --- NEW: DocumentType Choices ---
 class DocumentType(models.TextChoices):
     BIRTH_CERTIFICATE = 'BIRTH_CERTIFICATE', 'Birth Certificate'
     SPONSORSHIP_CONTRACT = 'SPONSORSHIP_CONTRACT', 'Sponsorship Contract'
@@ -90,10 +89,16 @@ class Student(models.Model):
     student_status = models.CharField(max_length=50, choices=StudentStatus.choices, default=StudentStatus.PENDING_QUALIFICATION)
     sponsorship_status = models.CharField(max_length=50, choices=SponsorshipStatus.choices, default=SponsorshipStatus.UNSPONSORED)
     has_housing_sponsorship = models.BooleanField(default=False)
-    sponsor = models.ForeignKey(Sponsor, on_delete=models.SET_NULL, null=True, blank=True, related_name='sponsored_students')
+    
+    sponsors = models.ManyToManyField(
+        Sponsor,
+        through='Sponsorship',
+        related_name='sponsored_students',
+        blank=True
+    )
+    
     application_date = models.DateField(default=timezone.now)
     has_birth_certificate = models.BooleanField(default=False)
-    # MODIFIED: Allow null values for better data import resilience
     siblings_count = models.PositiveIntegerField(default=0, null=True, blank=True)
     household_members_count = models.PositiveIntegerField(default=0, null=True, blank=True)
     city = models.CharField(max_length=100, blank=True)
@@ -103,7 +108,6 @@ class Student(models.Model):
     home_location = models.CharField(max_length=255, blank=True)
     father_details = models.JSONField(default=default_parent_details)
     mother_details = models.JSONField(default=default_parent_details)
-    # MODIFIED: Allow null values for better data import resilience
     annual_income = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     guardian_if_not_parents = models.CharField(max_length=255, blank=True)
     parent_support_level = models.IntegerField(default=3)
@@ -121,10 +125,41 @@ class Student(models.Model):
     other_notes = models.TextField(blank=True)
     risk_level = models.IntegerField(default=3)
     transportation = models.CharField(max_length=50, choices=TransportationType.choices, default=TransportationType.WALKING)
-    has_sponsorship_contract = models.BooleanField(default=False)
+
     def __str__(self): return f"{self.first_name} {self.last_name} ({self.student_id})"
 
-# --- NEW: StudentDocument Model ---
+class Sponsorship(models.Model):
+    # --- MODIFIED: Explicitly added related_name to fix query ambiguity ---
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='sponsorships')
+    sponsor = models.ForeignKey(Sponsor, on_delete=models.CASCADE)
+    start_date = models.DateField(default=timezone.now)
+    end_date = models.DateField(null=True, blank=True)
+    has_sponsorship_contract = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('student', 'sponsor')
+
+    def __str__(self):
+        return f"{self.sponsor.name} sponsors {self.student.first_name}"
+
+@receiver([post_save, post_delete], sender=Sponsorship)
+def update_student_sponsorship_status(sender, instance, **kwargs):
+    student = instance.student
+    active_sponsorships_count = Sponsorship.objects.filter(
+        student=student, 
+        end_date__isnull=True
+    ).count()
+
+    if active_sponsorships_count > 0:
+        student.sponsorship_status = SponsorshipStatus.SPONSORED
+        if student.student_status != StudentStatus.ACTIVE:
+             student.student_status = StudentStatus.ACTIVE
+    else:
+        student.sponsorship_status = SponsorshipStatus.UNSPONSORED
+        
+    student.save(update_fields=['sponsorship_status', 'student_status'])
+
+
 class StudentDocument(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='documents', to_field='student_id')
     document_type = models.CharField(max_length=50, choices=DocumentType.choices)
@@ -134,7 +169,7 @@ class StudentDocument(models.Model):
 
     def __str__(self):
         return f"{self.get_document_type_display()} for {self.student.first_name} {self.student.last_name}"
-
+        
 class AcademicReport(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='academic_reports', to_field='student_id')
     report_period = models.CharField(max_length=100)
@@ -149,7 +184,6 @@ class AcademicReport(models.Model):
 
 class FollowUpRecord(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='follow_up_records', to_field='student_id')
-    # REMOVED: child_name and child_current_age are now derived in the serializer
     date_of_follow_up = models.DateField()
     location = models.CharField(max_length=255)
     parent_guardian = models.CharField(max_length=255, blank=True)

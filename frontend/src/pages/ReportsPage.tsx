@@ -73,7 +73,6 @@ const ReportsPage: React.FC = () => {
                 gender: s.gender,
                 studentStatus: s.studentStatus,
                 sponsorshipStatus: s.sponsorshipStatus,
-                sponsorName: s.sponsorName || 'N/A',
                 school: s.school,
                 currentGrade: s.currentGrade,
             }));
@@ -86,7 +85,6 @@ const ReportsPage: React.FC = () => {
                 gender: 'Gender',
                 studentStatus: 'Status',
                 sponsorshipStatus: 'Sponsorship',
-                sponsorName: 'Sponsor',
                 school: 'School',
                 currentGrade: 'Grade',
             };

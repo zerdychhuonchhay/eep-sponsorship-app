@@ -1,3 +1,5 @@
+
+import { StudentFormData } from './components/schemas/studentSchema.ts';
 export interface PaginatedResponse<T> {
     count: number;
     next: string | null;
@@ -141,6 +143,24 @@ export interface StudentDocument {
 }
 // --- END: Document Types ---
 
+export interface Sponsorship {
+    id: number;
+    student: string; // studentId
+    sponsor: number; // sponsorId
+    sponsorName: string;
+    startDate: string;
+    endDate: string | null;
+    hasSponsorshipContract: boolean;
+}
+
+// --- NEW: Primary Caregiver Enum ---
+export enum PrimaryCaregiver {
+    MOTHER_FATHER = 'Mother & Father',
+    MOTHER = 'Mother',
+    FATHER = 'Father',
+    OTHER = 'Other Guardian',
+}
+
 export interface Student {
     studentId: string;
     firstName: string;
@@ -157,8 +177,7 @@ export interface Student {
     studentStatus: StudentStatus;
     sponsorshipStatus: SponsorshipStatus;
     hasHousingSponsorship: boolean;
-    sponsor?: string; // This will hold the Sponsor ID
-    sponsorName?: string; // Read-only from backend
+    applicationDate: string;
     
     // --- Merged from Risk Assessment ---
     hasBirthCertificate: boolean;
@@ -193,12 +212,16 @@ export interface Student {
     otherNotes: string;
     riskLevel: number; // 1-5
     transportation: TransportationType;
-    hasSponsorshipContract: boolean;
     
     // Follow-ups and reports
     academicReports?: AcademicReport[];
     followUpRecords?: FollowUpRecord[];
-    documents?: StudentDocument[]; // --- NEW ---
+    documents?: StudentDocument[];
+    sponsorships?: Sponsorship[];
+
+    // Frontend-only fields for improved form logic
+    primaryCaregiver?: PrimaryCaregiver;
+    guardianRelationship?: string;
 }
 
 
