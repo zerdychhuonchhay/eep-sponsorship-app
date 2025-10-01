@@ -9,6 +9,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import Modal from '@/components/Modal.tsx';
 import Button from '@/components/ui/Button.tsx';
 import { FormInput, FormSelect } from '@/components/forms/FormControls.tsx';
+import { usePermissions } from '@/contexts/AuthContext.tsx';
 
 const sponsorshipSchema = z.object({
     sponsor: z.string().min(1, "A sponsor must be selected."),
@@ -32,6 +33,7 @@ const SponsorshipFormModal: React.FC<SponsorshipFormModalProps> = ({ isOpen, onC
     const { showToast } = useNotification();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const { canDelete: canDeleteSponsors } = usePermissions('sponsors');
     
     const { register, handleSubmit, formState: { errors }, reset } = useForm<SponsorshipFormData>({
         resolver: zodResolver(sponsorshipSchema),
@@ -88,7 +90,7 @@ const SponsorshipFormModal: React.FC<SponsorshipFormModalProps> = ({ isOpen, onC
     };
     
     const handleDelete = async () => {
-        if (!isEdit || !initialData) return;
+        if (!isEdit || !initialData || !canDeleteSponsors) return;
         if (!window.confirm("Are you sure you want to remove this sponsorship record?")) return;
         
         setIsDeleting(true);
@@ -118,7 +120,7 @@ const SponsorshipFormModal: React.FC<SponsorshipFormModalProps> = ({ isOpen, onC
                 
                 <div className="flex justify-between items-center pt-4">
                     <div>
-                        {isEdit && <Button type="button" variant="danger" onClick={handleDelete} isLoading={isDeleting}>Remove Sponsorship</Button>}
+                        {isEdit && canDeleteSponsors && <Button type="button" variant="danger" onClick={handleDelete} isLoading={isDeleting}>Remove Sponsorship</Button>}
                     </div>
                     <div className="flex gap-2">
                         <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Button>

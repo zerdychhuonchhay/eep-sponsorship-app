@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-// FIX: Using namespace import for react-router-dom to resolve module resolution issues.
-import * as ReactRouterDOM from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
@@ -10,8 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { passwordResetSchema, PasswordResetFormData } from '@/components/schemas/passwordResetSchema.ts';
 
 const ResetPasswordPage: React.FC = () => {
-    const { uidb64, token } = ReactRouterDOM.useParams<{ uidb64: string; token: string }>();
-    const navigate = ReactRouterDOM.useNavigate();
+    const { uidb64, token } = useParams<{ uidb64: string; token: string }>();
+    const navigate = useNavigate();
     const { showToast } = useNotification();
     const [apiError, setApiError] = useState('');
 

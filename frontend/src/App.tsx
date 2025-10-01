@@ -1,6 +1,5 @@
 import React from 'react';
-// FIX: Using namespace import for react-router-dom to resolve module resolution issues.
-import * as ReactRouterDOM from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import DashboardPage from '@/pages/DashboardPage.tsx';
 import StudentsPage from '@/pages/StudentsPage.tsx';
@@ -34,7 +33,7 @@ const UsersAndRolesPage = React.lazy(() => import('@/pages/UserManagementPage.ts
 const ProfilePage = React.lazy(() => import('@/pages/ProfilePage.tsx'));
 
 const AppContent: React.FC = () => {
-    const location = ReactRouterDOM.useLocation();
+    const location = useLocation();
     return (
         <div className="flex h-screen overflow-hidden">
             <Sidebar />
@@ -48,49 +47,49 @@ const AppContent: React.FC = () => {
                                 classNames="page-fade"
                                 timeout={300}
                             >
-                                <ReactRouterDOM.Routes location={location}>
-                                    <ReactRouterDOM.Route index element={<DashboardPage />} />
-                                    <ReactRouterDOM.Route path="students" element={<StudentsPage />} />
-                                    <ReactRouterDOM.Route path="transactions" element={<TransactionsPage />} />
-                                    <ReactRouterDOM.Route path="filings" element={<FilingsPage />} />
-                                    <ReactRouterDOM.Route path="tasks" element={<TasksPage />} />
-                                    <ReactRouterDOM.Route path="academics" element={<AcademicsPage />} />
-                                     <ReactRouterDOM.Route path="sponsors" element={
+                                <Routes location={location}>
+                                    <Route index element={<DashboardPage />} />
+                                    <Route path="students" element={<StudentsPage />} />
+                                    <Route path="transactions" element={<TransactionsPage />} />
+                                    <Route path="filings" element={<FilingsPage />} />
+                                    <Route path="tasks" element={<TasksPage />} />
+                                    <Route path="academics" element={<AcademicsPage />} />
+                                     <Route path="sponsors" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <SponsorsPage />
                                         </React.Suspense>
                                     } />
-                                    <ReactRouterDOM.Route path="sponsors/:id" element={
+                                    <Route path="sponsors/:id" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <SponsorDetailPage />
                                         </React.Suspense>
                                     } />
-                                     <ReactRouterDOM.Route path="reports" element={
+                                     <Route path="reports" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <ReportsPage />
                                         </React.Suspense>
                                     } />
-                                    <ReactRouterDOM.Route path="audit" element={
+                                    <Route path="audit" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <AuditLogPage />
                                         </React.Suspense>
                                     } />
-                                     <ReactRouterDOM.Route path="users" element={
+                                     <Route path="users" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <UsersAndRolesPage />
                                         </React.Suspense>
                                     } />
-                                     <ReactRouterDOM.Route path="settings" element={
+                                     <Route path="settings" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <SettingsPage />
                                         </React.Suspense>
                                     } />
-                                    <ReactRouterDOM.Route path="profile" element={
+                                    <Route path="profile" element={
                                         <React.Suspense fallback={<PageLoader />}>
                                             <ProfilePage />
                                         </React.Suspense>
                                     } />
-                                </ReactRouterDOM.Routes>
+                                </Routes>
                             </CSSTransition>
                         </TransitionGroup>
                     </div>
@@ -102,18 +101,18 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => (
-    <ReactRouterDOM.HashRouter>
+    <HashRouter>
         <ThemeProvider>
             <NotificationProvider>
                 <UIProvider>
                     <AuthProvider>
-                        <ReactRouterDOM.Routes>
-                            <ReactRouterDOM.Route path="/login" element={<LoginPage />} />
-                            <ReactRouterDOM.Route path="/signup" element={<SignupPage />} />
-                            <ReactRouterDOM.Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                            <ReactRouterDOM.Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
-                            <ReactRouterDOM.Route element={<ProtectedRoute />}>
-                                <ReactRouterDOM.Route
+                        <Routes>
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/signup" element={<SignupPage />} />
+                            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                            <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
+                            <Route element={<ProtectedRoute />}>
+                                <Route
                                     path="/*"
                                     element={
                                         <DataProvider>
@@ -123,14 +122,14 @@ const App: React.FC = () => (
                                         </DataProvider>
                                     }
                                 />
-                            </ReactRouterDOM.Route>
-                        </ReactRouterDOM.Routes>
+                            </Route>
+                        </Routes>
                         <Toast />
                     </AuthProvider>
                 </UIProvider>
             </NotificationProvider>
         </ThemeProvider>
-    </ReactRouterDOM.HashRouter>
+    </HashRouter>
 );
 
 export default App;
