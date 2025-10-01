@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
@@ -66,13 +66,13 @@ const LoginPage: React.FC = () => {
                     </div>
                 </form>
                 <div className="text-sm text-center text-body-color dark:text-gray-300 space-x-4">
-                    <NavLink to="/forgot-password" className="font-medium text-primary hover:underline">
+                    <ReactRouterDOM.NavLink to="/forgot-password" className="font-medium text-primary hover:underline">
                         Forgot Password?
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                     <span>|</span>
-                     <NavLink to="/signup" className="font-medium text-primary hover:underline">
+                     <ReactRouterDOM.NavLink to="/signup" className="font-medium text-primary hover:underline">
                         Don't have an account? Sign Up
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                 </div>
             </div>
         </div>

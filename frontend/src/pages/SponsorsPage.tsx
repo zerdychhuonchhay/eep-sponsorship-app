@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { Sponsor } from '@/types.ts';
 import Modal from '@/components/Modal.tsx';
-import { PlusIcon, ArrowUpIcon, ArrowDownIcon } from '@/components/Icons.tsx';
+import { PlusIcon, ArrowUpIcon, ArrowDownIcon, SponsorIcon } from '@/components/Icons.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
-import { SkeletonCard, SkeletonTable } from '@/components/SkeletonLoader.tsx';
+import { SkeletonCard, SkeletonTable, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
 import PageHeader from '@/components/layout/PageHeader.tsx';
@@ -17,13 +17,13 @@ import { useData } from '@/contexts/DataContext.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import SponsorCard from '@/components/sponsors/SponsorCard.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
-import SponsorSwipeView from '@/components/sponsors/SponsorSwipeView.tsx';
 import { useSettings } from '@/contexts/SettingsContext.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import PageActions from '@/components/layout/PageActions.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
 const SponsorsPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +33,7 @@ const SponsorsPage: React.FC = () => {
     const { canCreate } = usePermissions('sponsors');
     const isMobile = useMediaQuery('(max-width: 767px)');
     const { sponsorViewMode, setSponsorViewMode } = useSettings();
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
 
     const { 
         currentPage, apiQueryString, setCurrentPage, handleSort, sortConfig
@@ -47,7 +47,7 @@ const SponsorsPage: React.FC = () => {
         fetcher: api.getSponsors,
         apiQueryString,
         currentPage,
-        keepDataWhileRefetching: isMobile,
+        keepDataWhileRefetching: false,
     });
 
     const handleSave = async (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
@@ -98,18 +98,36 @@ const SponsorsPage: React.FC = () => {
             </PageHeader>
            
             {isMobile ? (
-                 <DataWrapper isStale={isStale && sponsors.length > 0}>
-                    <SponsorSwipeView
-                        sponsors={sponsors}
-                        isLoading={isLoading && sponsors.length === 0}
-                        loadMore={() => {
-                            if (!isStale && currentPage < totalPages) {
-                                setCurrentPage(prev => prev + 1);
-                            }
-                        }}
-                        hasMore={currentPage < totalPages}
-                    />
-                </DataWrapper>
+                 <div className="space-y-4">
+                    {isLoading ? (
+                        Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)
+                    ) : (
+                         <DataWrapper isStale={isStale}>
+                            {isInitialLoadAndEmpty ? (
+                                <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
+                            ) : (
+                                <div className="space-y-3">
+                                    {sponsors.map((sponsor) => (
+                                        <MobileListItem
+                                            key={sponsor.id}
+                                            icon={<SponsorIcon className="w-6 h-6 text-primary" />}
+                                            title={sponsor.name}
+                                            subtitle={sponsor.email}
+                                            rightContent={
+                                                <div className="text-center">
+                                                    <p className="font-semibold text-black dark:text-white">{sponsor.sponsoredStudentCount}</p>
+                                                    <p className="text-xs text-body-color">students</p>
+                                                </div>
+                                            }
+                                            onClick={() => navigate(`/sponsors/${sponsor.id}`)}
+                                        />
+                                    ))}
+                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                </div>
+                            )}
+                        </DataWrapper>
+                    )}
+                 </div>
             ) : (
                 <Card>
                     <CardContent>

@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 
 interface Breadcrumb {
     name: string;
@@ -6,7 +6,7 @@ interface Breadcrumb {
 }
 
 const useBreadcrumbs = (): Breadcrumb[] => {
-    const location = useLocation();
+    const location = ReactRouterDOM.useLocation();
     const pathnames = location.pathname.split('/').filter(x => x);
 
     const breadcrumbs: Breadcrumb[] = [{ name: 'Dashboard', path: '/' }];

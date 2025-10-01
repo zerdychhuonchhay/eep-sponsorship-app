@@ -1,5 +1,5 @@
 import React, { useState, useEffect, TouchEvent, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { Sponsor } from '@/types.ts';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import Button from '@/components/ui/Button.tsx';
@@ -21,7 +21,7 @@ const SponsorSwipeView: React.FC<SponsorSwipeViewProps> = ({ sponsors, isLoading
     const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
     const [touchMove, setTouchMove] = useState<{ x: number, y: number } | null>(null);
     const [swipeDirection, setSwipeDirection] = useState<'horizontal' | 'vertical' | null>(null);
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
 
     const goToNext = useCallback(() => {
         if (currentIndex < sponsors.length - 1) {
@@ -31,7 +31,7 @@ const SponsorSwipeView: React.FC<SponsorSwipeViewProps> = ({ sponsors, isLoading
 
     const goToPrev = useCallback(() => {
         if (currentIndex > 0) {
-            setCurrentIndex(prev => prev - 1);
+            setCurrentIndex(prev => prev + 1);
         }
     }, [currentIndex]);
 

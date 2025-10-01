@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { api } from '@/services/api.ts';
 import { Student, StudentStatus, SponsorshipStatus, Gender } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
-import { SkeletonTable, SkeletonCard } from '@/components/SkeletonLoader.tsx';
+import { SkeletonTable, SkeletonCard, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -22,11 +22,12 @@ import BulkActionBar from '@/components/students/BulkActionBar.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
-import StudentSwipeView from '@/components/students/StudentSwipeView.tsx';
 import StudentCard from '@/components/students/StudentCard.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
+import Badge from '@/components/ui/Badge.tsx';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
@@ -71,7 +72,7 @@ const StudentsPage: React.FC = () => {
         fetcher: api.getStudents,
         apiQueryString,
         currentPage,
-        keepDataWhileRefetching: isMobile,
+        keepDataWhileRefetching: false, // Use standard pagination on mobile now
     });
     
     const filterOptions: FilterOption[] = [
@@ -259,13 +260,32 @@ const StudentsPage: React.FC = () => {
                             <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
                         </div>
 
-                        {isLoading && studentsList.length === 0 ? (
-                            <div className="flex h-[60vh] items-center justify-center"><div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div></div>
+                        {isLoading ? (
+                             <div className="space-y-4">
+                                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
+                            </div>
                         ) : isInitialLoadAndEmpty ? (
                             <EmptyState title="No Students in System" message="Get started by adding your first student." />
                         ) : (
-                            <DataWrapper isStale={isStale && studentsList.length > 0}>
-                                <StudentSwipeView students={studentsList} isLoading={isLoading && studentsList.length === 0} loadMore={() => { if (!isStale && currentPage < totalPages) { setCurrentPage(prev => prev + 1); }}} hasMore={currentPage < totalPages} onViewProfile={setSelectedStudent} />
+                            <DataWrapper isStale={isStale}>
+                                <div className="space-y-3">
+                                    {studentsList.map(student => (
+                                        <MobileListItem 
+                                            key={student.studentId}
+                                            icon={student.profilePhoto ? <img src={student.profilePhoto} alt="" className="w-10 h-10 rounded-full object-cover" /> : <UserIcon className="w-6 h-6 text-gray-500"/>}
+                                            title={`${student.firstName} ${student.lastName}`}
+                                            subtitle={student.studentId}
+                                            rightContent={
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <Badge type={student.studentStatus} />
+                                                    <Badge type={student.sponsorshipStatus} />
+                                                </div>
+                                            }
+                                            onClick={() => setSelectedStudent(student)}
+                                        />
+                                    ))}
+                                </div>
+                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                             </DataWrapper>
                         )}
                     </div>

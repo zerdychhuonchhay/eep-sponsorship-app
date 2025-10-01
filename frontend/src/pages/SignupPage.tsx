@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { FormInput } from '@/components/forms/FormControls.tsx';
@@ -22,7 +22,7 @@ type SignupSchema = z.infer<typeof signupSchema>;
 
 const SignupPage: React.FC = () => {
     const [apiError, setApiError] = useState('');
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const { showToast } = useNotification();
     
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignupSchema>({
@@ -92,9 +92,9 @@ const SignupPage: React.FC = () => {
                     </div>
                 </form>
                 <div className="text-sm text-center">
-                    <NavLink to="/login" className="font-medium text-primary hover:underline">
+                    <ReactRouterDOM.NavLink to="/login" className="font-medium text-primary hover:underline">
                         Already have an account? Sign In
-                    </NavLink>
+                    </ReactRouterDOM.NavLink>
                 </div>
             </div>
         </div>
