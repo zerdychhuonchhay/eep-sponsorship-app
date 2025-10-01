@@ -20,6 +20,8 @@ import { usePermissions } from '@/contexts/AuthContext.tsx';
 import { AcademicReportFormData } from '../schemas/academicReportSchema.ts';
 import ActionDropdown from '@/components/ActionDropdown.tsx';
 import DocumentUploadModal from './DocumentUploadModal.tsx';
+import PageHeader from '@/components/layout/PageHeader.tsx';
+import PageActions from '@/components/layout/PageActions.tsx';
 
 interface StudentDetailViewProps {
     student: Student;
@@ -60,7 +62,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
     const { showToast } = useNotification();
     const { canUpdate, canDelete } = usePermissions('students');
     const { canCreate: canCreateAcademics, canUpdate: canUpdateAcademics, canDelete: canDeleteAcademics } = usePermissions('academics');
-    const { canCreate: canManageSponsors, canUpdate: canUpdateSponsors } = usePermissions('sponsors');
+    const { canManageSponsors, canUpdate: canUpdateSponsors } = usePermissions('sponsors');
     
     const [editingField, setEditingField] = useState<string | null>(null);
     const [isUpdatingField, setIsUpdatingField] = useState(false);
@@ -470,7 +472,6 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Follow-up History</h3>
-                        {canCreateAcademics && <Button onClick={() => { setEditingFollowUp(null); setModal('add_follow_up'); }} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">New Follow-up</Button>}
                     </div>
                     <div className="space-y-2">
                         {student.followUpRecords && student.followUpRecords.length > 0 ? (
@@ -499,13 +500,23 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <button onClick={onBack} className="text-primary hover:underline font-medium">← Back to Student List</button>
-                 <div className="flex gap-2">
-                     {canUpdate && <Button onClick={() => onEdit(student)} icon={<EditIcon className="w-5 h-5" />}>Edit</Button>}
-                     {canDelete && <Button onClick={() => onDelete(student.studentId)} variant="danger" icon={<TrashIcon className="w-5 h-5" />}>Delete</Button>}
-                 </div>
-            </div>
+            <button onClick={onBack} className="text-primary hover:underline font-medium mb-6">← Back to Student List</button>
+            
+            <PageHeader title={`${student.firstName} ${student.lastName}`}>
+                 <PageActions>
+                    {canCreateAcademics && (
+                        <Button
+                            onClick={() => { setEditingFollowUp(null); setModal('add_follow_up'); }}
+                            icon={<DocumentAddIcon className="w-5 h-5" />}
+                            aria-label="New Follow-up"
+                        >
+                           <span className="hidden sm:inline">New Follow-up</span>
+                        </Button>
+                    )}
+                     {canUpdate && <Button onClick={() => onEdit(student)} icon={<EditIcon className="w-5 h-5" />} aria-label="Edit Student"><span className="hidden sm:inline">Edit</span></Button>}
+                     {canDelete && <Button onClick={() => onDelete(student.studentId)} variant="danger" icon={<TrashIcon className="w-5 h-5" />} aria-label="Delete Student"><span className="hidden sm:inline">Delete</span></Button>}
+                 </PageActions>
+            </PageHeader>
 
             <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-center">
