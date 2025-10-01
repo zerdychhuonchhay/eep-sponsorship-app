@@ -1,3 +1,5 @@
+
+import { StudentFormData } from './components/schemas/studentSchema.ts';
 export interface PaginatedResponse<T> {
     count: number;
     next: string | null;
@@ -60,7 +62,6 @@ export type SponsorLookup = Pick<Sponsor, 'id' | 'name'>;
 export enum Gender {
     MALE = 'Male',
     FEMALE = 'Female',
-    OTHER = 'Other',
 }
 
 export enum StudentStatus {
@@ -126,6 +127,40 @@ export interface ParentDetails {
     skills: string;
 }
 
+// --- NEW: Document Types ---
+export enum DocumentType {
+    BIRTH_CERTIFICATE = 'BIRTH_CERTIFICATE',
+    SPONSORSHIP_CONTRACT = 'SPONSORSHIP_CONTRACT',
+}
+
+export interface StudentDocument {
+    id: number;
+    student: string;
+    documentType: DocumentType;
+    file: string; // URL to the file
+    originalFilename: string;
+    uploadedAt: string;
+}
+// --- END: Document Types ---
+
+export interface Sponsorship {
+    id: number;
+    student: string; // studentId
+    sponsor: number; // sponsorId
+    sponsorName: string;
+    startDate: string;
+    endDate: string | null;
+    hasSponsorshipContract: boolean;
+}
+
+// --- NEW: Primary Caregiver Enum ---
+export enum PrimaryCaregiver {
+    MOTHER_FATHER = 'Mother & Father',
+    MOTHER = 'Mother',
+    FATHER = 'Father',
+    OTHER = 'Other Guardian',
+}
+
 export interface Student {
     studentId: string;
     firstName: string;
@@ -142,14 +177,12 @@ export interface Student {
     studentStatus: StudentStatus;
     sponsorshipStatus: SponsorshipStatus;
     hasHousingSponsorship: boolean;
-    sponsor?: string; // This will hold the Sponsor ID
-    sponsorName?: string; // Read-only from backend
+    applicationDate: string;
     
     // --- Merged from Risk Assessment ---
-    applicationDate: string;
     hasBirthCertificate: boolean;
-    siblingsCount: number;
-    householdMembersCount: number;
+    siblingsCount: number | null;
+    householdMembersCount: number | null;
     city: string;
     villageSlum: string;
     guardianName: string;
@@ -157,7 +190,7 @@ export interface Student {
     homeLocation: string;
     fatherDetails: ParentDetails;
     motherDetails: ParentDetails;
-    annualIncome: number;
+    annualIncome: number | null;
     guardianIfNotParents: string;
     parentSupportLevel: number; // 1-5
     closestPrivateSchool: string;
@@ -179,11 +212,16 @@ export interface Student {
     otherNotes: string;
     riskLevel: number; // 1-5
     transportation: TransportationType;
-    hasSponsorshipContract: boolean;
     
     // Follow-ups and reports
     academicReports?: AcademicReport[];
     followUpRecords?: FollowUpRecord[];
+    documents?: StudentDocument[];
+    sponsorships?: Sponsorship[];
+
+    // Frontend-only fields for improved form logic
+    primaryCaregiver?: PrimaryCaregiver;
+    guardianRelationship?: string;
 }
 
 

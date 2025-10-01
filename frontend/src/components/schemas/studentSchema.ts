@@ -1,76 +1,84 @@
 import { z } from 'zod';
-import { Gender, StudentStatus, SponsorshipStatus, YesNo, HealthStatus, InteractionStatus, TransportationType } from '@/types.ts';
+import { Gender, StudentStatus, YesNo, HealthStatus, InteractionStatus, TransportationType, PrimaryCaregiver } from '@/types.ts';
 
 const parentDetailsSchema = z.object({
     isLiving: z.nativeEnum(YesNo),
     isAtHome: z.nativeEnum(YesNo),
     isWorking: z.nativeEnum(YesNo),
-    occupation: z.string().optional().nullable(),
-    skills: z.string().optional().nullable(),
+    occupation: z.string().optional(),
+    skills: z.string().optional(),
 });
 
-const previousSchoolingDetailsSchema = z.object({
-    when: z.string().optional().nullable(),
-    howLong: z.string().optional().nullable(),
-    where: z.string().optional().nullable(),
-});
+const nullableInt = z.preprocess(
+    (val) => (String(val).trim() === '' || val === null || (typeof val === 'number' && isNaN(val)) ? null : val),
+    z.coerce.number().int().min(0).nullable().optional()
+);
 
-// A custom zod preprocessor to handle empty strings for optional numbers, converting them to undefined so optional validation passes.
-const emptyStringToUndefined = z.preprocess((val) => {
-    if (typeof val === 'string' && val.trim() === '') return undefined;
-    return val;
-}, z.unknown());
-
+const nullableFloat = z.preprocess(
+    (val) => (String(val).trim() === '' || val === null || (typeof val === 'number' && isNaN(val)) ? null : val),
+    z.coerce.number().min(0).nullable().optional()
+);
 
 export const studentSchema = z.object({
     studentId: z.string().min(1, 'Student ID is required.'),
     firstName: z.string().min(1, 'First name is required.'),
     lastName: z.string().min(1, 'Last name is required.'),
-    dateOfBirth: z.string().min(1, 'Date of birth is required.').refine(val => !isNaN(Date.parse(val)), { message: 'A valid date is required.' }),
+    dateOfBirth: z.string().min(1, 'Date of birth is required.'),
     gender: z.nativeEnum(Gender),
-
-    // Program Details
-    school: z.string().optional().nullable(),
-    currentGrade: z.string().optional().nullable(),
-    eepEnrollDate: z.string().min(1, 'EEP enroll date is required.').refine(val => !isNaN(Date.parse(val)), { message: 'A valid date is required.' }),
-    outOfProgramDate: z.string().nullable().optional().transform(val => val === '' ? null : val).refine(val => val === null || val === undefined || !isNaN(Date.parse(val)), { message: 'A valid date is required.' }),
+    school: z.string().optional(),
+    currentGrade: z.string().optional(),
+    eepEnrollDate: z.string().min(1, 'EEP enroll date is required.'),
+    outOfProgramDate: z.string().optional().nullable(),
     studentStatus: z.nativeEnum(StudentStatus),
-    sponsorshipStatus: z.nativeEnum(SponsorshipStatus),
     hasHousingSponsorship: z.boolean(),
-    sponsor: z.string().optional().nullable(),
-    applicationDate: z.string().optional().nullable().refine(val => !val || !isNaN(Date.parse(val)), { message: 'A valid date is required.' }),
-    
-    // Family Details
-    hasBirthCertificate: z.boolean(),
-    siblingsCount: emptyStringToUndefined.pipe(z.coerce.number().int().nonnegative().optional().nullable()),
-    householdMembersCount: emptyStringToUndefined.pipe(z.coerce.number().int().nonnegative().optional().nullable()),
-    city: z.string().optional().nullable(),
-    villageSlum: z.string().optional().nullable(),
-    guardianName: z.string().optional().nullable(),
-    guardianContactInfo: z.string().optional().nullable(),
-    homeLocation: z.string().optional().nullable(),
+    siblingsCount: nullableInt,
+    householdMembersCount: nullableInt,
+    city: z.string().optional(),
+    villageSlum: z.string().optional(),
+    guardianName: z.string().optional(),
+    guardianContactInfo: z.string().optional(),
+    homeLocation: z.string().optional(),
     fatherDetails: parentDetailsSchema,
     motherDetails: parentDetailsSchema,
-    annualIncome: emptyStringToUndefined.pipe(z.coerce.number().nonnegative().optional().nullable()),
-    guardianIfNotParents: z.string().optional().nullable(),
-    
-    // Assessment
-    parentSupportLevel: emptyStringToUndefined.pipe(z.coerce.number().int().min(1).max(5).optional().nullable()),
-    closestPrivateSchool: z.string().optional().nullable(),
+    annualIncome: nullableFloat,
+    primaryCaregiver: z.nativeEnum(PrimaryCaregiver),
+    guardianRelationship: z.string().optional(),
+    parentSupportLevel: z.preprocess(
+        (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : Number(val)),
+        z.number().min(1, "Value must be between 1 and 5.").max(5, "Value must be between 1 and 5.")
+    ),
+    closestPrivateSchool: z.string().optional(),
     currentlyInSchool: z.nativeEnum(YesNo),
     previousSchooling: z.nativeEnum(YesNo),
-    previousSchoolingDetails: previousSchoolingDetailsSchema,
-    gradeLevelBeforeEep: z.string().optional().nullable(),
-    childResponsibilities: z.string().optional().nullable(),
+    previousSchoolingDetails: z.object({
+        when: z.string().optional(),
+        howLong: z.string().optional(),
+        where: z.string().optional(),
+    }),
+    gradeLevelBeforeEep: z.string().optional(),
+    childResponsibilities: z.string().optional(),
     healthStatus: z.nativeEnum(HealthStatus),
-    healthIssues: z.string().optional().nullable(),
+    healthIssues: z.string().optional(),
     interactionWithOthers: z.nativeEnum(InteractionStatus),
-    interactionIssues: z.string().optional().nullable(),
-    childStory: z.string().optional().nullable(),
-    otherNotes: z.string().optional().nullable(),
-    riskLevel: emptyStringToUndefined.pipe(z.coerce.number().int().min(1).max(5).optional().nullable()),
+    interactionIssues: z.string().optional(),
+    childStory: z.string().optional(),
+    otherNotes: z.string().optional(),
+    riskLevel: z.preprocess(
+        (val) => (val === '' || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : Number(val)),
+        z.number().min(1, "Value must be between 1 and 5.").max(5, "Value must be between 1 and 5.")
+    ),
     transportation: z.nativeEnum(TransportationType),
-    hasSponsorshipContract: z.boolean(),
+    profilePhoto: z.any().optional().nullable()
+}).superRefine((data, ctx) => {
+    if (data.primaryCaregiver === PrimaryCaregiver.OTHER && (!data.guardianRelationship || data.guardianRelationship.trim() === '')) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['guardianRelationship'],
+            message: 'Relationship to child is required when "Other Guardian" is selected.',
+        });
+    }
 });
 
-export type StudentFormData = z.infer<typeof studentSchema>;
+// We are removing hasBirthCertificate from the form-level validation.
+// It will still exist on the Student type, but its management is moved to the Documents tab.
+export type StudentFormData = Omit<z.infer<typeof studentSchema>, 'hasBirthCertificate' | 'guardianIfNotParents'> & { hasBirthCertificate?: boolean };

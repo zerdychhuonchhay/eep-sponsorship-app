@@ -21,6 +21,7 @@ export const ALL_STUDENT_COLUMNS: ColumnConfig[] = [
     { id: 'guardianName', label: 'Guardian', renderCell: (s) => s.guardianName || 'N/A', },
     { id: 'studentStatus', label: 'Status', renderCell: (s) => <Badge type={s.studentStatus} />, },
     { id: 'sponsorshipStatus', label: 'Sponsorship', renderCell: (s) => <Badge type={s.sponsorshipStatus} />, },
+    { id: 'sponsorsCount', label: 'Sponsors', renderCell: (s) => s.sponsorsCount, },
 ];
 
 // The default set of columns and their order.
@@ -32,6 +33,7 @@ export const DEFAULT_STUDENT_COLUMNS_ORDER: (keyof Student | 'age')[] = [
   'age',
   'studentStatus',
   'sponsorshipStatus',
+  'sponsorsCount',
 ];
 
 export const getDefaultColumns = (): ColumnConfig[] => {

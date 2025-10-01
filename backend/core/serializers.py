@@ -2,14 +2,22 @@
 
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.tokens import default_token_generator
-# MODIFIED: Corrected import path for modern Django versions
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str 
 from django.conf import settings
 from rest_framework import serializers
 from django.core.exceptions import ValidationError as DjangoValidationError
 import json
-from .models import Student, AcademicReport, FollowUpRecord, Transaction, GovernmentFiling, Task, AuditLog, Sponsor, RoleProfile
+from .models import (
+    Student, AcademicReport, FollowUpRecord, Transaction, GovernmentFiling, 
+    Task, AuditLog, Sponsor, RoleProfile, StudentDocument, Sponsorship
+)
+
+class StudentDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentDocument
+        fields = ['id', 'student', 'document_type', 'file', 'original_filename', 'uploaded_at']
+        read_only_fields = ['student', 'uploaded_at', 'original_filename']
 
 class AcademicReportSerializer(serializers.ModelSerializer):
     student_name = serializers.ReadOnlyField()
@@ -24,6 +32,15 @@ class FollowUpRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = FollowUpRecord
         fields = '__all__'
+
+class SponsorshipSerializer(serializers.ModelSerializer):
+    sponsor_name = serializers.StringRelatedField(source='sponsor.name', read_only=True)
+    
+    class Meta:
+        model = Sponsorship
+        fields = ['id', 'student', 'sponsor', 'sponsor_name', 'start_date', 'end_date', 'has_sponsorship_contract']
+        read_only_fields = ['student']
+
 
 class TransactionSerializer(serializers.ModelSerializer):
     student = serializers.PrimaryKeyRelatedField(
@@ -48,14 +65,15 @@ class StudentLookupSerializer(serializers.ModelSerializer):
         fields = ['student_id', 'first_name', 'last_name']
 
 class StudentListSerializer(serializers.ModelSerializer):
-    sponsor_name = serializers.StringRelatedField(source='sponsor')
+    sponsors_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Student
         fields = [
             'student_id', 'first_name', 'last_name', 'date_of_birth', 
             'gender', 'profile_photo', 'student_status', 'sponsorship_status', 
-            'sponsor_name', 'school', 'current_grade'
+            'sponsors_count', 'school', 'current_grade', 'eep_enroll_date', 
+            'has_birth_certificate',
         ]
 
 class SponsorSerializer(serializers.ModelSerializer):
@@ -73,11 +91,13 @@ class SponsorLookupSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     academic_reports = AcademicReportSerializer(many=True, read_only=True)
     follow_up_records = FollowUpRecordSerializer(many=True, read_only=True)
-    sponsor = serializers.PrimaryKeyRelatedField(queryset=Sponsor.objects.all(), allow_null=True, required=False)
+    documents = StudentDocumentSerializer(many=True, read_only=True)
+    # --- MODIFIED: Changed source to explicit related_name ---
+    sponsorships = SponsorshipSerializer(many=True, read_only=True)
 
     class Meta:
         model = Student
-        fields = [f.name for f in Student._meta.fields] + ['academic_reports', 'follow_up_records']
+        exclude = ('sponsors',)
 
     def to_internal_value(self, data):
         json_fields = ['father_details', 'mother_details', 'previous_schooling_details']
@@ -89,16 +109,6 @@ class StudentSerializer(serializers.ModelSerializer):
                 except json.JSONDecodeError:
                     raise serializers.ValidationError({field_name: "Invalid JSON format."})
         return super().to_internal_value(mutable_data)
-    
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        if instance.sponsor:
-            representation['sponsor'] = instance.sponsor.id
-            representation['sponsor_name'] = instance.sponsor.name
-        else:
-            representation['sponsor'] = None
-            representation['sponsor_name'] = None
-        return representation
 
 class GovernmentFilingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -177,13 +187,11 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_permissions(self, obj):
         if obj.is_superuser:
-            # An empty object signals to the frontend that the user is an admin with all rights
             return {}
         
         group = obj.groups.first()
         if group and hasattr(group, 'roleprofile'):
             return group.roleprofile.permissions
-        # Default to no permissions if no role or profile exists
         return {}
 
 class InviteUserSerializer(serializers.Serializer):
@@ -217,14 +225,10 @@ class RoleSerializer(serializers.ModelSerializer):
         return instance
 
 class GroupSerializer(serializers.ModelSerializer):
-    """
-    Serializer for managing Groups (Roles).
-    """
     class Meta:
         model = Group
         fields = ['id', 'name']
 
-# --- NEW SERIALIZERS FOR PASSWORD MANAGEMENT ---
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
     new_password1 = serializers.CharField(required=True, write_only=True)
@@ -236,7 +240,6 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({"old_password": "Your old password was entered incorrectly."})
         if data['new_password1'] != data['new_password2']:
             raise serializers.ValidationError({"new_password2": "The two password fields didn't match."})
-        # You can add password strength validation here if desired
         return data
 
     def save(self, **kwargs):
@@ -249,8 +252,6 @@ class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
     def validate_email(self, value):
-        # We check for the user in the view, but the serializer can just validate the format.
-        # This approach helps prevent email enumeration attacks.
         return value
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
@@ -278,7 +279,6 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def save(self, **kwargs):
         user = self.validated_data['user']
         user.set_password(self.validated_data['new_password1'])
-        # If the user was invited and inactive, this is their first login. Activate them.
         if not user.is_active:
             user.is_active = True
         user.save()

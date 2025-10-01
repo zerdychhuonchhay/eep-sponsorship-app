@@ -4,7 +4,7 @@ import { WellbeingStatus, YesNo } from '../../types.ts';
 import CustomSelect from '../ui/Select.tsx'; // Assuming the custom Select is exported as default
 
 interface FormControlProps {
-    label: string;
+    label?: string; // Made optional
     className?: string;
     children?: React.ReactNode;
 }
@@ -17,7 +17,7 @@ interface InputProps extends FormControlProps, React.InputHTMLAttributes<HTMLInp
 export const FormInput = React.forwardRef<HTMLInputElement, InputProps>(
     ({ id, label, className, error, ...props }, ref) => (
         <div className={className}>
-            <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>
+            {label && <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>}
             <input
                 id={id}
                 ref={ref}
@@ -43,7 +43,7 @@ interface SelectProps extends FormControlProps, React.SelectHTMLAttributes<HTMLS
 export const FormSelect = React.forwardRef<HTMLSelectElement, SelectProps>(
     ({ id, label, className, children, error, ...props }, ref) => (
         <div className={className}>
-            <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>
+            {label && <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>}
             <select
                 id={id}
                 ref={ref}
@@ -99,7 +99,7 @@ interface TextAreaProps extends FormControlProps, React.TextareaHTMLAttributes<H
 export const FormTextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     ({ id, label, className, error, ...props }, ref) => (
     <div className={className}>
-        <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>
+        {label && <label htmlFor={id} className="mb-2 block text-black dark:text-white">{label}</label>}
         <textarea
             id={id}
             ref={ref}
@@ -134,12 +134,12 @@ export const FormCheckbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
 ));
 FormCheckbox.displayName = 'FormCheckbox';
 
-export const FormSection: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
+export const FormSection: React.FC<{ title: string; children: React.ReactNode; className?: string; useDefaultGrid?: boolean }> = ({ title, children, className, useDefaultGrid = true }) => (
     <div className="rounded-sm border border-stroke bg-white shadow-sm dark:border-strokedark dark:bg-box-dark p-4">
         <div className="border-b border-stroke py-2 px-4 dark:border-strokedark mb-4">
             <h3 className="font-medium text-black dark:text-white">{title}</h3>
         </div>
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 p-4 ${className}`}>
+        <div className={`p-4 ${useDefaultGrid ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''} ${className || ''}`}>
             {children}
         </div>
     </div>

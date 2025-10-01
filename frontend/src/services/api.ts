@@ -1,4 +1,4 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, DocumentType, StudentDocument, Sponsorship } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
@@ -141,10 +141,13 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
 
         const data = await response.json();
         
-        const fixPhotoUrl = (obj: any) => {
+        const fixFileUrl = (obj: any) => {
+            const baseUrl = new URL(API_BASE_URL).origin;
             if (obj && obj.profile_photo && !obj.profile_photo.startsWith('http')) {
-                const baseUrl = new URL(API_BASE_URL).origin;
                 obj.profile_photo = `${baseUrl}${obj.profile_photo}`;
+            }
+            if (obj && obj.file && !obj.file.startsWith('http')) {
+                obj.file = `${baseUrl}${obj.file}`;
             }
             return obj;
         };
@@ -157,7 +160,11 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
                     data.results = data.results.map(fixUrlsInData);
                     return data;
                 }
-                return fixPhotoUrl(data);
+                // Handle student object with nested documents
+                if (data.documents && Array.isArray(data.documents)) {
+                    data.documents = data.documents.map(fixUrlsInData);
+                }
+                return fixFileUrl(data);
             }
             return data;
         };
@@ -173,7 +180,7 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
     }
 };
 
-type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate'> & { profilePhoto?: File; outOfProgramDate?: string | null };
+type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate' | 'documents' | 'sponsorships'> & { profilePhoto?: File; outOfProgramDate?: string | null };
 
 const prepareStudentData = (studentData: any) => {
     const data = { ...studentData };
@@ -182,6 +189,33 @@ const prepareStudentData = (studentData: any) => {
         data.outOfProgramDate = null;
     }
     return data;
+};
+
+// Centralized helper to create FormData for student, ensuring correct JSON stringification
+const createStudentFormData = (data: Record<string, any>): FormData => {
+    const formData = new FormData();
+    const jsonFields = ['father_details', 'mother_details', 'previous_schooling_details'];
+
+    Object.entries(data).forEach(([key, value]) => {
+        if (value === undefined) {
+            return; // Skip undefined values
+        }
+
+        if (jsonFields.includes(key)) {
+            // For JSON fields, stringify the object. If the value is nullish, stringify null.
+            formData.append(key, JSON.stringify(value ?? null));
+        } else if (value === null) {
+            // For other nullable fields, Django's multipart parser interprets an empty string as null.
+            formData.append(key, '');
+        } else if (typeof value === 'boolean') {
+            formData.append(key, value ? 'true' : 'false');
+        } else {
+            // Append all other values as strings.
+            formData.append(key, String(value));
+        }
+    });
+
+    return formData;
 };
 
 const prepareTransactionData = (data: any) => {
@@ -374,41 +408,37 @@ export const api = {
         return apiClient(`/students/all/?${queryString}`);
     },
     getStudentById: async (id: string): Promise<Student> => apiClient(`/students/${id}/`),
-    addStudent: async (studentData: Omit<Student, 'academicReports' | 'followUpRecords'> & { profilePhoto?: File }) => {
+    addStudent: async (studentData: Omit<Student, 'academicReports' | 'followUpRecords' | 'sponsorships'> & { profilePhoto?: File }) => {
         const { profilePhoto, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
-        const formData = new FormData();
-        Object.entries(snakeCaseData).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-                 if (typeof value === 'object' && !(value instanceof File)) {
-                    formData.append(key, JSON.stringify(value));
-                 } else {
-                    formData.append(key, String(value));
-                 }
-            }
-        });
-        if (profilePhoto) formData.append('profile_photo', profilePhoto);
+        
+        const formData = createStudentFormData(snakeCaseData);
+
+        if (profilePhoto) {
+            formData.append('profile_photo', profilePhoto);
+        }
+        
         return apiClient('/students/', { method: 'POST', body: formData });
     },
     updateStudent: async (studentData: StudentFormData) => {
-        const { profilePhoto, studentId, ...rest } = studentData;
+        const { studentId, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
-        const formData = new FormData();
-        Object.entries(snakeCaseData).forEach(([key, value]) => {
-             if (value !== undefined) { // Send null values
-                 if (typeof value === 'object' && value !== null && !(value instanceof File)) {
-                    formData.append(key, JSON.stringify(value));
-                 } else if (value === null) {
-                    formData.append(key, ''); // Django multipart forms interpret empty string as null for non-file fields
-                 }
-                 else {
-                    formData.append(key, String(value));
-                 }
-            }
-        });
-        if (profilePhoto instanceof File) formData.append('profile_photo', profilePhoto);
+        
+        const { profile_photo, ...snakeRest } = snakeCaseData;
+
+        const formData = createStudentFormData(snakeRest);
+
+        if (profile_photo instanceof File) {
+            formData.append('profile_photo', profile_photo);
+        } else if (profile_photo === null) {
+            // This indicates the user wants to remove the photo.
+            formData.append('profile_photo', '');
+        }
+        // If profile_photo is a string (URL of existing photo) or undefined, we do nothing.
+        // The field won't be in the FormData, and the backend PATCH won't update it.
+
         return apiClient(`/students/${studentId}/`, { method: 'PATCH', body: formData });
     },
     deleteStudent: async (studentId: string) => apiClient(`/students/${studentId}/`, { method: 'DELETE' }),
@@ -428,6 +458,20 @@ export const api = {
             method: 'POST',
             body: JSON.stringify(payload),
         });
+    },
+    // --- Student Document Endpoints ---
+    addStudentDocument: async (studentId: string, documentType: DocumentType, file: File): Promise<Student> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('document_type', documentType);
+        // The POST returns a stale student object, so we discard it and re-fetch.
+        await apiClient(`/students/${studentId}/documents/`, { method: 'POST', body: formData });
+        return apiClient(`/students/${studentId}/`);
+    },
+    deleteStudentDocument: async (documentId: number, studentId: string): Promise<Student> => {
+        await apiClient(`/documents/${documentId}/`, { method: 'DELETE' });
+        // After deletion, refetch the full student object to get the updated documents list
+        return apiClient(`/students/${studentId}/`);
     },
 
     // Academic Report Endpoints
@@ -496,6 +540,17 @@ export const api = {
         return apiClient(`/sponsors/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(rest)) });
     },
     deleteSponsor: async (id: string) => apiClient(`/sponsors/${id}/`, { method: 'DELETE' }),
+
+    // Sponsorship endpoints
+    addSponsorship: async (data: any): Promise<Sponsorship> => {
+        return apiClient('/sponsorships/', { method: 'POST', body: JSON.stringify(convertKeysToSnake(data)) });
+    },
+    updateSponsorship: async (id: number, data: any): Promise<Sponsorship> => {
+        return apiClient(`/sponsorships/${id}/`, { method: 'PATCH', body: JSON.stringify(convertKeysToSnake(data)) });
+    },
+    deleteSponsorship: async (id: number): Promise<void> => {
+        return apiClient(`/sponsorships/${id}/`, { method: 'DELETE' });
+    },
 
     // AI Assistant
     queryAIAssistant: async (prompt: string, conversationHistory: any[]): Promise<{ response: string }> => {
