@@ -21,7 +21,6 @@ import { useSettings } from '@/contexts/SettingsContext.tsx';
 import BulkActionBar from '@/components/students/BulkActionBar.tsx';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
-import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import StudentCard from '@/components/students/StudentCard.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
