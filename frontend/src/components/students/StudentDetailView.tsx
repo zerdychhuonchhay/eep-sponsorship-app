@@ -22,6 +22,8 @@ import ActionDropdown from '@/components/ActionDropdown.tsx';
 import DocumentUploadModal from './DocumentUploadModal.tsx';
 import PageHeader from '@/components/layout/PageHeader.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import { Card, CardContent } from '@/components/ui/Card.tsx';
 
 interface StudentDetailViewProps {
     student: Student;
@@ -63,9 +65,23 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
     const { canUpdate, canDelete } = usePermissions('students');
     const { canCreate: canCreateAcademics, canUpdate: canUpdateAcademics, canDelete: canDeleteAcademics } = usePermissions('academics');
     const { canCreate: canCreateSponsorships, canUpdate: canUpdateSponsors } = usePermissions('sponsors');
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const [isSummaryView, setIsSummaryView] = useState(isMobile);
     
     const [editingField, setEditingField] = useState<string | null>(null);
     const [isUpdatingField, setIsUpdatingField] = useState(false);
+
+    useEffect(() => {
+        setIsSummaryView(isMobile);
+    }, [isMobile]);
+
+    const handleBackClick = () => {
+        if (isMobile && !isSummaryView) {
+            setIsSummaryView(true);
+        } else {
+            onBack();
+        }
+    };
 
     const handleDownloadPdf = (record: FollowUpRecord) => {
         setRecordForPdf(record);
@@ -236,6 +252,41 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
 
     const activeSponsors = student.sponsorships?.filter(s => !s.endDate) || [];
     const birthCert = student.documents?.find(d => d.documentType === DocumentType.BIRTH_CERTIFICATE);
+    
+    if (isMobile && isSummaryView) {
+        return (
+            <div className="space-y-6">
+                <button onClick={handleBackClick} className="text-primary hover:underline font-medium">← Back to Student List</button>
+                <Card>
+                    <CardContent className="flex flex-col items-center text-center p-6">
+                        {student.profilePhoto ? (
+                             <img src={student.profilePhoto} alt={`${student.firstName}`} className="w-32 h-32 rounded-full object-cover mb-4 shadow-md"/>
+                        ) : (
+                            <div className="w-32 h-32 rounded-full bg-gray-2 dark:bg-box-dark-2 flex items-center justify-center mb-4">
+                                <UserIcon className="w-16 h-16 text-gray-500 dark:text-gray-400" />
+                            </div>
+                        )}
+                         <h2 className="text-2xl font-bold text-black dark:text-white">{student.firstName} {student.lastName}</h2>
+                        <p className="text-body-color dark:text-gray-300">{student.studentId}</p>
+                        <p className="text-body-color dark:text-gray-300">Age: {calculateAge(student.dateOfBirth)} | Gender: {student.gender}</p>
+                        <div className="mt-4 flex flex-wrap justify-center gap-2">
+                            <Badge type={student.studentStatus} />
+                            <Badge type={student.sponsorshipStatus} />
+                        </div>
+                    </CardContent>
+                </Card>
+                <DetailCard title="Core Program Data" data={{
+                    'School': student.school,
+                    'Current Grade': student.currentGrade,
+                    'Active Sponsors': activeSponsors.length > 0 ? activeSponsors.map(s => s.sponsorName).join(', ') : 'N/A',
+                    'EEP Enroll Date': formatDateForDisplay(student.eepEnrollDate),
+                }} />
+                <Button onClick={() => setIsSummaryView(false)} className="w-full">
+                    View Full Details & History
+                </Button>
+            </div>
+        );
+    }
     
     const tabs: Tab[] = [
         {
@@ -500,7 +551,9 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
 
     return (
         <div className="space-y-6">
-            <button onClick={onBack} className="text-primary hover:underline font-medium mb-6">← Back to Student List</button>
+            <button onClick={handleBackClick} className="text-primary hover:underline font-medium mb-6">
+                {isMobile ? '← Back to Summary' : '← Back to Student List'}
+            </button>
             
             <PageHeader title={`${student.firstName} ${student.lastName}`}>
                  <PageActions>
