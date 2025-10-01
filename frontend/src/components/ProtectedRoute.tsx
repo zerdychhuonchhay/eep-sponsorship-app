@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.tsx';
 
 const ProtectedRoute: React.FC = () => {
@@ -14,10 +14,10 @@ const ProtectedRoute: React.FC = () => {
     }
 
     if (!user) {
-        return <Navigate to="/login" replace />;
+        return <ReactRouterDOM.Navigate to="/login" replace />;
     }
 
-    return <Outlet />;
+    return <ReactRouterDOM.Outlet />;
 };
 
 export default ProtectedRoute;

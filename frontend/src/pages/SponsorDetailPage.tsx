@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import * as ReactRouterDOM from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { Sponsor, Student, PaginatedResponse } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
@@ -20,8 +20,8 @@ import { usePermissions } from '@/contexts/AuthContext.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
 
 const SponsorDetailPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { id } = ReactRouterDOM.useParams<{ id: string }>();
+    const navigate = ReactRouterDOM.useNavigate();
     const { showToast } = useNotification();
     const { refetchSponsorLookup } = useData();
     const { canUpdate, canDelete } = usePermissions('sponsors');

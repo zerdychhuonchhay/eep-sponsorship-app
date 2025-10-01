@@ -9,6 +9,8 @@ import { studentSchema, StudentFormData } from '@/components/schemas/studentSche
 import { UserIcon, ArrowUpIcon, ArrowDownIcon } from '@/components/Icons.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { api } from '@/services/api.ts';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import Stepper from '@/components/ui/Stepper.tsx';
 
 const formatDateForInput = (dateStr?: string | null) => {
     if (!dateStr || isNaN(new Date(dateStr).getTime())) return '';
@@ -57,6 +59,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [savingSection, setSavingSection] = useState<string | null>(null);
     const { showToast } = useNotification();
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const [activeStep, setActiveStep] = useState(0);
 
     const { register, handleSubmit, formState: { errors }, watch, trigger, getValues, reset, setValue } = useForm<StudentFormData>({
         resolver: zodResolver(studentSchema) as Resolver<StudentFormData>,
@@ -204,6 +208,30 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
             </div>
         ) : null
     );
+
+    const steps = [
+        { label: 'Program' },
+        { label: 'Family' },
+        { label: 'Background' },
+        { label: 'Narrative' },
+    ];
+    
+    const handleNextStep = async () => {
+        const sections = ['program', 'family', 'background', 'narrative'];
+        const currentSection = sections[activeStep] as keyof typeof SECTION_FIELDS;
+        const fieldsToValidate = SECTION_FIELDS[currentSection];
+        
+        const isValid = await trigger(fieldsToValidate as (keyof StudentFormData)[]);
+        if (isValid) {
+            setActiveStep(prev => Math.min(prev + 1, steps.length - 1));
+        } else {
+            showToast('Please fix the errors before proceeding.', 'error');
+        }
+    };
+
+    const handlePrevStep = () => {
+        setActiveStep(prev => Math.max(prev - 1, 0));
+    };
 
     const ProgramDetails = (
         <FormSection title="Program Details">
@@ -404,16 +432,46 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                         </div>
                     )}
                 </FormSection>
-                <Tabs tabs={tabs} />
-            </div>
-            <div className="flex justify-end space-x-2 p-4 border-t border-stroke dark:border-strokedark">
-                {isEdit ? (
-                    <Button type="button" variant="ghost" onClick={onCancel}>Close</Button>
+                {isMobile && !isEdit ? (
+                    <div className="space-y-4">
+                        <Stepper steps={steps} activeStep={activeStep} className="mb-6" />
+                        <div className={activeStep === 0 ? 'block' : 'hidden'}>{ProgramDetails}</div>
+                        <div className={activeStep === 1 ? 'block' : 'hidden'}>{FamilyAndHousehold}</div>
+                        <div className={activeStep === 2 ? 'block' : 'hidden'}>{BackgroundAndHealth}</div>
+                        <div className={activeStep === 3 ? 'block' : 'hidden'}>{NarrativeAndRisk}</div>
+                    </div>
                 ) : (
-                    <>
-                        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-                        <Button type="submit" isLoading={isSaving}>Save Student</Button>
-                    </>
+                    <Tabs tabs={tabs} />
+                )}
+            </div>
+            <div className="flex justify-end items-center gap-2 p-4 border-t border-stroke dark:border-strokedark">
+                <Button type="button" variant="ghost" onClick={onCancel}>
+                    {isEdit ? 'Close' : 'Cancel'}
+                </Button>
+                
+                {!isEdit && (
+                    isMobile ? (
+                        <>
+                            {activeStep > 0 && (
+                                <Button type="button" variant="ghost" onClick={handlePrevStep} disabled={isSaving}>
+                                    Back
+                                </Button>
+                            )}
+                            {activeStep < steps.length - 1 ? (
+                                <Button type="button" onClick={handleNextStep}>
+                                    Next
+                                </Button>
+                            ) : (
+                                <Button type="submit" isLoading={isSaving}>
+                                    Save Student
+                                </Button>
+                            )}
+                        </>
+                    ) : (
+                        <Button type="submit" isLoading={isSaving}>
+                            Save Student
+                        </Button>
+                    )
                 )}
             </div>
         </form>

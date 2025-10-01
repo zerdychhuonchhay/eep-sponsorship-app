@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { api } from '@/services/api.ts';
-import { AppUser, UserStatus } from '@/types.ts';
+import { AppUser, UserStatus, User } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
-import { SkeletonCard, SkeletonTable } from '@/components/SkeletonLoader.tsx';
+import { SkeletonCard, SkeletonTable, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import PageHeader from '@/components/layout/PageHeader.tsx';
 import Pagination from '@/components/Pagination.tsx';
 import Modal from '@/components/Modal.tsx';
@@ -18,7 +18,6 @@ import Tabs, { Tab } from '@/components/ui/Tabs.tsx';
 import PermissionsManager from '@/components/PermissionsManager.tsx';
 import UserCard from '@/components/users/UserCard.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
-import UserSwipeView from '@/components/users/UserSwipeView.tsx';
 import { useSettings } from '@/contexts/SettingsContext.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import ActionDropdown, { ActionItem } from '@/components/ActionDropdown.tsx';
@@ -27,6 +26,7 @@ import Badge from '@/components/ui/Badge.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
 const UsersList: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +52,7 @@ const UsersList: React.FC = () => {
         fetcher: api.getUsers,
         apiQueryString,
         currentPage,
-        keepDataWhileRefetching: isMobile,
+        keepDataWhileRefetching: false,
     });
 
     const handleInviteUser = async (email: string, role: string) => {
@@ -128,24 +128,37 @@ const UsersList: React.FC = () => {
     return (
         <>
             {isMobile ? (
-                <DataWrapper isStale={isStale && users.length > 0}>
-                    <UserSwipeView
-                        users={users}
-                        isLoading={isLoading && users.length === 0}
-                        loadMore={() => {
-                            if (!isStale && currentPage < totalPages) {
-                                setCurrentPage(prev => prev + 1);
-                            }
-                        }}
-                        hasMore={currentPage < totalPages}
-                        onEditUser={setEditingUser}
-                        onDeleteUser={handleDeleteUser}
-                        onSendPasswordReset={handleSendPasswordReset}
-                        currentUser={currentUser}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                    />
-                </DataWrapper>
+                 <div className="space-y-4">
+                    {isLoading ? (
+                         Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)
+                    ) : (
+                         <DataWrapper isStale={isStale}>
+                            {users.length > 0 ? (
+                                <div className="space-y-3">
+                                    {users.map(user => (
+                                        <MobileListItem
+                                            key={user.id}
+                                            icon={<UserIcon className="w-6 h-6 text-gray-500" />}
+                                            title={user.username}
+                                            subtitle={user.email}
+                                            rightContent={
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <Badge type={user.role} />
+                                                    <Badge type={user.status} />
+                                                </div>
+                                            }
+                                            onClick={canUpdate ? () => setEditingUser(user) : undefined}
+                                            showChevron={canUpdate}
+                                        />
+                                    ))}
+                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                </div>
+                            ) : (
+                                <EmptyState title="No Users Found" />
+                            )}
+                        </DataWrapper>
+                    )}
+                 </div>
             ) : (
                 <Card>
                     <CardContent>

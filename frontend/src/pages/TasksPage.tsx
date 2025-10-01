@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
 import { Task, TaskStatus, TaskPriority } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, TasksIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { SkeletonTable, SkeletonListItem } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls.tsx';
 import { useTableControls } from '../hooks/useTableControls.ts';
 import Pagination from '../components/Pagination.tsx';
@@ -23,6 +23,8 @@ import { taskSchema, TaskFormData } from '@/components/schemas/taskSchema.ts';
 import PageActions from '@/components/layout/PageActions.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
@@ -82,6 +84,7 @@ const TasksPage: React.FC = () => {
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const { showToast } = useNotification();
     const { canCreate, canUpdate, canDelete } = usePermissions('tasks');
+    const isMobile = useMediaQuery('(max-width: 767px)');
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
@@ -137,11 +140,10 @@ const TasksPage: React.FC = () => {
     };
     
     const handleQuickStatusChange = async (task: Task, newStatus: TaskStatus) => {
-        // Optimistic UI update - this might be too complex with the new hook, let's simplify
         try {
             await api.updateTask({ ...task, status: newStatus });
             showToast(`Task "${task.title}" status updated to ${newStatus}.`, 'success');
-            refetch(); // Refetch to get the latest state
+            refetch();
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
         }
@@ -155,6 +157,93 @@ const TasksPage: React.FC = () => {
     
     const tasks = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
+
+    const mainContent = isLoading ? (
+        isMobile ? (
+            <div className="space-y-4">
+                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
+            </div>
+        ) : <SkeletonTable rows={5} cols={5} />
+    ) : (
+        <DataWrapper isStale={isStale}>
+            {tasks.length > 0 ? (
+                isMobile ? (
+                    <div className="space-y-3">
+                        {tasks.map((task) => (
+                            <MobileListItem
+                                key={task.id}
+                                icon={<TasksIcon className="w-5 h-5 text-primary" />}
+                                title={task.title}
+                                subtitle={`Due: ${new Date(task.dueDate).toLocaleDateString()}`}
+                                rightContent={<Badge type={task.priority} />}
+                                onClick={canUpdate ? () => setEditingTask(task) : undefined}
+                            />
+                        ))}
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="ui-table">
+                                <thead>
+                                    <tr>
+                                        {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
+                                            <th key={key}>
+                                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                    {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                                    {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                </button>
+                                            </th>
+                                        ))}
+                                        <th className="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tasks.map((task) => {
+                                        const actionItems = [];
+                                        if (canUpdate) {
+                                            actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
+                                        }
+                                        if (canDelete) {
+                                            actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' });
+                                        }
+
+                                        return (
+                                            <tr key={task.id}>
+                                                <td>
+                                                    <p className="font-medium">{task.title}</p>
+                                                    {task.description && <p className="text-sm text-body-color mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
+                                                </td>
+                                                <td className="text-body-color">{new Date(task.dueDate).toLocaleDateString()}</td>
+                                                <td><Badge type={task.priority} /></td>
+                                                <td>
+                                                    <select 
+                                                        value={task.status} 
+                                                        onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
+                                                        className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        disabled={!canUpdate}
+                                                    >
+                                                        {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                </td>
+                                                <td className="text-center">
+                                                    {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </>
+                 )
+             ) : (
+                <EmptyState title="No Tasks Found" />
+            )}
+        </DataWrapper>
+    );
 
     return (
         <div className="space-y-6">
@@ -185,72 +274,7 @@ const TasksPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    {isLoading ? (
-                        <SkeletonTable rows={5} cols={5} />
-                    ) : (
-                        <DataWrapper isStale={isStale}>
-                            {tasks.length > 0 ? (
-                                <>
-                                    <div className="overflow-x-auto">
-                                        <table className="ui-table">
-                                            <thead>
-                                                <tr>
-                                                    {(['title', 'dueDate', 'priority', 'status'] as (keyof Task)[]).map(key => (
-                                                        <th key={key}>
-                                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                                {key === 'dueDate' ? 'Due Date' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                            </button>
-                                                        </th>
-                                                    ))}
-                                                    <th className="text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {tasks.map((task) => {
-                                                    const actionItems = [];
-                                                    if (canUpdate) {
-                                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
-                                                    }
-                                                    if (canDelete) {
-                                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteTask(task.id), className: 'text-danger' });
-                                                    }
-
-                                                    return (
-                                                        <tr key={task.id}>
-                                                            <td>
-                                                                <p className="font-medium">{task.title}</p>
-                                                                {task.description && <p className="text-sm text-body-color mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
-                                                            </td>
-                                                            <td className="text-body-color">{new Date(task.dueDate).toLocaleDateString()}</td>
-                                                            <td><Badge type={task.priority} /></td>
-                                                            <td>
-                                                                <select 
-                                                                    value={task.status} 
-                                                                    onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
-                                                                    className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    disabled={!canUpdate}
-                                                                >
-                                                                    {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
-                                                                </select>
-                                                            </td>
-                                                            <td className="text-center">
-                                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                </>
-                             ) : (
-                                <EmptyState title="No Tasks Found" />
-                            )}
-                        </DataWrapper>
-                    )}
+                    {mainContent}
                 </CardContent>
             </Card>
 

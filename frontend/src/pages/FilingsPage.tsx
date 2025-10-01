@@ -3,8 +3,8 @@ import { api } from '../services/api.ts';
 import { GovernmentFiling, FilingStatus } from '../types.ts';
 import Modal from '../components/Modal.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { ArrowUpIcon, ArrowDownIcon, PlusIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
-import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { ArrowUpIcon, ArrowDownIcon, PlusIcon, EditIcon, TrashIcon, FilingsIcon } from '../components/Icons.tsx';
+import { SkeletonTable, SkeletonListItem } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect } from '../components/forms/FormControls.tsx';
 import { useTableControls } from '../hooks/useTableControls.ts';
 import Pagination from '../components/Pagination.tsx';
@@ -23,6 +23,8 @@ import { filingSchema, FilingFormData } from '@/components/schemas/filingSchema.
 import PageActions from '@/components/layout/PageActions.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
 const FilingForm: React.FC<{ 
     filing?: GovernmentFiling | null; 
@@ -102,6 +104,7 @@ const FilingsPage: React.FC = () => {
     const [selectedFiling, setSelectedFiling] = useState<GovernmentFiling | null>(null);
     const { showToast } = useNotification();
     const { canCreate, canUpdate, canDelete } = usePermissions('filings');
+    const isMobile = useMediaQuery('(max-width: 767px)');
     
     const {
         sortConfig, currentPage, apiQueryString, filters,
@@ -158,6 +161,81 @@ const FilingsPage: React.FC = () => {
     const filings = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
+    const mainContent = isLoading ? (
+        isMobile ? (
+            <div className="space-y-4">
+                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
+            </div>
+        ) : <SkeletonTable rows={5} cols={5} />
+    ) : (
+        <DataWrapper isStale={isStale}>
+            {filings.length > 0 ? (
+                isMobile ? (
+                    <div className="space-y-3">
+                        {filings.map((f) => (
+                            <MobileListItem
+                                key={f.id}
+                                icon={<FilingsIcon className="w-5 h-5 text-primary" />}
+                                title={f.documentName}
+                                subtitle={`Due: ${new Date(f.dueDate).toLocaleDateString()}`}
+                                rightContent={<Badge type={f.status} />}
+                                onClick={canUpdate ? () => setSelectedFiling(f) : undefined}
+                            />
+                        ))}
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="ui-table">
+                                <thead>
+                                    <tr>
+                                        {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
+                                            <th key={key}>
+                                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                    {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                </button>
+                                            </th>
+                                        ))}
+                                        <th className="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filings.map((f) => {
+                                        const actionItems = [];
+                                        if(canUpdate) {
+                                            actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
+                                        }
+                                        if(canDelete) {
+                                            actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
+                                        }
+                                        return (
+                                            <tr key={f.id}>
+                                                <td className="font-medium">{f.documentName}</td>
+                                                <td className="text-body-color">{f.authority}</td>
+                                                <td className="text-body-color">{new Date(f.dueDate).toLocaleDateString()}</td>
+                                                <td>
+                                                    <Badge type={f.status} />
+                                                </td>
+                                                <td className="text-center">
+                                                    {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </>
+                )
+            ) : (
+                <EmptyState title="No Filings Found" />
+            )}
+        </DataWrapper>
+    );
+
     return (
         <div className="space-y-6">
             <PageHeader title="Government Filings">
@@ -187,60 +265,7 @@ const FilingsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    {isLoading ? (
-                        <SkeletonTable rows={5} cols={5} />
-                    ) : (
-                        <DataWrapper isStale={isStale}>
-                            {filings.length > 0 ? (
-                                <>
-                                    <div className="overflow-x-auto">
-                                        <table className="ui-table">
-                                            <thead>
-                                                <tr>
-                                                    {(['documentName', 'authority', 'dueDate', 'status'] as (keyof GovernmentFiling)[]).map(key => (
-                                                        <th key={key}>
-                                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                            </button>
-                                                        </th>
-                                                    ))}
-                                                    <th className="text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filings.map((f) => {
-                                                    const actionItems = [];
-                                                    if(canUpdate) {
-                                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setSelectedFiling(f) });
-                                                    }
-                                                    if(canDelete) {
-                                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(f.id), className: 'text-danger' });
-                                                    }
-                                                    return (
-                                                        <tr key={f.id}>
-                                                            <td className="font-medium">{f.documentName}</td>
-                                                            <td className="text-body-color">{f.authority}</td>
-                                                            <td className="text-body-color">{new Date(f.dueDate).toLocaleDateString()}</td>
-                                                            <td>
-                                                                <Badge type={f.status} />
-                                                            </td>
-                                                            <td className="text-center">
-                                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                </>
-                            ) : (
-                                <EmptyState title="No Filings Found" />
-                            )}
-                        </DataWrapper>
-                    )}
+                    {mainContent}
                 </CardContent>
             </Card>
 

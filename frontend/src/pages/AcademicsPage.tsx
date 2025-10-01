@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
 import { AcademicReport } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, AcademicsIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { SkeletonTable, SkeletonListItem } from '../components/SkeletonLoader.tsx';
 import AcademicReportForm from '../components/AcademicReportForm.tsx';
 import { AcademicReportFormData } from '@/components/schemas/academicReportSchema.ts';
 import { useTableControls } from '../hooks/useTableControls.ts';
@@ -21,6 +21,8 @@ import { usePermissions } from '@/contexts/AuthContext.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
 const AcademicsPage: React.FC = () => {
     const [filterOptionsData, setFilterOptionsData] = useState<{ years: string[], grades: string[] }>({ years: [], grades: [] });
@@ -29,6 +31,7 @@ const AcademicsPage: React.FC = () => {
     const [selectedReport, setSelectedReport] = useState<AcademicReport | null>(null);
     const { showToast } = useNotification();
     const { canCreate, canUpdate, canDelete } = usePermissions('academics');
+    const isMobile = useMediaQuery('(max-width: 767px)');
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
@@ -93,6 +96,83 @@ const AcademicsPage: React.FC = () => {
     const allReports = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
+    const mainContent = isLoading ? (
+        isMobile ? (
+            <div className="space-y-4">
+                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
+            </div>
+        ) : <SkeletonTable rows={10} cols={6} />
+    ) : (
+        <DataWrapper isStale={isStale}>
+            {allReports.length > 0 ? (
+                isMobile ? (
+                    <div className="space-y-3">
+                        {allReports.map(report => (
+                            <MobileListItem
+                                key={report.id}
+                                icon={<AcademicsIcon className="w-5 h-5 text-primary" />}
+                                title={report.studentName || 'Unknown Student'}
+                                subtitle={`${report.reportPeriod} - Grade ${report.gradeLevel}`}
+                                rightContent={<Badge type={report.passFailStatus} />}
+                                onClick={canUpdate ? () => { setSelectedReport(report); setModalState('edit'); } : undefined}
+                            />
+                        ))}
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="ui-table">
+                                <thead>
+                                    <tr>
+                                        {(['studentName', 'reportPeriod', 'gradeLevel', 'overallAverage', 'passFailStatus'] as (keyof AcademicReport)[]).map(key => (
+                                            <th key={key as string}>
+                                                <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
+                                                    {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                    {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                </button>
+                                            </th>
+                                        ))}
+                                        <th className="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allReports.map(report => {
+                                        const actionItems = [];
+                                        if (canUpdate) {
+                                            actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
+                                        }
+                                        if (canDelete) {
+                                            actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
+                                        }
+
+                                        return (
+                                            <tr key={report.id}>
+                                                <td className="font-medium">{report.studentName}</td>
+                                                <td className="text-body-color">{report.reportPeriod}</td>
+                                                <td className="text-body-color">{report.gradeLevel}</td>
+                                                <td className="text-body-color">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
+                                                <td>
+                                                    <Badge type={report.passFailStatus} />
+                                                </td>
+                                                <td className="text-center">
+                                                    {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </>
+                )
+            ) : (
+                <EmptyState title="No Academic Reports Found" />
+            )}
+        </DataWrapper>
+    );
+
     return (
         <div className="space-y-6">
             <PageHeader title="Academics">
@@ -122,62 +202,7 @@ const AcademicsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    {isLoading ? (
-                        <SkeletonTable rows={10} cols={6} />
-                    ) : (
-                        <DataWrapper isStale={isStale}>
-                            {allReports.length > 0 ? (
-                                <>
-                                    <div className="overflow-x-auto">
-                                        <table className="ui-table">
-                                            <thead>
-                                                <tr>
-                                                    {(['studentName', 'reportPeriod', 'gradeLevel', 'overallAverage', 'passFailStatus'] as (keyof AcademicReport)[]).map(key => (
-                                                        <th key={key as string}>
-                                                            <button className="flex items-center gap-1 hover:text-primary dark:hover:text-primary transition-colors" onClick={() => handleSort(key)}>
-                                                                {String(key).replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                            </button>
-                                                        </th>
-                                                    ))}
-                                                    <th className="text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {allReports.map(report => {
-                                                    const actionItems = [];
-                                                    if (canUpdate) {
-                                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => { setSelectedReport(report); setModalState('edit'); } });
-                                                    }
-                                                    if (canDelete) {
-                                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteReport(report.id), className: 'text-danger' });
-                                                    }
-
-                                                    return (
-                                                        <tr key={report.id}>
-                                                            <td className="font-medium">{report.studentName}</td>
-                                                            <td className="text-body-color">{report.reportPeriod}</td>
-                                                            <td className="text-body-color">{report.gradeLevel}</td>
-                                                            <td className="text-body-color">{report.overallAverage ? report.overallAverage.toFixed(1) + '%' : 'N/A'}</td>
-                                                            <td>
-                                                                <Badge type={report.passFailStatus} />
-                                                            </td>
-                                                            <td className="text-center">
-                                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                </>
-                            ) : (
-                                <EmptyState title="No Academic Reports Found" />
-                            )}
-                        </DataWrapper>
-                    )}
+                    {mainContent}
                 </CardContent>
             </Card>
             
