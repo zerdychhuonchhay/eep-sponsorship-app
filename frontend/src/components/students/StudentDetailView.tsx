@@ -62,7 +62,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
     const { showToast } = useNotification();
     const { canUpdate, canDelete } = usePermissions('students');
     const { canCreate: canCreateAcademics, canUpdate: canUpdateAcademics, canDelete: canDeleteAcademics } = usePermissions('academics');
-    const { canManageSponsors, canUpdate: canUpdateSponsors } = usePermissions('sponsors');
+    const { canCreate: canCreateSponsorships, canUpdate: canUpdateSponsors } = usePermissions('sponsors');
     
     const [editingField, setEditingField] = useState<string | null>(null);
     const [isUpdatingField, setIsUpdatingField] = useState(false);
@@ -259,7 +259,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-md p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-semibold text-black dark:text-white">Sponsorship History</h3>
-                        {canManageSponsors && <Button onClick={() => { setEditingSponsorship(null); setModal('sponsorship'); }} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">Add Sponsorship</Button>}
+                        {canCreateSponsorships && <Button onClick={() => { setEditingSponsorship(null); setModal('sponsorship'); }} icon={<DocumentAddIcon className="w-5 h-5" />} size="sm">Add Sponsorship</Button>}
                     </div>
                     {student.sponsorships && student.sponsorships.length > 0 ? (
                         <div className="overflow-x-auto">
@@ -270,7 +270,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                                         <th>Start Date</th>
                                         <th>End Date</th>
                                         <th>Contract</th>
-                                        {canManageSponsors && <th className="text-center">Actions</th>}
+                                        {canUpdateSponsors && <th className="text-center">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -282,7 +282,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                                              <td>
                                                 <Badge type={sponsorship.hasSponsorshipContract ? 'Submitted' : 'Pending'} />
                                             </td>
-                                            {canManageSponsors && (
+                                            {canUpdateSponsors && (
                                                 <td className="text-center">
                                                     <Button onClick={() => { setEditingSponsorship(sponsorship); setModal('sponsorship'); }} icon={<EditIcon className="w-4 h-4" />} size="sm" variant="ghost">Edit</Button>
                                                 </td>
