@@ -1,5 +1,5 @@
 import React from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Sponsor } from '@/types.ts';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
@@ -10,7 +10,7 @@ interface SponsorCardProps {
 }
 
 const SponsorCard: React.FC<SponsorCardProps> = ({ sponsor }) => {
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
 
     return (
         <Card

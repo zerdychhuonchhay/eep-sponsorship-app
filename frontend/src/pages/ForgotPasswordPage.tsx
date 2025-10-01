@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { api } from '@/services/api.ts';
 import { FormInput } from '@/components/forms/FormControls.tsx';
 import Button from '@/components/ui/Button.tsx';
@@ -65,9 +65,9 @@ const ForgotPasswordPage: React.FC = () => {
                 )}
 
                 <div className="text-sm text-center">
-                    <ReactRouterDOM.NavLink to="/login" className="font-medium text-primary hover:underline">
+                    <NavLink to="/login" className="font-medium text-primary hover:underline">
                         &larr; Back to Sign In
-                    </ReactRouterDOM.NavLink>
+                    </NavLink>
                 </div>
             </div>
         </div>

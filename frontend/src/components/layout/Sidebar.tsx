@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-// FIX: Using namespace import for react-router-dom to resolve module resolution issues.
-import * as ReactRouterDOM from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { DashboardIcon, StudentsIcon, TransactionsIcon, FilingsIcon, ReportsIcon, TasksIcon, AuditIcon, SponsorIcon, AcademicsIcon, SettingsIcon, UsersIcon, UserIcon, ProfileIcon, LogoutIcon, CloseIcon } from '@/components/Icons.tsx';
 import { usePermissions, useAuth } from '@/contexts/AuthContext.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
@@ -17,7 +16,7 @@ interface NavLinkItemProps {
 }
 
 const NavLinkItem: React.FC<NavLinkItemProps> = ({ item, onClick }) => {
-    const location = ReactRouterDOM.useLocation();
+    const location = useLocation();
     const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
 
     const linkClasses = `group relative flex items-center rounded-md font-medium duration-300 ease-in-out py-2 px-4 gap-2.5 ${
@@ -27,10 +26,10 @@ const NavLinkItem: React.FC<NavLinkItemProps> = ({ item, onClick }) => {
     }`;
 
     return (
-        <ReactRouterDOM.NavLink to={item.path} className={linkClasses} onClick={onClick}>
+        <NavLink to={item.path} className={linkClasses} onClick={onClick}>
             {item.icon}
             <span className="whitespace-nowrap">{item.label}</span>
-        </ReactRouterDOM.NavLink>
+        </NavLink>
     );
 };
 
@@ -38,7 +37,7 @@ const Sidebar: React.FC = () => {
     const { isSidebarOpen, setIsSidebarOpen } = useUI();
     const { user, logout } = useAuth();
     const sidebar = useRef<HTMLDivElement>(null);
-    const location = ReactRouterDOM.useLocation();
+    const location = useLocation();
 
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileTriggerRef = useRef<HTMLButtonElement>(null);
@@ -140,10 +139,10 @@ const Sidebar: React.FC = () => {
                 }`}
             >
                 <div className="flex items-center justify-between gap-2 px-4 py-4">
-                    <ReactRouterDOM.NavLink to="/" className="flex items-center gap-2">
+                    <NavLink to="/" className="flex items-center gap-2">
                         <img src="/logo.png" alt="Logo" className="h-8 w-auto flex-shrink-0" />
                         <span className="text-black dark:text-white text-xl font-bold whitespace-nowrap">Dashboard</span>
-                    </ReactRouterDOM.NavLink>
+                    </NavLink>
                      {/* <!-- Close button for sidebar --> */}
                     <button
                         onClick={() => setIsSidebarOpen(false)}
@@ -214,10 +213,10 @@ const Sidebar: React.FC = () => {
                     className="w-48 rounded-md shadow-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark"
                 >
                     <div className="py-1">
-                        <ReactRouterDOM.NavLink to="/profile" onClick={() => setIsProfileMenuOpen(false)} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
+                        <NavLink to="/profile" onClick={() => setIsProfileMenuOpen(false)} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
                             <ProfileIcon className="w-5 h-5" />
                             My Profile
-                        </ReactRouterDOM.NavLink>
+                        </NavLink>
                         <button onClick={logout} className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-black dark:text-white hover:bg-gray-2 dark:hover:bg-box-dark-2">
                             <LogoutIcon className="w-5 h-5" />
                             Log Out
