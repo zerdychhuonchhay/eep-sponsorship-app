@@ -29,6 +29,20 @@ export const SkeletonTable: React.FC<{ rows?: number; cols?: number }> = ({ rows
     </div>
 );
 
+export const SkeletonListItem: React.FC = () => (
+    <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-sm p-4 animate-pulse">
+        <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-box-dark-2"></div>
+            <div className="flex-grow space-y-2">
+                <div className="h-4 bg-gray-300 dark:bg-box-dark-2 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-300 dark:bg-box-dark-2 rounded w-1/2"></div>
+            </div>
+            <div className="w-12 h-6 bg-gray-300 dark:bg-box-dark-2 rounded-full"></div>
+        </div>
+    </div>
+);
+
+
 export const SkeletonCard: React.FC = () => (
     <div className="rounded-lg border border-stroke bg-white dark:bg-box-dark p-6 shadow-sm animate-pulse">
         <div className="h-8 bg-gray-300 dark:bg-box-dark-2 rounded w-3/4 mb-4"></div>

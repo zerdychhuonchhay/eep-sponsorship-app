@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
 import { Transaction, TransactionType, StudentLookup } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '../components/Icons.tsx';
+import { PlusIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon, IncomeIcon, ExpenseIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
-import { SkeletonTable } from '../components/SkeletonLoader.tsx';
+import { SkeletonTable, SkeletonListItem } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect } from '../components/forms/FormControls.tsx';
 import { useTableControls } from '../hooks/useTableControls.ts';
 import Pagination from '../components/Pagination.tsx';
@@ -24,6 +24,8 @@ import { transactionSchema, TransactionFormData } from '@/components/schemas/tra
 import PageActions from '@/components/layout/PageActions.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
 const TransactionForm: React.FC<{ 
     onSave: (transaction: TransactionFormData) => void; 
@@ -92,6 +94,7 @@ const TransactionsPage: React.FC = () => {
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const { showToast } = useNotification();
     const { canCreate, canUpdate, canDelete } = usePermissions('transactions');
+    const isMobile = useMediaQuery('(max-width: 767px)');
     
     const { 
         sortConfig, currentPage, filters, apiQueryString,
@@ -153,6 +156,102 @@ const TransactionsPage: React.FC = () => {
     const transactions = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
+    const mainContent = isLoading ? (
+        isMobile ? (
+             <div className="space-y-4">
+                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
+            </div>
+        ) : <SkeletonTable rows={10} cols={6} />
+    ) : (
+        <DataWrapper isStale={isStale}>
+            {transactions.length > 0 ? (
+                isMobile ? (
+                    <div className="space-y-3">
+                         {transactions.map(t => {
+                            const student = students.find(s => s.studentId === t.studentId);
+                            const subtitle = student ? `${new Date(t.date).toLocaleDateString()} - For: ${student.firstName}` : new Date(t.date).toLocaleDateString();
+                            return (
+                                <MobileListItem 
+                                    key={t.id}
+                                    icon={t.type === TransactionType.INCOME ? <IncomeIcon className="h-5 w-5 text-success" /> : <ExpenseIcon className="h-5 w-5 text-danger" />}
+                                    title={t.description}
+                                    subtitle={subtitle}
+                                    rightContent={
+                                        <span className={`font-medium ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
+                                            ${Number(t.amount).toFixed(2)}
+                                        </span>
+                                    }
+                                    onClick={canUpdate ? () => setEditingTransaction(t) : undefined}
+                                />
+                            );
+                         })}
+                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="ui-table">
+                                <thead>
+                                    <tr>
+                                        {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
+                                            <th key={key as string} className={`${key === 'amount' ? 'text-right' : ''}`}>
+                                                <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
+                                                    {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
+                                                </button>
+                                            </th>
+                                        ))}
+                                        <th className="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactions.map((t) => {
+                                        const student = students.find(s => s.studentId === t.studentId);
+                                        const actionItems = [];
+                                        if (canUpdate) {
+                                            actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
+                                        }
+                                        if (canDelete) {
+                                            actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
+                                        }
+
+                                        return (
+                                            <tr key={t.id}>
+                                                <td>{new Date(t.date).toLocaleDateString()}</td>
+                                                <td>
+                                                    <p className="font-medium text-black dark:text-white">{t.description}</p>
+                                                    {student && (
+                                                        <p className="text-sm text-body-color">
+                                                            For: {student.firstName} {student.lastName}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="text-body-color">{t.category}</td>
+                                                <td>
+                                                    <Badge type={t.type} />
+                                                </td>
+                                                <td className={`font-medium text-right ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
+                                                    ${Number(t.amount).toFixed(2)}
+                                                </td>
+                                                <td className="text-center">
+                                                    {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </>
+                 )
+             ) : (
+                <EmptyState title="No Transactions Found" />
+            )}
+        </DataWrapper>
+    );
+
     return (
         <div className="space-y-6">
             <PageHeader title="Transactions">
@@ -182,73 +281,7 @@ const TransactionsPage: React.FC = () => {
                         </div>
                         <ActiveFiltersDisplay activeFilters={filters} onRemoveFilter={(key) => handleFilterChange(key, '')} />
                     </div>
-                    {isLoading ? (
-                        <SkeletonTable rows={10} cols={6} />
-                    ) : (
-                        <DataWrapper isStale={isStale}>
-                            {transactions.length > 0 ? (
-                                <>
-                                    <div className="overflow-x-auto">
-                                        <table className="ui-table">
-                                            <thead>
-                                                <tr>
-                                                    {(['date', 'description', 'category', 'type', 'amount'] as (keyof Transaction | string)[]).map(key => (
-                                                        <th key={key as string} className={`${key === 'amount' ? 'text-right' : ''}`}>
-                                                            <button className={`flex items-center gap-1 w-full hover:text-primary dark:hover:text-primary transition-colors ${key === 'amount' ? 'justify-end' : ''}`} onClick={() => handleSort(key as keyof Transaction)}>
-                                                                {String(key).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                                {sortConfig?.key === key && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}
-                                                            </button>
-                                                        </th>
-                                                    ))}
-                                                    <th className="text-center">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {transactions.map((t) => {
-                                                    const student = students.find(s => s.studentId === t.studentId);
-                                                    const actionItems = [];
-                                                    if (canUpdate) {
-                                                        actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTransaction(t) });
-                                                    }
-                                                    if (canDelete) {
-                                                        actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDelete(t.id), className: 'text-danger' });
-                                                    }
-
-                                                    return (
-                                                        <tr key={t.id}>
-                                                            <td>{new Date(t.date).toLocaleDateString()}</td>
-                                                            <td>
-                                                                <p className="font-medium text-black dark:text-white">{t.description}</p>
-                                                                {student && (
-                                                                    <p className="text-sm text-body-color">
-                                                                        For: {student.firstName} {student.lastName}
-                                                                    </p>
-                                                                )}
-                                                            </td>
-                                                            <td className="text-body-color">{t.category}</td>
-                                                            <td>
-                                                                <Badge type={t.type} />
-                                                            </td>
-                                                            <td className={`font-medium text-right ${t.type === TransactionType.INCOME ? 'text-success' : 'text-danger'}`}>
-                                                                ${Number(t.amount).toFixed(2)}
-                                                            </td>
-                                                            <td className="text-center">
-                                                                {actionItems.length > 0 && <ActionDropdown items={actionItems} />}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                </>
-                             ) : (
-                                <EmptyState title="No Transactions Found" />
-                            )}
-                        </DataWrapper>
-                    )}
+                    {mainContent}
                 </CardContent>
             </Card>
 
