@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '@/services/api.ts';
-import { AppUser, UserStatus, User } from '@/types.ts';
+import { AppUser, UserStatus } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import { SkeletonCard, SkeletonTable, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
