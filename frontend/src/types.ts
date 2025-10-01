@@ -1,5 +1,5 @@
 
-import { StudentFormData } from './components/schemas/studentSchema.ts';
+
 export interface PaginatedResponse<T> {
     count: number;
     next: string | null;
@@ -218,6 +218,10 @@ export interface Student {
     followUpRecords?: FollowUpRecord[];
     documents?: StudentDocument[];
     sponsorships?: Sponsorship[];
+
+    // For import purposes
+    sponsorName?: string;
+    hasSponsorshipContract?: boolean;
 
     // Frontend-only fields for improved form logic
     primaryCaregiver?: PrimaryCaregiver;

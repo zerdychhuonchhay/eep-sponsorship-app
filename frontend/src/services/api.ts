@@ -1,4 +1,4 @@
-import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, DocumentType, StudentDocument, Sponsorship } from '../types.ts';
+import { Student, Transaction, GovernmentFiling, Task, AcademicReport, FollowUpRecord, PaginatedResponse, StudentLookup, AuditLog, Sponsor, SponsorLookup, User, AppUser, Role, Permissions, DocumentType, Sponsorship } from '../types.ts';
 import { convertKeysToCamel, convertKeysToSnake } from '../utils/caseConverter.ts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
@@ -179,8 +179,6 @@ const apiClient = async (endpoint: string, options: RequestInit = {}): Promise<a
         throw error;
     }
 };
-
-type StudentFormData = Omit<Student, 'profilePhoto' | 'academicReports' | 'followUpRecords' | 'outOfProgramDate' | 'documents' | 'sponsorships'> & { profilePhoto?: File; outOfProgramDate?: string | null };
 
 const prepareStudentData = (studentData: any) => {
     const data = { ...studentData };
@@ -421,7 +419,7 @@ export const api = {
         
         return apiClient('/students/', { method: 'POST', body: formData });
     },
-    updateStudent: async (studentData: StudentFormData) => {
+    updateStudent: async (studentData: Partial<Student> & { studentId: string }) => {
         const { studentId, ...rest } = studentData;
         const preparedData = prepareStudentData(rest);
         const snakeCaseData = convertKeysToSnake(preparedData);
