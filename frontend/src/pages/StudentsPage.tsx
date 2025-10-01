@@ -54,7 +54,6 @@ const StudentsPage: React.FC = () => {
     const { canCreate, canUpdate } = usePermissions('students');
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [aiSearchQuery, setAiSearchQuery] = useState('');
-    const isMobile = useMediaQuery('(max-width: 767px)');
     const { studentTableColumns, studentViewMode, setStudentViewMode } = useSettings();
     const { isAiEnabled } = useSettings();
 
