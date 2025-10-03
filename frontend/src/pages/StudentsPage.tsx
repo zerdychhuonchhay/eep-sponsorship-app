@@ -197,7 +197,7 @@ const StudentsPage: React.FC = () => {
         let payload = { ...studentData };
 
         if (!isOnline) {
-            if (payload.profilePhoto && payload.profilePhoto instanceof File) {
+            if (typeof payload.profilePhoto === 'object' && payload.profilePhoto && payload.profilePhoto instanceof File) {
                 showToast('Photo uploads are not available offline and will be ignored.', 'info');
                 delete payload.profilePhoto;
             }
@@ -237,7 +237,7 @@ const StudentsPage: React.FC = () => {
         let payload = { ...studentData };
 
         if (!isOnline) {
-            if (payload.profilePhoto && payload.profilePhoto instanceof File) {
+            if (typeof payload.profilePhoto === 'object' && payload.profilePhoto && payload.profilePhoto instanceof File) {
                 showToast('Photo uploads are not available offline and will be ignored.', 'info');
                 delete payload.profilePhoto;
             }
