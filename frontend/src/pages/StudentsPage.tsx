@@ -5,7 +5,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable, SkeletonCard, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, EditIcon, TrashIcon, CloudUploadIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -25,11 +25,14 @@ import StudentCard from '@/components/students/StudentCard.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
-import MobileListItem from '@/components/ui/MobileListItem.tsx';
-import Badge from '@/components/ui/Badge.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import MobileStudentCard from '@/components/students/MobileStudentCard.tsx';
+import { useOffline } from '@/contexts/OfflineContext.tsx';
+import * as db from '@/utils/db.ts';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
+// FIX: Correctly defined the FormLoader component to return a ReactNode.
 const FormLoader: React.FC = () => (
     <div className="flex justify-center items-center h-96">
         <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -42,19 +45,25 @@ const FormLoader: React.FC = () => (
 // --- Main Page Component ---
 const StudentsPage: React.FC = () => {
     const { sponsorLookup, refetchStudentLookup } = useData();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [savingSection, setSavingSection] = useState<string | null>(null);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [detailedStudent, setDetailedStudent] = useState<Student | null>(null);
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [isShowingImportModal, setIsShowingImportModal] = useState(false);
     const { showToast } = useNotification();
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const { setIsBulkActionBarVisible } = useUI();
-    const { canCreate, canUpdate } = usePermissions('students');
+    const { canCreate, canUpdate, canDelete } = usePermissions('students');
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [aiSearchQuery, setAiSearchQuery] = useState('');
     const { studentTableColumns, studentViewMode, setStudentViewMode } = useSettings();
     const { isAiEnabled } = useSettings();
+    const isMobile = useMediaQuery('(max-width: 767px)');
+    const { isOnline, queueChange } = useOffline();
+    const [studentsList, setStudentsList] = useState<Student[]>([]);
 
     const {
         sortConfig, currentPage, searchTerm, filters, apiQueryString,
@@ -70,9 +79,99 @@ const StudentsPage: React.FC = () => {
         fetcher: api.getStudents,
         apiQueryString,
         currentPage,
-        keepDataWhileRefetching: false, // Use standard pagination on mobile now
+        cacheKeyPrefix: 'students',
     });
     
+    useEffect(() => {
+        if(paginatedData?.results) {
+            setStudentsList(paginatedData.results);
+        }
+    }, [paginatedData]);
+
+    const refetchListData = useCallback(() => {
+        refetch();
+        refetchStudentLookup();
+    }, [refetch, refetchStudentLookup]);
+
+    useEffect(() => {
+        const handleSync = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const createdMap = customEvent.detail?.created;
+    
+            if (createdMap && Object.keys(createdMap).length > 0) {
+                setStudentsList(prevList => {
+                    let listChanged = false;
+                    const newList = prevList.map(student => {
+                        if (student.studentId in createdMap) {
+                            listChanged = true;
+                            return createdMap[student.studentId]; // Replace temp student with permanent one
+                        }
+                        return student;
+                    });
+    
+                    if (listChanged) {
+                        // Also update lookups if a student was created
+                        refetchStudentLookup();
+                        return newList;
+                    }
+                    return prevList;
+                });
+                showToast('Offline changes synced and updated.', 'success');
+            } else {
+                // Fallback for simple syncs like DELETE/UPDATE
+                showToast('Data synced from server.', 'info');
+                refetchListData();
+            }
+        };
+    
+        window.addEventListener('offline-sync-complete', handleSync);
+        return () => window.removeEventListener('offline-sync-complete', handleSync);
+    }, [refetchListData, showToast, refetchStudentLookup]);
+    
+    const fetchAndSetDetailedStudent = useCallback(async (studentId: string, initialData?: Student) => {
+        setIsDetailLoading(true);
+        if (initialData) {
+            setDetailedStudent(initialData); // Show partial data immediately
+        }
+    
+        const cacheKey = `student-detail-${studentId}`;
+    
+        try {
+            const cachedData = await db.get(cacheKey);
+            if (cachedData) {
+                setDetailedStudent(cachedData);
+            }
+        } catch (e) {
+            console.error("Cache read failed:", e);
+        } finally {
+           if (!isOnline) {
+              setIsDetailLoading(false);
+           }
+        }
+    
+        if (isOnline) {
+           try {
+               const freshData = await api.getStudentById(studentId);
+               setDetailedStudent(freshData);
+               await db.put(cacheKey, freshData);
+           } catch (error) {
+               showToast("Could not load latest student details from server.", 'error');
+           } finally {
+               setIsDetailLoading(false);
+           }
+        }
+    
+    }, [isOnline, showToast]);
+    
+    useEffect(() => {
+        if (selectedStudentId) {
+            const studentFromList = studentsList.find(s => s.studentId === selectedStudentId);
+            fetchAndSetDetailedStudent(selectedStudentId, studentFromList);
+        } else {
+            setDetailedStudent(null);
+        }
+    }, [selectedStudentId, fetchAndSetDetailedStudent, studentsList]);
+
     const filterOptions: FilterOption[] = [
         { id: 'student_status', label: 'Status', options: Object.values(StudentStatus).map(s => ({ value: s, label: s })) },
         { id: 'sponsorship_status', label: 'Sponsorship', options: Object.values(SponsorshipStatus).map(s => ({ value: s, label: s })) },
@@ -80,7 +179,6 @@ const StudentsPage: React.FC = () => {
         { id: 'sponsor', label: 'Sponsor', options: sponsorLookup.map(s => ({ value: String(s.id), label: s.name })) }
     ];
     
-    const studentsList = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
     
     useEffect(() => {
@@ -95,67 +193,121 @@ const StudentsPage: React.FC = () => {
         setSelectedStudentIds(prev => new Set([...prev].filter(id => currentPageIds.has(id))));
     }, [studentsList]);
 
-    const refetchListData = useCallback(() => {
-        refetch();
-        refetchStudentLookup();
-    }, [refetch, refetchStudentLookup]);
+    const handleSaveCreateStudent = async (studentData: any) => {
+        setIsCreating(true);
+        let payload = { ...studentData };
 
-    const handleEditSave = (updatedStudent: Student) => {
-        // Update the student being edited in the modal to ensure the form
-        // reflects the newly saved data without needing to close and reopen.
-        setEditingStudent(updatedStudent);
+        if (!isOnline) {
+            if (payload.profilePhoto instanceof File) {
+                showToast('Photo uploads are not available offline and will be ignored.', 'info');
+                delete payload.profilePhoto;
+            }
 
-        // If the student being viewed in the detail page is the one we just edited,
-        // update its state as well to instantly reflect changes.
-        if (selectedStudent && selectedStudent.studentId === updatedStudent.studentId) {
-            setSelectedStudent(updatedStudent);
+            const tempId = `temp-${Date.now()}`;
+            const newStudent: Student = { ...payload, studentId: tempId, sponsorships: [], documents: [] };
+            
+            // Optimistic UI update
+            setStudentsList(prev => [newStudent, ...prev]);
+
+            await queueChange({
+                type: 'CREATE_STUDENT',
+                payload: newStudent,
+                timestamp: Date.now(),
+            });
+            
+            showToast('Offline: Student created. Will sync when online.', 'info');
+            setEditingStudent(null);
+            setIsCreating(false);
+            return;
         }
 
-        // Refetch the list in the background to keep the main list view in sync.
-        refetchListData();
-    };
-
-
-    const handleSaveStudent = async (studentData: any) => {
-        setIsSubmitting(true);
         try {
-            // This handler is now only for CREATING students
-            await api.addStudent(studentData);
+            await api.addStudent(payload);
             showToast('Student added successfully!', 'success');
             setEditingStudent(null);
             refetchListData();
         } catch (error: any) {
             showToast(error.message || 'Failed to save student.', 'error');
         } finally {
-            setIsSubmitting(false);
+            setIsCreating(false);
         }
     };
-    
-    const handleDeleteStudent = async (studentId: string) => {
-        if(window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) {
-            try {
-                await api.deleteStudent(studentId);
-                showToast('Student deleted.', 'success');
-                setSelectedStudent(null);
-                refetchListData();
-            } catch (error: any) {
-                showToast(error.message || 'Failed to delete student.', 'error');
+
+    const handleSaveUpdateStudent = async (studentData: Partial<Student> & { studentId: string }, sectionKey: string) => {
+        setSavingSection(sectionKey);
+        let payload = { ...studentData };
+
+        if (!isOnline) {
+            if (payload.profilePhoto instanceof File) {
+                showToast('Photo uploads are not available offline and will be ignored.', 'info');
+                delete payload.profilePhoto;
             }
+            
+            const updatedStudent = { ...(studentsList.find(s => s.studentId === payload.studentId)), ...payload } as Student;
+            setStudentsList(prev => prev.map(s => s.studentId === payload.studentId ? updatedStudent : s));
+            if (detailedStudent?.studentId === payload.studentId) {
+                setDetailedStudent(prev => ({ ...prev!, ...payload } as Student));
+            }
+
+            await queueChange({
+                type: 'UPDATE_STUDENT',
+                payload: payload,
+                timestamp: Date.now(),
+            });
+
+            showToast(`Offline: Student updated. Will sync.`, 'info');
+            setSavingSection(null);
+            return;
+        }
+
+        try {
+            const updatedStudent = await api.updateStudent(payload);
+            showToast(`${sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1)} section updated!`, 'success');
+            
+            // This is the logic from the old onEditSave
+            setEditingStudent(null);
+            if (detailedStudent && detailedStudent.studentId === updatedStudent.studentId) {
+                setDetailedStudent(updatedStudent);
+            }
+            refetchListData(); // Simplified refetch logic
+
+        } catch (error: any) {
+            showToast(error.message || 'Failed to update section.', 'error');
+        } finally {
+            setSavingSection(null);
         }
     };
     
-    const refreshSelectedStudent = useCallback(async () => {
-        if (!selectedStudent) return;
-        try {
-            const updatedStudent = await api.getStudentById(selectedStudent.studentId);
-            setSelectedStudent(updatedStudent);
-            // Also refetch the main list data to ensure it's in sync when the user navigates back.
-            refetchListData();
-        } catch(e) {
-            showToast("Could not refresh student data.", 'error');
-            setSelectedStudent(null);
+    const handleDeleteStudent = async (studentId: string, fromDetailView: boolean = false) => {
+        if(!window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) return;
+        
+        // Optimistic UI update
+        setStudentsList(prev => prev.filter(s => s.studentId !== studentId));
+
+        if (fromDetailView) {
+            setSelectedStudentId(null);
+            setDetailedStudent(null);
         }
-    }, [selectedStudent, showToast, refetchListData]);
+
+        if (!isOnline) {
+            await queueChange({
+                type: 'DELETE_STUDENT',
+                payload: { studentId },
+                timestamp: Date.now(),
+            });
+            showToast('Offline: Student will be deleted upon reconnection.', 'info');
+            return;
+        }
+
+        try {
+            await api.deleteStudent(studentId);
+            showToast('Student deleted.', 'success');
+            refetchListData();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to delete student.', 'error');
+            setStudentsList(paginatedData?.results || []);
+        }
+    };
 
     const handleImportFinished = () => {
         setIsShowingImportModal(false);
@@ -223,115 +375,130 @@ const StudentsPage: React.FC = () => {
     
     return (
         <div className="space-y-6">
-            <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
-                {!selectedStudent && canCreate && (
+            <PageHeader title={detailedStudent ? `${detailedStudent.firstName} ${detailedStudent.lastName}` : "Students"}>
+                {!detailedStudent && canCreate && (
                     <PageActions>
-                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />} aria-label="Import">
-                            <span className="hidden sm:inline">Import</span>
-                        </Button>
-                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />} aria-label="Add Student">
-                           <span className="hidden sm:inline">Add Student</span>
-                        </Button>
+                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />} aria-label="Import Students" />
+                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />} aria-label="Add Student" />
                     </PageActions>
                 )}
             </PageHeader>
 
-            {selectedStudent ? (
+            {detailedStudent ? (
                 <StudentDetailView 
-                    student={selectedStudent} 
-                    onBack={() => setSelectedStudent(null)}
+                    student={detailedStudent} 
+                    isLoading={isDetailLoading}
+                    onBack={() => setSelectedStudentId(null)}
                     onEdit={(student) => setEditingStudent(student)}
-                    onDelete={handleDeleteStudent}
-                    onDataChange={refreshSelectedStudent}
+                    onDelete={(studentId) => handleDeleteStudent(studentId, true)}
+                    onDataChange={() => selectedStudentId && fetchAndSetDetailedStudent(selectedStudentId)}
                 />
             ) : (
                 <>
-                    <div className="md:hidden space-y-4">
-                        <div className="p-4 rounded-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark">
-                            <div className="flex flex-row items-center gap-2">
-                                <div className="relative flex-grow">
-                                    <input type="text" placeholder="Search by name, ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div>
-                                </div>
-                                <div className="flex-shrink-0"><AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} /></div>
-                            </div>
-                            <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
-                        </div>
-
-                        {isLoading ? (
-                             <div className="space-y-4">
-                                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
-                            </div>
-                        ) : isInitialLoadAndEmpty ? (
-                            <EmptyState title="No Students in System" message="Get started by adding your first student." />
-                        ) : (
-                            <DataWrapper isStale={isStale}>
-                                <div className="space-y-3">
-                                    {studentsList.map(student => (
-                                        <MobileListItem 
-                                            key={student.studentId}
-                                            icon={student.profilePhoto ? <img src={student.profilePhoto} alt="" className="w-10 h-10 rounded-full object-cover" /> : <UserIcon className="w-6 h-6 text-gray-500"/>}
-                                            title={`${student.firstName} ${student.lastName}`}
-                                            subtitle={student.studentId}
-                                            rightContent={
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <Badge type={student.studentStatus} />
-                                                    <Badge type={student.sponsorshipStatus} />
-                                                </div>
-                                            }
-                                            onClick={() => setSelectedStudent(student)}
-                                        />
-                                    ))}
-                                </div>
-                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                            </DataWrapper>
-                        )}
-                    </div>
-
-                    <Card className="hidden md:block">
-                        <CardContent>
-                             <div className="p-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark mb-4">
-                                {isAiEnabled && (
-                                    <form onSubmit={handleAiSearch} className="flex items-center gap-2 mb-4">
-                                        <div className="relative flex-grow"><input type="text" placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')" value={aiSearchQuery} onChange={e => setAiSearchQuery(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SparklesIcon className="text-body-color w-5 h-5"/></div></div>
-                                        <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">Ask AI</Button>
-                                    </form>
-                                )}
-                                <div className="flex flex-row justify-between items-center gap-4">
-                                    <div className="relative flex-grow"><input type="text" placeholder="Search by name, ID, school..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div></div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        <AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} />
-                                        {canUpdate && (!isSelectionMode ? (<Button onClick={() => setIsSelectionMode(true)} variant="ghost" size="sm">Select</Button>) : (<Button onClick={() => { setIsSelectionMode(false); setSelectedStudentIds(new Set()); }} variant="ghost" size="sm">Cancel</Button>))}
-                                        <ViewToggle view={studentViewMode} onChange={setStudentViewMode} />
+                    {isMobile ? (
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark">
+                                <div className="flex flex-row items-center gap-2">
+                                    <div className="relative flex-grow">
+                                        <input type="text" placeholder="Search by name, ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div>
                                     </div>
+                                    <div className="flex-shrink-0"><AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} /></div>
                                 </div>
                                 <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
                             </div>
                             
-                            {isLoading ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
-                                <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
+                            {isLoading && studentsList.length === 0 ? (
+                                <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}</div>
                             ) : (
                                 <DataWrapper isStale={isStale}>
-                                    {studentsList.length > 0 ? (
-                                        studentViewMode === 'card' ? (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                                {studentsList.map((student) => (<StudentCard key={student.studentId} student={student} isSelected={selectedStudentIds.has(student.studentId)} onSelect={handleSelectStudent} onViewProfile={setSelectedStudent} canUpdate={canUpdate} isSelectionMode={isSelectionMode} />))}
-                                            </div>
-                                        ) : (
-                                            <div className="overflow-x-auto">
-                                                <table className="ui-table">
-                                                    <thead><tr>{canUpdate && isSelectionMode && <th className="w-12"></th>}{studentTableColumns.map(col => (<th key={col.id as string}><button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(col.id as keyof Student)}>{col.label}{sortConfig?.key === col.id && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}</button></th>))}</tr></thead>
-                                                    <tbody>{studentsList.map(s => (<tr key={s.studentId} className="cursor-pointer" onClick={() => isSelectionMode ? handleSelectStudent(s.studentId, !selectedStudentIds.has(s.studentId)) : setSelectedStudent(s)}>{canUpdate && isSelectionMode && (<td onClick={e => e.stopPropagation()}><input type="checkbox" className="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary" checked={selectedStudentIds.has(s.studentId)} onChange={e => handleSelectStudent(s.studentId, e.target.checked)} /></td>)}{studentTableColumns.map(col => (<td key={col.id as string}>{col.renderCell(s)}</td>))}</tr>))}</tbody>
-                                                </table>
-                                            </div>
-                                        )
-                                    ) : (<EmptyState />)}
-                                    {studentsList.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                    {isInitialLoadAndEmpty ? (
+                                        <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
+                                    ) : studentsList.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {studentsList.map((student) => {
+                                                const actionItems = [];
+                                                if (canUpdate) {
+                                                    actionItems.push({
+                                                        label: 'Edit',
+                                                        icon: <EditIcon className="w-4 h-4" />,
+                                                        onClick: () => setEditingStudent(student)
+                                                    });
+                                                }
+                                                if (canDelete) {
+                                                    actionItems.push({
+                                                        label: 'Delete',
+                                                        icon: <TrashIcon className="w-4 h-4" />,
+                                                        onClick: () => handleDeleteStudent(student.studentId),
+                                                        className: 'text-danger'
+                                                    });
+                                                }
+                                                
+                                                const activeSponsorship = student.sponsorships?.find(s => !s.endDate);
+
+                                                return (
+                                                    <MobileStudentCard 
+                                                        key={student.studentId}
+                                                        student={student}
+                                                        actionItems={actionItems}
+                                                        onViewProfile={(s) => setSelectedStudentId(s.studentId)}
+                                                        sponsorName={activeSponsorship?.sponsorName}
+                                                    />
+                                                );
+                                            })}
+                                            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                        </div>
+                                    ) : (
+                                        <EmptyState />
+                                    )}
                                 </DataWrapper>
                             )}
-                        </CardContent>
-                    </Card>
-
+                        </div>
+                    ) : (
+                        <Card>
+                            <CardContent>
+                                <div className="p-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark mb-4">
+                                    {isAiEnabled && (
+                                        <form onSubmit={handleAiSearch} className="flex items-center gap-2 mb-4">
+                                            <div className="relative flex-grow"><input type="text" placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')" value={aiSearchQuery} onChange={e => setAiSearchQuery(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SparklesIcon className="text-body-color w-5 h-5"/></div></div>
+                                            <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">Ask AI</Button>
+                                        </form>
+                                    )}
+                                    <div className="flex flex-row justify-between items-center gap-4">
+                                        <div className="relative flex-grow"><input type="text" placeholder="Search by name, ID, school..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div></div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} />
+                                            {canUpdate && (!isSelectionMode ? (<Button onClick={() => setIsSelectionMode(true)} variant="ghost" size="sm">Select</Button>) : (<Button onClick={() => { setIsSelectionMode(false); setSelectedStudentIds(new Set()); }} variant="ghost" size="sm">Cancel</Button>))}
+                                            <ViewToggle view={studentViewMode} onChange={setStudentViewMode} />
+                                        </div>
+                                    </div>
+                                    <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
+                                </div>
+                                
+                                {isLoading && studentsList.length === 0 ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
+                                    <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
+                                ) : (
+                                    <DataWrapper isStale={isStale}>
+                                        {studentsList.length > 0 ? (
+                                            studentViewMode === 'card' ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                    {studentsList.map((student) => (<StudentCard key={student.studentId} student={student} isSelected={selectedStudentIds.has(student.studentId)} onSelect={handleSelectStudent} onViewProfile={(s) => setSelectedStudentId(s.studentId)} canUpdate={canUpdate} isSelectionMode={isSelectionMode} />))}
+                                                </div>
+                                            ) : (
+                                                <div className="overflow-x-auto">
+                                                    <table className="ui-table">
+                                                        <thead><tr>{canUpdate && isSelectionMode && <th className="w-12"></th>}{studentTableColumns.map(col => (<th key={col.id as string}><button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(col.id as keyof Student)}>{col.label}{sortConfig?.key === col.id && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}</button></th>))}</tr></thead>
+                                                        <tbody>{studentsList.map(s => (<tr key={s.studentId} className="cursor-pointer" onClick={() => isSelectionMode ? handleSelectStudent(s.studentId, !selectedStudentIds.has(s.studentId)) : setSelectedStudentId(s.studentId)}>{canUpdate && isSelectionMode && (<td onClick={e => e.stopPropagation()}><input type="checkbox" className="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary" checked={selectedStudentIds.has(s.studentId)} onChange={e => handleSelectStudent(s.studentId, e.target.checked)} /></td>)}{studentTableColumns.map(col => (<td key={col.id as string}>{col.renderCell(s)}</td>))}</tr>))}</tbody>
+                                                    </table>
+                                                </div>
+                                            )
+                                        ) : (<EmptyState />)}
+                                        {studentsList.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                    </DataWrapper>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                     {selectedStudentIds.size > 0 && (<BulkActionBar selectedCount={selectedStudentIds.size} onUpdateStatus={handleBulkUpdateStatus} onClearSelection={() => { setSelectedStudentIds(new Set()); setIsSelectionMode(false); }} />)}
                 </>
             )}
@@ -341,10 +508,11 @@ const StudentsPage: React.FC = () => {
                     <StudentForm 
                         key={editingStudent?.studentId || 'new'} 
                         student={editingStudent!} 
-                        onSave={handleSaveStudent} 
-                        onCancel={() => setEditingStudent(null)} 
-                        isSaving={isSubmitting}
-                        onEditSave={handleEditSave}
+                        onCancel={() => setEditingStudent(null)}
+                        onSaveCreate={handleSaveCreateStudent}
+                        onSaveUpdate={handleSaveUpdateStudent}
+                        isCreating={isCreating}
+                        savingSection={savingSection}
                     />
                 </Suspense>
             </Modal>

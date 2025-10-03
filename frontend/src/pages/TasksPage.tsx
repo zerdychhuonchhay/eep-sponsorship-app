@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
 import { Task, TaskStatus, TaskPriority } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, TasksIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, TasksIcon, CloudUploadIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable, SkeletonListItem } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls.tsx';
@@ -25,6 +25,8 @@ import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import MobileListItem from '@/components/ui/MobileListItem.tsx';
+import Drawer from '@/components/ui/Drawer.tsx';
+import { useOffline } from '@/contexts/OfflineContext.tsx';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
@@ -85,6 +87,8 @@ const TasksPage: React.FC = () => {
     const { showToast } = useNotification();
     const { canCreate, canUpdate, canDelete } = usePermissions('tasks');
     const isMobile = useMediaQuery('(max-width: 767px)');
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const { isOnline, queueChange } = useOffline();
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
@@ -100,25 +104,83 @@ const TasksPage: React.FC = () => {
         fetcher: api.getTasks,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'tasks',
     });
     
+    useEffect(() => {
+        if (paginatedData?.results) {
+            setTasks(paginatedData.results);
+        }
+    }, [paginatedData]);
+
+    useEffect(() => {
+        const handleSync = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const createdMap = customEvent.detail?.created;
+    
+            if (createdMap && Object.keys(createdMap).length > 0) {
+                setTasks(prevList => {
+                    let listChanged = false;
+                    const newList = prevList.map(task => {
+                        if (task.id in createdMap) {
+                            listChanged = true;
+                            return createdMap[task.id];
+                        }
+                        return task;
+                    });
+                    return listChanged ? newList : prevList;
+                });
+                showToast('Offline task changes synced.', 'success');
+            } else {
+                showToast('Tasks synced from server.', 'info');
+                refetch();
+            }
+        };
+        window.addEventListener('offline-sync-complete', handleSync);
+        return () => window.removeEventListener('offline-sync-complete', handleSync);
+    }, [refetch, showToast]);
+
     const filterOptions: FilterOption[] = [
         { id: 'status', label: 'Status', options: Object.values(TaskStatus).map(s => ({ value: s, label: s }))},
         { id: 'priority', label: 'Priority', options: Object.values(TaskPriority).map(p => ({ value: p, label: p }))},
     ];
     
+    const closeForm = () => {
+        setIsAdding(false);
+        setEditingTask(null);
+    };
+
     const handleSaveTask = async (taskData: TaskFormData) => {
         setIsApiSubmitting(true);
+        const isEdit = !!editingTask;
+
+        if (!isOnline) {
+            if (isEdit && editingTask) {
+                const updatedTask = { ...editingTask, ...taskData };
+                setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+                await queueChange({ type: 'UPDATE_TASK', payload: updatedTask, timestamp: Date.now() });
+                showToast('Offline: Task updated. Will sync when online.', 'info');
+            } else {
+                const tempId = `temp-${Date.now()}`;
+                const newTask: Task = { ...taskData, id: tempId };
+                setTasks(prev => [newTask, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+                await queueChange({ type: 'CREATE_TASK', payload: newTask, timestamp: Date.now() });
+                showToast('Offline: Task created. Will sync when online.', 'info');
+            }
+            closeForm();
+            setIsApiSubmitting(false);
+            return;
+        }
+    
         try {
-            if (editingTask) {
+            if (isEdit && editingTask) {
                 await api.updateTask({ ...taskData, id: editingTask.id });
                 showToast('Task updated successfully!', 'success');
             } else {
                 await api.addTask(taskData);
                 showToast('Task added successfully!', 'success');
             }
-            setEditingTask(null);
-            setIsAdding(false);
+            closeForm();
             refetch();
         } catch (error: any) {
             showToast(error.message || 'Failed to save task.', 'error');
@@ -128,24 +190,49 @@ const TasksPage: React.FC = () => {
     };
     
     const handleDeleteTask = async (taskId: string) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            try {
-                await api.deleteTask(taskId);
-                showToast('Task deleted.', 'success');
-                refetch();
-            } catch (error: any) {
-                showToast(error.message || 'Failed to delete task.', 'error');
-            }
+        if (!window.confirm('Are you sure you want to delete this task?')) return;
+
+        const taskToDelete = tasks.find(t => t.id === taskId);
+        if (!taskToDelete) return;
+
+        // Optimistic UI update
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+
+        if (!isOnline) {
+            await queueChange({ type: 'DELETE_TASK', payload: { id: taskId }, timestamp: Date.now() });
+            showToast('Offline: Task will be deleted upon reconnection.', 'info');
+            return;
+        }
+
+        try {
+            await api.deleteTask(taskId);
+            showToast('Task deleted.', 'success');
+            refetch();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to delete task.', 'error');
+            setTasks(prev => [...prev, taskToDelete].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())); // Revert
         }
     };
     
-    const handleQuickStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    const handleQuickStatusChange = async (taskToUpdate: Task, newStatus: TaskStatus) => {
+        const originalTasks = tasks;
+        const updatedTask = { ...taskToUpdate, status: newStatus };
+        setTasks(tasks.map(task => 
+            task.id === taskToUpdate.id ? updatedTask : task
+        ));
+
+        if (!isOnline) {
+            await queueChange({ type: 'UPDATE_TASK', payload: updatedTask, timestamp: Date.now() });
+            showToast(`Offline: Task status updated. Will sync.`, 'info');
+            return;
+        }
+
         try {
-            await api.updateTask({ ...task, status: newStatus });
-            showToast(`Task "${task.title}" status updated to ${newStatus}.`, 'success');
-            refetch();
+            await api.updateTask(updatedTask);
+            showToast(`Task status updated to ${newStatus}.`, 'success');
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
+            setTasks(originalTasks);
         }
     };
     
@@ -155,10 +242,9 @@ const TasksPage: React.FC = () => {
         [TaskStatus.DONE]: 'bg-success/20 text-success',
     };
     
-    const tasks = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    const mainContent = isLoading ? (
+    const mainContent = isLoading && tasks.length === 0 ? (
         isMobile ? (
             <div className="space-y-4">
                 {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
@@ -169,16 +255,24 @@ const TasksPage: React.FC = () => {
             {tasks.length > 0 ? (
                 isMobile ? (
                     <div className="space-y-3">
-                        {tasks.map((task) => (
-                            <MobileListItem
-                                key={task.id}
-                                icon={<TasksIcon className="w-5 h-5 text-primary" />}
-                                title={task.title}
-                                subtitle={`Due: ${new Date(task.dueDate).toLocaleDateString()}`}
-                                rightContent={<Badge type={task.priority} />}
-                                onClick={canUpdate ? () => setEditingTask(task) : undefined}
-                            />
-                        ))}
+                        {tasks.map((task) => {
+                            const isPending = task.id.startsWith('temp-');
+                            return (
+                                <MobileListItem
+                                    key={task.id}
+                                    icon={<TasksIcon className="w-5 h-5 text-primary" />}
+                                    title={
+                                        <div className="flex items-center gap-2">
+                                            {task.title}
+                                            {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                        </div>
+                                    }
+                                    subtitle={`Due: ${new Date(task.dueDate).toLocaleDateString()}`}
+                                    rightContent={<Badge type={task.priority} />}
+                                    onClick={canUpdate && !isPending ? () => setEditingTask(task) : undefined}
+                                />
+                            );
+                        })}
                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                     </div>
                 ) : (
@@ -200,8 +294,9 @@ const TasksPage: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {tasks.map((task) => {
+                                        const isPending = task.id.startsWith('temp-');
                                         const actionItems = [];
-                                        if (canUpdate) {
+                                        if (canUpdate && !isPending) {
                                             actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
                                         }
                                         if (canDelete) {
@@ -211,7 +306,10 @@ const TasksPage: React.FC = () => {
                                         return (
                                             <tr key={task.id}>
                                                 <td>
-                                                    <p className="font-medium">{task.title}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-medium">{task.title}</p>
+                                                        {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                                    </div>
                                                     {task.description && <p className="text-sm text-body-color mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
                                                 </td>
                                                 <td className="text-body-color">{new Date(task.dueDate).toLocaleDateString()}</td>
@@ -222,7 +320,7 @@ const TasksPage: React.FC = () => {
                                                         onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
                                                         className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        disabled={!canUpdate}
+                                                        disabled={!canUpdate || isPending}
                                                     >
                                                         {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                                                     </select>
@@ -243,6 +341,18 @@ const TasksPage: React.FC = () => {
                 <EmptyState title="No Tasks Found" />
             )}
         </DataWrapper>
+    );
+    
+    const formIsOpen = isAdding || !!editingTask;
+
+    const formContent = (
+        <TaskForm 
+            key={editingTask ? editingTask.id : 'new-task'}
+            onSave={handleSaveTask}
+            onCancel={closeForm}
+            initialData={editingTask}
+            isApiSubmitting={isApiSubmitting}
+        />
     );
 
     return (
@@ -278,15 +388,15 @@ const TasksPage: React.FC = () => {
                 </CardContent>
             </Card>
 
-            <Modal isOpen={isAdding || !!editingTask} onClose={() => { setIsAdding(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add New Task'}>
-                <TaskForm 
-                    key={editingTask ? editingTask.id : 'new-task'}
-                    onSave={handleSaveTask}
-                    onCancel={() => { setIsAdding(false); setEditingTask(null); }}
-                    initialData={editingTask}
-                    isApiSubmitting={isApiSubmitting}
-                />
-            </Modal>
+            {isMobile ? (
+                <Drawer isOpen={formIsOpen} onClose={closeForm} title={editingTask ? 'Edit Task' : 'Add New Task'}>
+                    {formContent}
+                </Drawer>
+            ) : (
+                <Modal isOpen={formIsOpen} onClose={closeForm} title={editingTask ? 'Edit Task' : 'Add New Task'}>
+                    {formContent}
+                </Modal>
+            )}
         </div>
     );
 };

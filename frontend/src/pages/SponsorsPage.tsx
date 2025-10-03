@@ -1,9 +1,9 @@
-    import React, { useState } from 'react';
+    import React, { useState, useEffect } from 'react';
     import { useNavigate } from 'react-router-dom';
     import { api } from '@/services/api.ts';
     import { Sponsor } from '@/types.ts';
     import Modal from '@/components/Modal.tsx';
-    import { PlusIcon, ArrowUpIcon, ArrowDownIcon, SponsorIcon } from '@/components/Icons.tsx';
+    import { PlusIcon, ArrowUpIcon, ArrowDownIcon, SponsorIcon, CloudUploadIcon } from '@/components/Icons.tsx';
     import { useNotification } from '@/contexts/NotificationContext.tsx';
     import { SkeletonCard, SkeletonTable, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
     import { useTableControls } from '@/hooks/useTableControls.ts';
@@ -24,6 +24,8 @@
     import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
     import DataWrapper from '@/components/DataWrapper.tsx';
     import MobileListItem from '@/components/ui/MobileListItem.tsx';
+    import { useOffline } from '@/contexts/OfflineContext.tsx';
+
 
     const SponsorsPage: React.FC = () => {
         const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +36,8 @@
         const isMobile = useMediaQuery('(max-width: 767px)');
         const { sponsorViewMode, setSponsorViewMode } = useSettings();
         const navigate = useNavigate();
+        const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+        const { isOnline, queueChange } = useOffline();
 
         const { 
             currentPage, apiQueryString, setCurrentPage, handleSort, sortConfig
@@ -47,13 +51,63 @@
             fetcher: api.getSponsors,
             apiQueryString,
             currentPage,
-            keepDataWhileRefetching: false,
+            cacheKeyPrefix: 'sponsors',
         });
 
-        const handleSave = async (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
+        useEffect(() => {
+            if (paginatedData?.results) {
+                setSponsors(paginatedData.results);
+            }
+        }, [paginatedData]);
+    
+        useEffect(() => {
+            const handleSync = (event: Event) => {
+                const customEvent = event as CustomEvent;
+                const createdMap = customEvent.detail?.created;
+        
+                if (createdMap && Object.keys(createdMap).length > 0) {
+                    setSponsors(prevList => {
+                        let listChanged = false;
+                        const newList = prevList.map(sponsor => {
+                            if (sponsor.id in createdMap) {
+                                listChanged = true;
+                                return createdMap[sponsor.id];
+                            }
+                            return sponsor;
+                        });
+                        if (listChanged) {
+                            refetchSponsorLookup();
+                            return newList;
+                        }
+                        return prevList;
+                    });
+                    showToast('Offline sponsor changes synced.', 'success');
+                } else {
+                    showToast('Sponsors synced from server.', 'info');
+                    refetch();
+                }
+            };
+            window.addEventListener('offline-sync-complete', handleSync);
+            return () => window.removeEventListener('offline-sync-complete', handleSync);
+        }, [refetch, refetchSponsorLookup, showToast]);
+
+        const handleSave = async (sponsorData: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
             setIsSubmitting(true);
+            if (!isOnline) {
+                const tempId = `temp-${Date.now()}`;
+                const newSponsor: Sponsor = { ...sponsorData, id: tempId, sponsoredStudentCount: 0 };
+                
+                setSponsors(prev => [newSponsor, ...prev].sort((a,b) => a.name.localeCompare(b.name)));
+                
+                await queueChange({ type: 'CREATE_SPONSOR', payload: newSponsor, timestamp: Date.now() });
+                showToast('Offline: Sponsor will be created upon reconnection.', 'info');
+                setIsAdding(false);
+                setIsSubmitting(false);
+                return;
+            }
+    
             try {
-                await api.addSponsor(sponsor);
+                await api.addSponsor(sponsorData);
                 showToast('Sponsor added successfully!', 'success');
                 setIsAdding(false);
                 refetch();
@@ -65,7 +119,6 @@
             }
         };
         
-        const sponsors = paginatedData?.results || [];
         const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
         const renderDesktopSkeletons = () => {
@@ -90,40 +143,40 @@
                                 onClick={() => setIsAdding(true)} 
                                 icon={<PlusIcon className="w-5 h-5" />}
                                 aria-label="Add Sponsor"
-                            >
-                                <span className="hidden sm:inline">Add Sponsor</span>
-                            </Button>
+                            />
                         </PageActions>
                     )}
                 </PageHeader>
             
                 {isMobile ? (
-                    <div className="space-y-4">
-                        {isLoading ? (
-                            Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)
+                    <div className="space-y-3">
+                        {isLoading && sponsors.length === 0 ? (
+                             <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}</div>
                         ) : (
-                            <DataWrapper isStale={isStale}>
+                             <DataWrapper isStale={isStale}>
                                 {isInitialLoadAndEmpty ? (
                                     <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
                                 ) : (
-                                    <div className="space-y-3">
-                                        {sponsors.map((sponsor) => (
-                                            <MobileListItem
-                                                key={sponsor.id}
-                                                icon={<SponsorIcon className="w-6 h-6 text-primary" />}
-                                                title={sponsor.name}
-                                                subtitle={sponsor.email}
-                                                rightContent={
-                                                    <div className="text-center">
-                                                        <p className="font-semibold text-black dark:text-white">{sponsor.sponsoredStudentCount}</p>
-                                                        <p className="text-xs text-body-color">students</p>
-                                                    </div>
-                                                }
-                                                onClick={() => navigate(`/sponsors/${sponsor.id}`)}
-                                            />
-                                        ))}
+                                    <>
+                                        {sponsors.map(sponsor => {
+                                            const isPending = sponsor.id.startsWith('temp-');
+                                            return (
+                                                <MobileListItem
+                                                    key={sponsor.id}
+                                                    icon={<SponsorIcon className="w-5 h-5 text-primary" />}
+                                                    title={
+                                                        <div className="flex items-center gap-2">
+                                                            {sponsor.name}
+                                                            {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                                        </div>
+                                                    }
+                                                    subtitle={`Sponsored Students: ${sponsor.sponsoredStudentCount}`}
+                                                    onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}
+                                                />
+                                            );
+                                        })}
                                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                    </div>
+                                    </>
                                 )}
                             </DataWrapper>
                         )}
@@ -134,7 +187,7 @@
                             <div className="flex justify-end p-4">
                                 <ViewToggle view={sponsorViewMode} onChange={setSponsorViewMode} />
                             </div>
-                            {isLoading ? renderDesktopSkeletons() : (
+                            {isLoading && sponsors.length === 0 ? renderDesktopSkeletons() : (
                                 <DataWrapper isStale={isStale}>
                                     {isInitialLoadAndEmpty ? (
                                         <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
@@ -160,14 +213,22 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {sponsors.map(sponsor => (
-                                                        <tr key={sponsor.id} className="cursor-pointer" onClick={() => navigate(`/sponsors/${sponsor.id}`)}>
-                                                            <td className="font-medium">{sponsor.name}</td>
-                                                            <td className="text-body-color">{sponsor.email}</td>
-                                                            <td className="text-body-color">{formatDateForDisplay(sponsor.sponsorshipStartDate)}</td>
-                                                            <td className="text-body-color">{sponsor.sponsoredStudentCount}</td>
-                                                        </tr>
-                                                    ))}
+                                                    {sponsors.map(sponsor => {
+                                                        const isPending = sponsor.id.startsWith('temp-');
+                                                        return (
+                                                            <tr key={sponsor.id} className={!isPending ? "cursor-pointer" : ""} onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}>
+                                                                <td className="font-medium">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {sponsor.name}
+                                                                        {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="text-body-color">{sponsor.email}</td>
+                                                                <td className="text-body-color">{formatDateForDisplay(sponsor.sponsorshipStartDate)}</td>
+                                                                <td className="text-body-color">{sponsor.sponsoredStudentCount}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>

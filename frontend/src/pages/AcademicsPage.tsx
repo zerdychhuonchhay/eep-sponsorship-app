@@ -47,6 +47,7 @@ const AcademicsPage: React.FC = () => {
         fetcher: api.getAllAcademicReports,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'academics',
     });
     
     useEffect(() => {

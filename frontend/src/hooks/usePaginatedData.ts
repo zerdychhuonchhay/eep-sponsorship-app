@@ -1,77 +1,87 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PaginatedResponse } from '@/types.ts';
+import { useOnlineStatus } from './useOnlineStatus.ts';
+import * as db from '@/utils/db.ts';
 
 interface UsePaginatedDataOptions<T> {
     fetcher: (query: string) => Promise<PaginatedResponse<T>>;
     apiQueryString: string;
     currentPage: number;
-    keepDataWhileRefetching?: boolean; // For mobile swipe views
+    cacheKeyPrefix?: string; // Optional key to enable caching for a specific data type
 }
 
-export const usePaginatedData = <T extends { id?: any; studentId?: any; }>({
+export const usePaginatedData = <T>({
     fetcher,
     apiQueryString,
     currentPage,
-    keepDataWhileRefetching = false,
+    cacheKeyPrefix,
 }: UsePaginatedDataOptions<T>) => {
     const [data, setData] = useState<PaginatedResponse<T> | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true); // True only on initial mount
+    const [isLoading, setIsLoading] = useState(true);
     const [isStale, setIsStale] = useState(false);
-    const [version, setVersion] = useState(0); // For manual refetching
+    const [version, setVersion] = useState(0);
+    const isOnline = useOnlineStatus();
 
     const staleTimeoutRef = useRef<number | null>(null);
-    
+    const cacheKey = cacheKeyPrefix ? `${cacheKeyPrefix}-${apiQueryString}` : null;
+
     const refetch = useCallback(() => {
         setVersion(v => v + 1);
     }, []);
-
-    // This effect handles resetting the aggregated data for mobile swipe views
-    // when filters or sorting change (indicated by currentPage being reset to 1)
-    useEffect(() => {
-        if (currentPage === 1 && keepDataWhileRefetching) {
-            setData(null);
-        }
-    }, [apiQueryString, keepDataWhileRefetching]);
-
 
     useEffect(() => {
         let isCancelled = false;
         
         const fetchData = async () => {
-            // Set loading state immediately for the very first fetch on a view
             if (!data) {
                 setIsLoading(true);
-            } else {
-                // For subsequent fetches, delay setting the 'stale' state to avoid flickering
-                staleTimeoutRef.current = window.setTimeout(() => {
-                    if (!isCancelled) setIsStale(true);
-                }, 300);
             }
+
+            // 1. Try to load from cache first for instant UI response
+            if (cacheKey) {
+                try {
+                    const cachedData = await db.get(cacheKey);
+                    if (cachedData && !isCancelled) {
+                        setData(cachedData);
+                        // If we have cached data, we are no longer in the initial "loading" state
+                        if (isLoading) setIsLoading(false);
+                    }
+                } catch (e) {
+                    console.error("Failed to read from cache", e);
+                }
+            }
+            
+            // 2. If offline, stop here. The UI will show cached data if available.
+            if (!isOnline) {
+                if (isLoading) setIsLoading(false); // Ensure loading stops if offline on first load
+                return;
+            }
+
+            // 3. If online, proceed to fetch from network
+            staleTimeoutRef.current = window.setTimeout(() => {
+                if (!isCancelled) setIsStale(true);
+            }, 300);
 
             try {
                 const result = await fetcher(apiQueryString);
                 if (isCancelled) return;
 
-                if (keepDataWhileRefetching && currentPage > 1 && data) {
-                    // Append new results for infinite scroll, avoiding duplicates
-                    setData(prev => {
-                        if (!prev) return result;
-                        const existingIds = new Set(prev.results.map(item => item.id || item.studentId));
-                        const newItems = result.results.filter(item => !existingIds.has(item.id || item.studentId));
-                        return {
-                            ...result,
-                            results: [...prev.results, ...newItems],
-                        };
-                    });
-                } else {
-                    // Replace data for normal pagination or first page load
-                    setData(result);
-                }
+                setData(result);
                 setError(null);
+
+                // 4. If caching is enabled, update the cache with fresh data
+                if (cacheKey) {
+                    await db.put(cacheKey, result);
+                }
             } catch (err: any) {
                 if (isCancelled) return;
-                setError(err.message || 'Failed to fetch data.');
+                // If fetch fails but we have cached data, show an error but don't clear the view
+                if (!data) {
+                    setError(err.message || 'Failed to fetch data.');
+                } else {
+                    console.error("Network fetch failed, serving stale data.", err);
+                }
             } finally {
                 if (isCancelled) return;
                 setIsLoading(false);
@@ -84,14 +94,13 @@ export const usePaginatedData = <T extends { id?: any; studentId?: any; }>({
 
         fetchData();
 
-        // Cleanup function
         return () => {
             isCancelled = true;
             if (staleTimeoutRef.current) {
                 clearTimeout(staleTimeoutRef.current);
             }
         };
-    }, [apiQueryString, fetcher, keepDataWhileRefetching, version, currentPage]);
+    }, [apiQueryString, fetcher, version, isOnline, cacheKey, data, isLoading]);
 
     return { data, error, isLoading, isStale, refetch };
 };

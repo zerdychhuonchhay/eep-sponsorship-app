@@ -3,6 +3,28 @@ import { MenuIcon, BellIcon } from '@/components/Icons.tsx';
 import NotificationCenter from '@/components/NotificationCenter.tsx';
 import { useUI } from '@/contexts/UIContext.tsx';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
+import { useOffline } from '@/contexts/OfflineContext.tsx';
+
+const OfflineIndicator: React.FC = () => {
+    const { isOnline, isSyncing, pendingChangesCount } = useOffline();
+
+    if (isOnline) {
+        if (isSyncing) {
+            return <div className="text-xs font-semibold text-primary">Syncing...</div>;
+        }
+        if (pendingChangesCount > 0) {
+            return <div className="text-xs font-semibold text-secondary">{pendingChangesCount} changes pending</div>;
+        }
+        return null;
+    }
+
+    return (
+        <div className="text-xs font-semibold text-warning px-2 py-1 bg-warning/10 rounded">
+            Offline
+        </div>
+    );
+};
+
 
 const Header: React.FC = () => {
     const { isSidebarOpen, toggleSidebar } = useUI();
@@ -40,6 +62,7 @@ const Header: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-3 2xsm:gap-7">
+                     <OfflineIndicator />
                      <ul className="flex items-center gap-2 2xsm:gap-4">
                         <li className="relative" ref={notificationRef}>
                             <button 

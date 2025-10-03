@@ -7,8 +7,6 @@ import { useForm, SubmitHandler, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { studentSchema, StudentFormData } from '@/components/schemas/studentSchema.ts';
 import { UserIcon, ArrowUpIcon, ArrowDownIcon } from '@/components/Icons.tsx';
-import { useNotification } from '@/contexts/NotificationContext.tsx';
-import { api } from '@/services/api.ts';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import Stepper from '@/components/ui/Stepper.tsx';
 
@@ -19,10 +17,11 @@ const formatDateForInput = (dateStr?: string | null) => {
 
 interface StudentFormProps {
     student: Student;
-    onSave: (student: any) => void;
     onCancel: () => void;
-    isSaving: boolean;
-    onEditSave: (updatedStudent: Student) => void;
+    onSaveCreate: (student: any) => void;
+    onSaveUpdate: (student: any, sectionKey: string) => void;
+    isCreating: boolean;
+    savingSection: string | null;
 }
 
 const SECTION_FIELDS = {
@@ -54,11 +53,9 @@ const initialStudentFormData: StudentFormData = {
 };
 
 
-const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, isSaving, onEditSave }) => {
+const StudentForm: React.FC<StudentFormProps> = ({ student, onCancel, onSaveCreate, onSaveUpdate, isCreating, savingSection }) => {
     const isEdit = !!student.studentId;
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-    const [savingSection, setSavingSection] = useState<string | null>(null);
-    const { showToast } = useNotification();
     const isMobile = useMediaQuery('(max-width: 767px)');
     const [activeStep, setActiveStep] = useState(0);
 
@@ -109,7 +106,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
             default:
                 break;
         }
-        // Collapse by default if the caregiver is not a parent, otherwise expand.
         setIsParentDetailsExpanded(watchPrimaryCaregiver !== PrimaryCaregiver.OTHER);
     }, [watchPrimaryCaregiver, setValue]);
 
@@ -128,17 +124,15 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
     const handleCreateSubmit: SubmitHandler<StudentFormData> = (data) => {
         const file = (data as any).profilePhoto instanceof FileList ? (data as any).profilePhoto[0] : undefined;
         const payload = transformDataForSave(data);
-        onSave({ ...payload, profilePhoto: file });
+        onSaveCreate({ ...payload, profilePhoto: file });
     };
 
     const handlePartialSave = async (sectionKey: keyof typeof SECTION_FIELDS) => {
-        setSavingSection(sectionKey);
         const fieldsToValidate = SECTION_FIELDS[sectionKey] as (keyof StudentFormData)[];
         const isValid = await trigger(fieldsToValidate);
 
         if (!isValid) {
-            showToast('Please fix the errors in this section before saving.', 'error');
-            setSavingSection(null);
+            // Errors will be displayed on the form fields
             return;
         }
 
@@ -163,16 +157,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                 delete (payload as any).profilePhoto;
             }
         }
-
-        try {
-            const updatedStudent = await api.updateStudent(payload as any);
-            showToast(`${sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1)} section updated!`, 'success');
-            onEditSave(updatedStudent);
-        } catch (error: any) {
-            showToast(error.message || 'Failed to update section.', 'error');
-        } finally {
-            setSavingSection(null);
-        }
+        
+        onSaveUpdate(payload, sectionKey);
     };
 
     const { onChange: onFormPhotoChange, ...photoRegisterProps } = register('profilePhoto');
@@ -224,8 +210,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
         const isValid = await trigger(fieldsToValidate as (keyof StudentFormData)[]);
         if (isValid) {
             setActiveStep(prev => Math.min(prev + 1, steps.length - 1));
-        } else {
-            showToast('Please fix the errors before proceeding.', 'error');
         }
     };
 
@@ -453,7 +437,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                     isMobile ? (
                         <>
                             {activeStep > 0 && (
-                                <Button type="button" variant="ghost" onClick={handlePrevStep} disabled={isSaving}>
+                                <Button type="button" variant="ghost" onClick={handlePrevStep} disabled={isCreating}>
                                     Back
                                 </Button>
                             )}
@@ -462,13 +446,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel, is
                                     Next
                                 </Button>
                             ) : (
-                                <Button type="submit" isLoading={isSaving}>
+                                <Button type="submit" isLoading={isCreating}>
                                     Save Student
                                 </Button>
                             )}
                         </>
                     ) : (
-                        <Button type="submit" isLoading={isSaving}>
+                        <Button type="submit" isLoading={isCreating}>
                             Save Student
                         </Button>
                     )

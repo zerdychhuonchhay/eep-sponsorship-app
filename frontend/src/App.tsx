@@ -18,6 +18,7 @@ import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { AuthProvider } from '@/contexts/AuthContext.tsx';
 import { SettingsProvider } from './contexts/SettingsContext.tsx';
+import { OfflineProvider } from './contexts/OfflineContext.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import SignupPage from './pages/SignupPage.tsx';
@@ -106,25 +107,27 @@ const App: React.FC = () => (
             <NotificationProvider>
                 <UIProvider>
                     <AuthProvider>
-                        <Routes>
-                            <Route path="/login" element={<LoginPage />} />
-                            <Route path="/signup" element={<SignupPage />} />
-                            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                            <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
-                            <Route element={<ProtectedRoute />}>
-                                <Route
-                                    path="/*"
-                                    element={
-                                        <DataProvider>
-                                            <SettingsProvider>
-                                                <AppContent />
-                                            </SettingsProvider>
-                                        </DataProvider>
-                                    }
-                                />
-                            </Route>
-                        </Routes>
-                        <Toast />
+                        <OfflineProvider>
+                            <Routes>
+                                <Route path="/login" element={<LoginPage />} />
+                                <Route path="/signup" element={<SignupPage />} />
+                                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                                <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
+                                <Route element={<ProtectedRoute />}>
+                                    <Route
+                                        path="/*"
+                                        element={
+                                            <DataProvider>
+                                                <SettingsProvider>
+                                                    <AppContent />
+                                                </SettingsProvider>
+                                            </DataProvider>
+                                        }
+                                    />
+                                </Route>
+                            </Routes>
+                            <Toast />
+                        </OfflineProvider>
                     </AuthProvider>
                 </UIProvider>
             </NotificationProvider>

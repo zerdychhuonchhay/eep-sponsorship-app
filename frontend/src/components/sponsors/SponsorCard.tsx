@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sponsor } from '@/types.ts';
 import { formatDateForDisplay } from '@/utils/dateUtils.ts';
 import { Card, CardContent } from '@/components/ui/Card.tsx';
-import { SponsorIcon } from '@/components/Icons.tsx';
+import { SponsorIcon, CloudUploadIcon } from '@/components/Icons.tsx';
 
 interface SponsorCardProps {
     sponsor: Sponsor;
@@ -11,11 +11,12 @@ interface SponsorCardProps {
 
 const SponsorCard: React.FC<SponsorCardProps> = ({ sponsor }) => {
     const navigate = useNavigate();
+    const isPending = sponsor.id.startsWith('temp-');
 
     return (
         <Card
-            className="cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200"
-            onClick={() => navigate(`/sponsors/${sponsor.id}`)}
+            className={`${!isPending ? 'cursor-pointer hover:shadow-lg hover:border-primary' : ''} transition-all duration-200`}
+            onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}
         >
             <CardContent className="flex flex-col h-full p-4">
                 <div className="flex items-center gap-4 mb-4">
@@ -23,9 +24,12 @@ const SponsorCard: React.FC<SponsorCardProps> = ({ sponsor }) => {
                         <SponsorIcon className="w-6 h-6 text-primary" />
                     </div>
                     <div className="flex-1 overflow-hidden">
-                        <h3 className="text-lg font-semibold text-black dark:text-white truncate" title={sponsor.name}>
-                            {sponsor.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-black dark:text-white truncate" title={sponsor.name}>
+                                {sponsor.name}
+                            </h3>
+                            {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary flex-shrink-0" title="Pending sync" />}
+                        </div>
                         <p className="text-sm text-body-color dark:text-gray-300 truncate" title={sponsor.email}>
                             {sponsor.email}
                         </p>
