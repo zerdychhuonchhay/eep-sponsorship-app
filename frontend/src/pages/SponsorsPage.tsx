@@ -1,4 +1,5 @@
 
+
     import React, { useState, useEffect } from 'react';
     import { useNavigate } from 'react-router-dom';
     import { api } from '@/services/api.ts';
@@ -69,7 +70,7 @@
                     setSponsors(prevList => {
                         let listChanged = false;
                         const newList = prevList.map(sponsor => {
-                            if (sponsor.id in createdMap) {
+                            if (String(sponsor.id) in createdMap) {
                                 listChanged = true;
                                 return createdMap[sponsor.id];
                             }
@@ -159,7 +160,7 @@
                                 ) : (
                                     <>
                                         {sponsors.map(sponsor => {
-                                            const isPending = String(sponsor.id).startsWith('temp-');
+                                            const isPending = sponsor.id && typeof sponsor.id === 'string' && sponsor.id.startsWith('temp-');
                                             return (
                                                 <MobileListItem
                                                     key={sponsor.id}
@@ -214,7 +215,7 @@
                                                 </thead>
                                                 <tbody>
                                                     {sponsors.map(sponsor => {
-                                                        const isPending = String(sponsor.id).startsWith('temp-');
+                                                        const isPending = sponsor.id && typeof sponsor.id === 'string' && sponsor.id.startsWith('temp-');
                                                         return (
                                                             <tr key={sponsor.id} className={!isPending ? "cursor-pointer" : ""} onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}>
                                                                 <td className="font-medium">
