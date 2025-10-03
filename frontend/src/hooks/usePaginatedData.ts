@@ -98,7 +98,7 @@ export const usePaginatedData = <T>({
                 clearTimeout(staleTimeoutRef.current);
             }
         };
-    }, [apiQueryString, fetcher, version, isOnline, cacheKey, data, isLoading]);
+    }, [apiQueryString, fetcher, version, isOnline, cacheKey]);
 
     return { data, error, isLoading, isStale, refetch };
 };
