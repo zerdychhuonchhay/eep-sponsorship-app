@@ -110,6 +110,7 @@ const TransactionsPage: React.FC = () => {
         fetcher: api.getTransactions,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'transactions',
     });
     
     useEffect(() => {

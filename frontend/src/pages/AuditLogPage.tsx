@@ -32,6 +32,7 @@ const AuditLogPage: React.FC = () => {
         fetcher: api.getAuditLogs,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'audit-logs',
     });
     
     // In a real app, this list would come from the backend or a shared config

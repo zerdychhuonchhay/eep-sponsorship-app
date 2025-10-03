@@ -120,6 +120,7 @@ const FilingsPage: React.FC = () => {
         fetcher: api.getFilings,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'filings',
     });
 
     const filterOptions: FilterOption[] = [

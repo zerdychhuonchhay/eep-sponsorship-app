@@ -102,6 +102,7 @@ const TasksPage: React.FC = () => {
         fetcher: api.getTasks,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'tasks',
     });
     
     useEffect(() => {

@@ -48,6 +48,7 @@
             fetcher: api.getSponsors,
             apiQueryString,
             currentPage,
+            cacheKeyPrefix: 'sponsors',
         });
 
         const handleSave = async (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {

@@ -53,6 +53,7 @@ const UsersList: React.FC = () => {
         fetcher: api.getUsers,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'users',
     });
 
     const handleInviteUser = async (email: string, role: string) => {
