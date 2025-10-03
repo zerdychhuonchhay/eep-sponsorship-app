@@ -50,7 +50,6 @@
         } = usePaginatedData<Sponsor>({
             fetcher: api.getSponsors,
             apiQueryString,
-            currentPage,
             cacheKeyPrefix: 'sponsors',
         });
 

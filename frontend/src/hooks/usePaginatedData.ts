@@ -6,14 +6,12 @@ import * as db from '@/utils/db.ts';
 interface UsePaginatedDataOptions<T> {
     fetcher: (query: string) => Promise<PaginatedResponse<T>>;
     apiQueryString: string;
-    currentPage: number;
     cacheKeyPrefix?: string; // Optional key to enable caching for a specific data type
 }
 
 export const usePaginatedData = <T>({
     fetcher,
     apiQueryString,
-    currentPage,
     cacheKeyPrefix,
 }: UsePaginatedDataOptions<T>) => {
     const [data, setData] = useState<PaginatedResponse<T> | null>(null);
