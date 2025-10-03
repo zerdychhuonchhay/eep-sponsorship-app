@@ -232,7 +232,7 @@ const StudentsPage: React.FC = () => {
         }
     };
 
-    const handleSaveUpdateStudent = async (studentData: Partial<Student> & { studentId: string }, sectionKey: string) => {
+    const handleSaveUpdateStudent = async (studentData: any, sectionKey: string) => {
         setSavingSection(sectionKey);
         let payload = { ...studentData };
 
