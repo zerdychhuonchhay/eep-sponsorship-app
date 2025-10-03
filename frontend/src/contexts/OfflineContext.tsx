@@ -3,7 +3,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus.ts';
 import * as db from '@/utils/db.ts';
 import { api } from '@/services/api.ts';
 import { useNotification } from './NotificationContext.tsx';
-import { Task, Sponsor } from '@/types.ts';
+import { Task, Sponsor, Student } from '@/types.ts';
 
 interface QueuedChange {
     id: number;
@@ -59,6 +59,14 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
                 switch(change.type) {
                     case 'DELETE_STUDENT':
                         await api.deleteStudent(change.payload.studentId);
+                        break;
+                    case 'CREATE_STUDENT': {
+                        const { id: tempId, ...createPayload } = change.payload;
+                        await api.addStudent(createPayload);
+                        break;
+                    }
+                    case 'UPDATE_STUDENT':
+                        await api.updateStudent(change.payload as Partial<Student> & { studentId: string });
                         break;
                     case 'CREATE_TASK': {
                         // The temp ID is only for the frontend. The backend creates its own.

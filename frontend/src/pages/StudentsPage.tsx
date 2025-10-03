@@ -44,7 +44,8 @@ const FormLoader: React.FC = () => (
 // --- Main Page Component ---
 const StudentsPage: React.FC = () => {
     const { sponsorLookup, refetchStudentLookup } = useData();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [savingSection, setSavingSection] = useState<string | null>(null);
     const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
     const [detailedStudent, setDetailedStudent] = useState<Student | null>(null);
     const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -86,14 +87,19 @@ const StudentsPage: React.FC = () => {
         }
     }, [paginatedData]);
 
+    const refetchListData = useCallback(() => {
+        refetch();
+        refetchStudentLookup();
+    }, [refetch, refetchStudentLookup]);
+
     useEffect(() => {
         const handleSync = () => {
             showToast('Data synced from server.', 'info');
-            refetch();
+            refetchListData();
         };
         window.addEventListener('offline-sync-complete', handleSync);
         return () => window.removeEventListener('offline-sync-complete', handleSync);
-    }, [refetch, showToast]);
+    }, [refetchListData, showToast]);
     
     const fetchAndSetDetailedStudent = useCallback(async (studentId: string, initialData?: Student) => {
         setIsDetailLoading(true);
@@ -160,31 +166,88 @@ const StudentsPage: React.FC = () => {
         setSelectedStudentIds(prev => new Set([...prev].filter(id => currentPageIds.has(id))));
     }, [studentsList]);
 
-    const refetchListData = useCallback(() => {
-        refetch();
-        refetchStudentLookup();
-    }, [refetch, refetchStudentLookup]);
+    const handleSaveCreateStudent = async (studentData: any) => {
+        setIsCreating(true);
+        let payload = { ...studentData };
 
-    const handleEditSave = (updatedStudent: Student) => {
-        setEditingStudent(null);
-        showToast('Student updated successfully!', 'success');
-        if (detailedStudent && detailedStudent.studentId === updatedStudent.studentId) {
-            setDetailedStudent(updatedStudent);
+        if (!isOnline) {
+            if (payload.profilePhoto instanceof File) {
+                showToast('Photo uploads are not available offline and will be ignored.', 'info');
+                delete payload.profilePhoto;
+            }
+
+            const tempId = `temp-${Date.now()}`;
+            const newStudent: Student = { ...payload, studentId: tempId, sponsorships: [], documents: [] };
+            
+            // Optimistic UI update
+            setStudentsList(prev => [newStudent, ...prev]);
+
+            await queueChange({
+                type: 'CREATE_STUDENT',
+                payload: newStudent,
+                timestamp: Date.now(),
+            });
+            
+            showToast('Offline: Student created. Will sync when online.', 'info');
+            setEditingStudent(null);
+            setIsCreating(false);
+            return;
         }
-        refetchListData();
-    };
 
-    const handleSaveStudent = async (studentData: any) => {
-        setIsSubmitting(true);
         try {
-            await api.addStudent(studentData);
+            await api.addStudent(payload);
             showToast('Student added successfully!', 'success');
             setEditingStudent(null);
             refetchListData();
         } catch (error: any) {
             showToast(error.message || 'Failed to save student.', 'error');
         } finally {
-            setIsSubmitting(false);
+            setIsCreating(false);
+        }
+    };
+
+    const handleSaveUpdateStudent = async (studentData: Partial<Student> & { studentId: string }, sectionKey: string) => {
+        setSavingSection(sectionKey);
+        let payload = { ...studentData };
+
+        if (!isOnline) {
+            if (payload.profilePhoto instanceof File) {
+                showToast('Photo uploads are not available offline and will be ignored.', 'info');
+                delete payload.profilePhoto;
+            }
+            
+            const updatedStudent = { ...(studentsList.find(s => s.studentId === payload.studentId)), ...payload } as Student;
+            setStudentsList(prev => prev.map(s => s.studentId === payload.studentId ? updatedStudent : s));
+            if (detailedStudent?.studentId === payload.studentId) {
+                setDetailedStudent(prev => ({ ...prev!, ...payload } as Student));
+            }
+
+            await queueChange({
+                type: 'UPDATE_STUDENT',
+                payload: payload,
+                timestamp: Date.now(),
+            });
+
+            showToast(`Offline: Student updated. Will sync.`, 'info');
+            setSavingSection(null);
+            return;
+        }
+
+        try {
+            const updatedStudent = await api.updateStudent(payload);
+            showToast(`${sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1)} section updated!`, 'success');
+            
+            // This is the logic from the old onEditSave
+            setEditingStudent(null);
+            if (detailedStudent && detailedStudent.studentId === updatedStudent.studentId) {
+                setDetailedStudent(updatedStudent);
+            }
+            refetchListData(); // Simplified refetch logic
+
+        } catch (error: any) {
+            showToast(error.message || 'Failed to update section.', 'error');
+        } finally {
+            setSavingSection(null);
         }
     };
     
@@ -212,11 +275,9 @@ const StudentsPage: React.FC = () => {
         try {
             await api.deleteStudent(studentId);
             showToast('Student deleted.', 'success');
-            // Data will be refetched by the hook, but we can force it if needed
             refetchListData();
         } catch (error: any) {
             showToast(error.message || 'Failed to delete student.', 'error');
-            // Revert optimistic update on failure
             setStudentsList(paginatedData?.results || []);
         }
     };
@@ -420,10 +481,11 @@ const StudentsPage: React.FC = () => {
                     <StudentForm 
                         key={editingStudent?.studentId || 'new'} 
                         student={editingStudent!} 
-                        onSave={handleSaveStudent} 
-                        onCancel={() => setEditingStudent(null)} 
-                        isSaving={isSubmitting}
-                        onEditSave={handleEditSave}
+                        onCancel={() => setEditingStudent(null)}
+                        onSaveCreate={handleSaveCreateStudent}
+                        onSaveUpdate={handleSaveUpdateStudent}
+                        isCreating={isCreating}
+                        savingSection={savingSection}
                     />
                 </Suspense>
             </Modal>
