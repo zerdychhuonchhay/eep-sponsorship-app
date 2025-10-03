@@ -1,3 +1,4 @@
+
     import React, { useState, useEffect } from 'react';
     import { useNavigate } from 'react-router-dom';
     import { api } from '@/services/api.ts';
@@ -158,7 +159,7 @@
                                 ) : (
                                     <>
                                         {sponsors.map(sponsor => {
-                                            const isPending = sponsor.id.startsWith('temp-');
+                                            const isPending = String(sponsor.id).startsWith('temp-');
                                             return (
                                                 <MobileListItem
                                                     key={sponsor.id}
@@ -213,7 +214,7 @@
                                                 </thead>
                                                 <tbody>
                                                     {sponsors.map(sponsor => {
-                                                        const isPending = sponsor.id.startsWith('temp-');
+                                                        const isPending = String(sponsor.id).startsWith('temp-');
                                                         return (
                                                             <tr key={sponsor.id} className={!isPending ? "cursor-pointer" : ""} onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}>
                                                                 <td className="font-medium">
