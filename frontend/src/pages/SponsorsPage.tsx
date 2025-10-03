@@ -1,4 +1,4 @@
-    import React, { useState } from 'react';
+    import React, { useState, useEffect } from 'react';
     import { useNavigate } from 'react-router-dom';
     import { api } from '@/services/api.ts';
     import { Sponsor } from '@/types.ts';
@@ -25,6 +25,7 @@
     import DataWrapper from '@/components/DataWrapper.tsx';
     import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
+
     const SponsorsPage: React.FC = () => {
         const [isSubmitting, setIsSubmitting] = useState(false);
         const [isAdding, setIsAdding] = useState(false);
@@ -47,7 +48,6 @@
             fetcher: api.getSponsors,
             apiQueryString,
             currentPage,
-            keepDataWhileRefetching: false,
         });
 
         const handleSave = async (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
@@ -90,40 +90,32 @@
                                 onClick={() => setIsAdding(true)} 
                                 icon={<PlusIcon className="w-5 h-5" />}
                                 aria-label="Add Sponsor"
-                            >
-                                <span className="hidden sm:inline">Add Sponsor</span>
-                            </Button>
+                            />
                         </PageActions>
                     )}
                 </PageHeader>
             
                 {isMobile ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {isLoading ? (
-                            Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)
+                             <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}</div>
                         ) : (
-                            <DataWrapper isStale={isStale}>
+                             <DataWrapper isStale={isStale}>
                                 {isInitialLoadAndEmpty ? (
                                     <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
                                 ) : (
-                                    <div className="space-y-3">
-                                        {sponsors.map((sponsor) => (
+                                    <>
+                                        {sponsors.map(sponsor => (
                                             <MobileListItem
                                                 key={sponsor.id}
-                                                icon={<SponsorIcon className="w-6 h-6 text-primary" />}
+                                                icon={<SponsorIcon className="w-5 h-5 text-primary" />}
                                                 title={sponsor.name}
-                                                subtitle={sponsor.email}
-                                                rightContent={
-                                                    <div className="text-center">
-                                                        <p className="font-semibold text-black dark:text-white">{sponsor.sponsoredStudentCount}</p>
-                                                        <p className="text-xs text-body-color">students</p>
-                                                    </div>
-                                                }
+                                                subtitle={`Sponsored Students: ${sponsor.sponsoredStudentCount}`}
                                                 onClick={() => navigate(`/sponsors/${sponsor.id}`)}
                                             />
                                         ))}
                                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                    </div>
+                                    </>
                                 )}
                             </DataWrapper>
                         )}

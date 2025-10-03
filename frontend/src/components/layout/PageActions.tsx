@@ -8,22 +8,18 @@ interface PageActionsProps {
 // A wrapper component that consistently collapses action buttons
 // into a "three-dots" dropdown menu.
 const PageActions: React.FC<PageActionsProps> = ({ children }) => {
-    // Transform children into items for the ActionDropdown.
-    // Use React.Children.map for safety as it handles various child types gracefully.
     const items = React.Children.map(children, (child) => {
-        // Ensure the child is a valid element and not a primitive or a native DOM element.
         if (!React.isValidElement(child) || typeof child.type === 'string') {
             return null;
         }
 
-        const props = child.props as { 'aria-label'?: string; icon?: ReactNode; onClick: () => void; variant?: string };
-        
-        // Prioritize aria-label for the dropdown text to support icon-only buttons.
-        const label = props['aria-label'];
+        // FIX: Cast props to include `children` and then use `props.children` to avoid TypeScript error.
+        const props = child.props as { children?: ReactNode, 'aria-label'?: string; icon?: ReactNode; onClick: () => void; variant?: string };
+        const label = props['aria-label'] || (typeof props.children === 'string' ? props.children : 'Action');
 
         if (label) {
             const actionItem: ActionItem = {
-                label: label,
+                label,
                 icon: props.icon,
                 onClick: props.onClick,
                 className: props.variant === 'danger' ? 'text-danger' : '',
@@ -32,7 +28,7 @@ const PageActions: React.FC<PageActionsProps> = ({ children }) => {
         }
 
         return null;
-    })?.filter((item): item is ActionItem => item !== null) ?? []; // Filter out nulls and ensure type correctness.
+    })?.filter((item): item is ActionItem => item !== null) ?? [];
 
 
     if (items.length === 0) {

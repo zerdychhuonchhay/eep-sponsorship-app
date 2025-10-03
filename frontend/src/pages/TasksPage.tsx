@@ -25,6 +25,7 @@ import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import MobileListItem from '@/components/ui/MobileListItem.tsx';
+import Drawer from '@/components/ui/Drawer.tsx';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
@@ -85,6 +86,7 @@ const TasksPage: React.FC = () => {
     const { showToast } = useNotification();
     const { canCreate, canUpdate, canDelete } = usePermissions('tasks');
     const isMobile = useMediaQuery('(max-width: 767px)');
+    const [tasks, setTasks] = useState<Task[]>([]);
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
@@ -102,6 +104,12 @@ const TasksPage: React.FC = () => {
         currentPage,
     });
     
+    useEffect(() => {
+        if (paginatedData?.results) {
+            setTasks(paginatedData.results);
+        }
+    }, [paginatedData]);
+
     const filterOptions: FilterOption[] = [
         { id: 'status', label: 'Status', options: Object.values(TaskStatus).map(s => ({ value: s, label: s }))},
         { id: 'priority', label: 'Priority', options: Object.values(TaskPriority).map(p => ({ value: p, label: p }))},
@@ -139,13 +147,20 @@ const TasksPage: React.FC = () => {
         }
     };
     
-    const handleQuickStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    const handleQuickStatusChange = async (taskToUpdate: Task, newStatus: TaskStatus) => {
+        const originalTasks = tasks;
+        
+        const updatedTasks = tasks.map(task => 
+            task.id === taskToUpdate.id ? { ...task, status: newStatus } : task
+        );
+        setTasks(updatedTasks);
+
         try {
-            await api.updateTask({ ...task, status: newStatus });
-            showToast(`Task "${task.title}" status updated to ${newStatus}.`, 'success');
-            refetch();
+            await api.updateTask({ ...taskToUpdate, status: newStatus });
+            showToast(`Task "${taskToUpdate.title}" status updated to ${newStatus}.`, 'success');
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
+            setTasks(originalTasks);
         }
     };
     
@@ -155,7 +170,6 @@ const TasksPage: React.FC = () => {
         [TaskStatus.DONE]: 'bg-success/20 text-success',
     };
     
-    const tasks = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
     const mainContent = isLoading ? (
@@ -244,6 +258,22 @@ const TasksPage: React.FC = () => {
             )}
         </DataWrapper>
     );
+    
+    const formIsOpen = isAdding || !!editingTask;
+    const closeForm = () => {
+        setIsAdding(false);
+        setEditingTask(null);
+    };
+
+    const formContent = (
+        <TaskForm 
+            key={editingTask ? editingTask.id : 'new-task'}
+            onSave={handleSaveTask}
+            onCancel={closeForm}
+            initialData={editingTask}
+            isApiSubmitting={isApiSubmitting}
+        />
+    );
 
     return (
         <div className="space-y-6">
@@ -278,15 +308,15 @@ const TasksPage: React.FC = () => {
                 </CardContent>
             </Card>
 
-            <Modal isOpen={isAdding || !!editingTask} onClose={() => { setIsAdding(false); setEditingTask(null); }} title={editingTask ? 'Edit Task' : 'Add New Task'}>
-                <TaskForm 
-                    key={editingTask ? editingTask.id : 'new-task'}
-                    onSave={handleSaveTask}
-                    onCancel={() => { setIsAdding(false); setEditingTask(null); }}
-                    initialData={editingTask}
-                    isApiSubmitting={isApiSubmitting}
-                />
-            </Modal>
+            {isMobile ? (
+                <Drawer isOpen={formIsOpen} onClose={closeForm} title={editingTask ? 'Edit Task' : 'Add New Task'}>
+                    {formContent}
+                </Drawer>
+            ) : (
+                <Modal isOpen={formIsOpen} onClose={closeForm} title={editingTask ? 'Edit Task' : 'Add New Task'}>
+                    {formContent}
+                </Modal>
+            )}
         </div>
     );
 };

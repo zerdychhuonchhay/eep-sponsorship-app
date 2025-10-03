@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '@/services/api.ts';
-import { AppUser, UserStatus } from '@/types.ts';
+import { AppUser, UserStatus, User } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import { SkeletonCard, SkeletonTable, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
@@ -28,6 +28,7 @@ import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
 import MobileListItem from '@/components/ui/MobileListItem.tsx';
 
+
 const UsersList: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingUser, setEditingUser] = useState<AppUser | null>(null);
@@ -52,7 +53,6 @@ const UsersList: React.FC = () => {
         fetcher: api.getUsers,
         apiQueryString,
         currentPage,
-        keepDataWhileRefetching: false,
     });
 
     const handleInviteUser = async (email: string, role: string) => {
@@ -127,35 +127,55 @@ const UsersList: React.FC = () => {
 
     return (
         <>
-            {isMobile ? (
+             {isMobile ? (
                  <div className="space-y-4">
+                    {canCreate && (
+                        <div className="px-4">
+                            <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} className="w-full">
+                                Invite New User
+                            </Button>
+                        </div>
+                    )}
                     {isLoading ? (
-                         Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)
+                        <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}</div>
                     ) : (
-                         <DataWrapper isStale={isStale}>
-                            {users.length > 0 ? (
+                        <DataWrapper isStale={isStale}>
+                           {users.length > 0 ? (
                                 <div className="space-y-3">
-                                    {users.map(user => (
-                                        <MobileListItem
-                                            key={user.id}
-                                            icon={<UserIcon className="w-6 h-6 text-gray-500" />}
-                                            title={user.username}
-                                            subtitle={user.email}
-                                            rightContent={
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <Badge type={user.role} />
-                                                    <Badge type={user.status} />
-                                                </div>
-                                            }
-                                            onClick={canUpdate ? () => setEditingUser(user) : undefined}
-                                            showChevron={canUpdate}
-                                        />
-                                    ))}
+                                    {users.map(user => {
+                                        const isCurrentUser = currentUser?.id === user.id;
+                                        const actionItems: ActionItem[] = [];
+                                        if (canUpdate) actionItems.push({ label: 'Edit', icon: <UserIcon className="w-4 h-4" />, onClick: () => setEditingUser(user) });
+                                        if (canUpdate && user.status === UserStatus.ACTIVE && !isCurrentUser) actionItems.push({ label: 'Send Password Set', icon: <KeyIcon className="w-4 h-4" />, onClick: () => handleSendPasswordReset(user) });
+                                        if (!isCurrentUser && canDelete) actionItems.push({ label: 'Delete', icon: <TrashIcon className="w-4 h-4" />, onClick: () => handleDeleteUser(user), className: 'text-danger' });
+
+                                        return (
+                                             <MobileListItem
+                                                key={user.id}
+                                                icon={<UserIcon className="w-5 h-5 text-gray-500" />}
+                                                title={user.username}
+                                                subtitle={user.role}
+                                                rightContent={
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge type={user.status} />
+                                                        {actionItems.length > 0 && 
+                                                            <div onClick={(e) => e.stopPropagation()}>
+                                                                <ActionDropdown items={actionItems} />
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                // Prevent main item click if actions exist
+                                                onClick={actionItems.length === 0 && canUpdate ? () => setEditingUser(user) : undefined}
+                                                showChevron={actionItems.length === 0 && canUpdate}
+                                            />
+                                        );
+                                    })}
                                     <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                                 </div>
-                            ) : (
-                                <EmptyState title="No Users Found" />
-                            )}
+                           ) : (
+                               <EmptyState title="No Users Found" />
+                           )}
                         </DataWrapper>
                     )}
                  </div>
@@ -166,9 +186,7 @@ const UsersList: React.FC = () => {
                             <ViewToggle view={userViewMode} onChange={setUserViewMode} />
                              {canCreate && (
                                 <PageActions>
-                                    <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} size="sm" aria-label="Invite User">
-                                       <span className="hidden sm:inline">Invite User</span>
-                                    </Button>
+                                    <Button onClick={() => setIsInviting(true)} icon={<PlusIcon className="w-5 h-5" />} size="sm" aria-label="Invite User" />
                                 </PageActions>
                             )}
                         </div>

@@ -5,7 +5,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable, SkeletonCard, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, EditIcon, TrashIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -25,8 +25,8 @@ import StudentCard from '@/components/students/StudentCard.tsx';
 import ViewToggle from '@/components/ui/ViewToggle.tsx';
 import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
-import MobileListItem from '@/components/ui/MobileListItem.tsx';
-import Badge from '@/components/ui/Badge.tsx';
+import useMediaQuery from '@/hooks/useMediaQuery.ts';
+import MobileStudentCard from '@/components/students/MobileStudentCard.tsx';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
@@ -50,11 +50,12 @@ const StudentsPage: React.FC = () => {
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const { setIsBulkActionBarVisible } = useUI();
-    const { canCreate, canUpdate } = usePermissions('students');
+    const { canCreate, canUpdate, canDelete } = usePermissions('students');
     const [isAiSearching, setIsAiSearching] = useState(false);
     const [aiSearchQuery, setAiSearchQuery] = useState('');
     const { studentTableColumns, studentViewMode, setStudentViewMode } = useSettings();
     const { isAiEnabled } = useSettings();
+    const isMobile = useMediaQuery('(max-width: 767px)');
 
     const {
         sortConfig, currentPage, searchTerm, filters, apiQueryString,
@@ -70,7 +71,6 @@ const StudentsPage: React.FC = () => {
         fetcher: api.getStudents,
         apiQueryString,
         currentPage,
-        keepDataWhileRefetching: false, // Use standard pagination on mobile now
     });
     
     const filterOptions: FilterOption[] = [
@@ -101,25 +101,16 @@ const StudentsPage: React.FC = () => {
     }, [refetch, refetchStudentLookup]);
 
     const handleEditSave = (updatedStudent: Student) => {
-        // Update the student being edited in the modal to ensure the form
-        // reflects the newly saved data without needing to close and reopen.
         setEditingStudent(updatedStudent);
-
-        // If the student being viewed in the detail page is the one we just edited,
-        // update its state as well to instantly reflect changes.
         if (selectedStudent && selectedStudent.studentId === updatedStudent.studentId) {
             setSelectedStudent(updatedStudent);
         }
-
-        // Refetch the list in the background to keep the main list view in sync.
         refetchListData();
     };
-
 
     const handleSaveStudent = async (studentData: any) => {
         setIsSubmitting(true);
         try {
-            // This handler is now only for CREATING students
             await api.addStudent(studentData);
             showToast('Student added successfully!', 'success');
             setEditingStudent(null);
@@ -149,7 +140,6 @@ const StudentsPage: React.FC = () => {
         try {
             const updatedStudent = await api.getStudentById(selectedStudent.studentId);
             setSelectedStudent(updatedStudent);
-            // Also refetch the main list data to ensure it's in sync when the user navigates back.
             refetchListData();
         } catch(e) {
             showToast("Could not refresh student data.", 'error');
@@ -226,12 +216,8 @@ const StudentsPage: React.FC = () => {
             <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
                 {!selectedStudent && canCreate && (
                     <PageActions>
-                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />} aria-label="Import">
-                            <span className="hidden sm:inline">Import</span>
-                        </Button>
-                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />} aria-label="Add Student">
-                           <span className="hidden sm:inline">Add Student</span>
-                        </Button>
+                        <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />} aria-label="Import Students" />
+                        <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />} aria-label="Add Student" />
                     </PageActions>
                 )}
             </PageHeader>
@@ -246,92 +232,110 @@ const StudentsPage: React.FC = () => {
                 />
             ) : (
                 <>
-                    <div className="md:hidden space-y-4">
-                        <div className="p-4 rounded-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark">
-                            <div className="flex flex-row items-center gap-2">
-                                <div className="relative flex-grow">
-                                    <input type="text" placeholder="Search by name, ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div>
-                                </div>
-                                <div className="flex-shrink-0"><AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} /></div>
-                            </div>
-                            <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
-                        </div>
-
-                        {isLoading ? (
-                             <div className="space-y-4">
-                                {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
-                            </div>
-                        ) : isInitialLoadAndEmpty ? (
-                            <EmptyState title="No Students in System" message="Get started by adding your first student." />
-                        ) : (
-                            <DataWrapper isStale={isStale}>
-                                <div className="space-y-3">
-                                    {studentsList.map(student => (
-                                        <MobileListItem 
-                                            key={student.studentId}
-                                            icon={student.profilePhoto ? <img src={student.profilePhoto} alt="" className="w-10 h-10 rounded-full object-cover" /> : <UserIcon className="w-6 h-6 text-gray-500"/>}
-                                            title={`${student.firstName} ${student.lastName}`}
-                                            subtitle={student.studentId}
-                                            rightContent={
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <Badge type={student.studentStatus} />
-                                                    <Badge type={student.sponsorshipStatus} />
-                                                </div>
-                                            }
-                                            onClick={() => setSelectedStudent(student)}
-                                        />
-                                    ))}
-                                </div>
-                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                            </DataWrapper>
-                        )}
-                    </div>
-
-                    <Card className="hidden md:block">
-                        <CardContent>
-                             <div className="p-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark mb-4">
-                                {isAiEnabled && (
-                                    <form onSubmit={handleAiSearch} className="flex items-center gap-2 mb-4">
-                                        <div className="relative flex-grow"><input type="text" placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')" value={aiSearchQuery} onChange={e => setAiSearchQuery(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SparklesIcon className="text-body-color w-5 h-5"/></div></div>
-                                        <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">Ask AI</Button>
-                                    </form>
-                                )}
-                                <div className="flex flex-row justify-between items-center gap-4">
-                                    <div className="relative flex-grow"><input type="text" placeholder="Search by name, ID, school..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div></div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        <AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} />
-                                        {canUpdate && (!isSelectionMode ? (<Button onClick={() => setIsSelectionMode(true)} variant="ghost" size="sm">Select</Button>) : (<Button onClick={() => { setIsSelectionMode(false); setSelectedStudentIds(new Set()); }} variant="ghost" size="sm">Cancel</Button>))}
-                                        <ViewToggle view={studentViewMode} onChange={setStudentViewMode} />
+                    {isMobile ? (
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-lg bg-white dark:bg-box-dark border border-stroke dark:border-strokedark">
+                                <div className="flex flex-row items-center gap-2">
+                                    <div className="relative flex-grow">
+                                        <input type="text" placeholder="Search by name, ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div>
                                     </div>
+                                    <div className="flex-shrink-0"><AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} /></div>
                                 </div>
                                 <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
                             </div>
                             
-                            {isLoading ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
-                                <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
+                            {isLoading && studentsList.length === 0 ? (
+                                <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}</div>
                             ) : (
                                 <DataWrapper isStale={isStale}>
-                                    {studentsList.length > 0 ? (
-                                        studentViewMode === 'card' ? (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                                {studentsList.map((student) => (<StudentCard key={student.studentId} student={student} isSelected={selectedStudentIds.has(student.studentId)} onSelect={handleSelectStudent} onViewProfile={setSelectedStudent} canUpdate={canUpdate} isSelectionMode={isSelectionMode} />))}
-                                            </div>
-                                        ) : (
-                                            <div className="overflow-x-auto">
-                                                <table className="ui-table">
-                                                    <thead><tr>{canUpdate && isSelectionMode && <th className="w-12"></th>}{studentTableColumns.map(col => (<th key={col.id as string}><button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(col.id as keyof Student)}>{col.label}{sortConfig?.key === col.id && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}</button></th>))}</tr></thead>
-                                                    <tbody>{studentsList.map(s => (<tr key={s.studentId} className="cursor-pointer" onClick={() => isSelectionMode ? handleSelectStudent(s.studentId, !selectedStudentIds.has(s.studentId)) : setSelectedStudent(s)}>{canUpdate && isSelectionMode && (<td onClick={e => e.stopPropagation()}><input type="checkbox" className="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary" checked={selectedStudentIds.has(s.studentId)} onChange={e => handleSelectStudent(s.studentId, e.target.checked)} /></td>)}{studentTableColumns.map(col => (<td key={col.id as string}>{col.renderCell(s)}</td>))}</tr>))}</tbody>
-                                                </table>
-                                            </div>
-                                        )
-                                    ) : (<EmptyState />)}
-                                    {studentsList.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                    {isInitialLoadAndEmpty ? (
+                                        <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
+                                    ) : studentsList.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {studentsList.map((student) => {
+                                                const actionItems = [];
+                                                if (canUpdate) {
+                                                    actionItems.push({
+                                                        label: 'Edit',
+                                                        icon: <EditIcon className="w-4 h-4" />,
+                                                        onClick: () => setEditingStudent(student)
+                                                    });
+                                                }
+                                                if (canDelete) {
+                                                    actionItems.push({
+                                                        label: 'Delete',
+                                                        icon: <TrashIcon className="w-4 h-4" />,
+                                                        onClick: () => handleDeleteStudent(student.studentId),
+                                                        className: 'text-danger'
+                                                    });
+                                                }
+                                                
+                                                const activeSponsorship = student.sponsorships?.find(s => !s.endDate);
+
+                                                return (
+                                                    <MobileStudentCard 
+                                                        key={student.studentId}
+                                                        student={student}
+                                                        actionItems={actionItems}
+                                                        onViewProfile={setSelectedStudent}
+                                                        sponsorName={activeSponsorship?.sponsorName}
+                                                    />
+                                                );
+                                            })}
+                                            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                        </div>
+                                    ) : (
+                                        <EmptyState />
+                                    )}
                                 </DataWrapper>
                             )}
-                        </CardContent>
-                    </Card>
-
+                        </div>
+                    ) : (
+                        <Card>
+                            <CardContent>
+                                <div className="p-4 rounded-lg bg-gray-2 dark:bg-box-dark-2 border border-stroke dark:border-strokedark mb-4">
+                                    {isAiEnabled && (
+                                        <form onSubmit={handleAiSearch} className="flex items-center gap-2 mb-4">
+                                            <div className="relative flex-grow"><input type="text" placeholder="Ask AI to find students (e.g., 'show all unsponsored girls')" value={aiSearchQuery} onChange={e => setAiSearchQuery(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-gray-2 py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary text-black dark:border-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SparklesIcon className="text-body-color w-5 h-5"/></div></div>
+                                            <Button type="submit" isLoading={isAiSearching} disabled={!aiSearchQuery.trim()} size="sm">Ask AI</Button>
+                                        </form>
+                                    )}
+                                    <div className="flex flex-row justify-between items-center gap-4">
+                                        <div className="relative flex-grow"><input type="text" placeholder="Search by name, ID, school..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-lg border-[1.5px] border-stroke bg-transparent py-2 pl-10 pr-4 font-medium outline-none transition focus:border-primary active:border-primary text-black dark:border-form-strokedark dark:bg-form-input dark:text-white" /><div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon className="w-5 h-5 text-body-color" /></div></div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <AdvancedFilter filterOptions={filterOptions} currentFilters={filters} onApply={applyFilters} onClear={() => { clearFilters(); setSearchTerm(''); setAiSearchQuery(''); }} />
+                                            {canUpdate && (!isSelectionMode ? (<Button onClick={() => setIsSelectionMode(true)} variant="ghost" size="sm">Select</Button>) : (<Button onClick={() => { setIsSelectionMode(false); setSelectedStudentIds(new Set()); }} variant="ghost" size="sm">Cancel</Button>))}
+                                            <ViewToggle view={studentViewMode} onChange={setStudentViewMode} />
+                                        </div>
+                                    </div>
+                                    <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
+                                </div>
+                                
+                                {isLoading ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
+                                    <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
+                                ) : (
+                                    <DataWrapper isStale={isStale}>
+                                        {studentsList.length > 0 ? (
+                                            studentViewMode === 'card' ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                    {studentsList.map((student) => (<StudentCard key={student.studentId} student={student} isSelected={selectedStudentIds.has(student.studentId)} onSelect={handleSelectStudent} onViewProfile={setSelectedStudent} canUpdate={canUpdate} isSelectionMode={isSelectionMode} />))}
+                                                </div>
+                                            ) : (
+                                                <div className="overflow-x-auto">
+                                                    <table className="ui-table">
+                                                        <thead><tr>{canUpdate && isSelectionMode && <th className="w-12"></th>}{studentTableColumns.map(col => (<th key={col.id as string}><button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(col.id as keyof Student)}>{col.label}{sortConfig?.key === col.id && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}</button></th>))}</tr></thead>
+                                                        <tbody>{studentsList.map(s => (<tr key={s.studentId} className="cursor-pointer" onClick={() => isSelectionMode ? handleSelectStudent(s.studentId, !selectedStudentIds.has(s.studentId)) : setSelectedStudent(s)}>{canUpdate && isSelectionMode && (<td onClick={e => e.stopPropagation()}><input type="checkbox" className="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary" checked={selectedStudentIds.has(s.studentId)} onChange={e => handleSelectStudent(s.studentId, e.target.checked)} /></td>)}{studentTableColumns.map(col => (<td key={col.id as string}>{col.renderCell(s)}</td>))}</tr>))}</tbody>
+                                                    </table>
+                                                </div>
+                                            )
+                                        ) : (<EmptyState />)}
+                                        {studentsList.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+                                    </DataWrapper>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                     {selectedStudentIds.size > 0 && (<BulkActionBar selectedCount={selectedStudentIds.size} onUpdateStatus={handleBulkUpdateStatus} onClearSelection={() => { setSelectedStudentIds(new Set()); setIsSelectionMode(false); }} />)}
                 </>
             )}

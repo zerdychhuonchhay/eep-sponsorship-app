@@ -75,6 +75,37 @@
   transition: opacity 300ms, transform 300ms;
 }
 
+/* Drawer Transitions */
+.drawer-enter {
+  transform: translateX(100%);
+}
+.drawer-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-in-out;
+}
+.drawer-exit {
+  transform: translateX(0);
+}
+.drawer-exit-active {
+  transform: translateX(100%);
+  transition: transform 300ms ease-in-out;
+}
+
+.overlay-fade-enter {
+  opacity: 0;
+}
+.overlay-fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in-out;
+}
+.overlay-fade-exit {
+  opacity: 1;
+}
+.overlay-fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+}
+
 
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {
