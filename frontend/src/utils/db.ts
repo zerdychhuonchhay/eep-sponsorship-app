@@ -27,7 +27,7 @@ const getDb = (): Promise<any> => {
       },
     });
   }
-  return dbPromise;
+  return dbPromise!;
 };
 
 // --- API Cache Functions ---

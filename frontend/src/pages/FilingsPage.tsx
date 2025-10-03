@@ -119,7 +119,6 @@ const FilingsPage: React.FC = () => {
     } = usePaginatedData<GovernmentFiling>({
         fetcher: api.getFilings,
         apiQueryString,
-        currentPage,
         cacheKeyPrefix: 'filings',
     });
 

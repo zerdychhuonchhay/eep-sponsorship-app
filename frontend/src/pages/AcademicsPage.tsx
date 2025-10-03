@@ -46,7 +46,6 @@ const AcademicsPage: React.FC = () => {
     } = usePaginatedData<AcademicReport>({
         fetcher: api.getAllAcademicReports,
         apiQueryString,
-        currentPage,
         cacheKeyPrefix: 'academics',
     });
     

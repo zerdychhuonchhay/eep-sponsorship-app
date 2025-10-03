@@ -109,7 +109,6 @@ const TransactionsPage: React.FC = () => {
     } = usePaginatedData<Transaction>({
         fetcher: api.getTransactions,
         apiQueryString,
-        currentPage,
         cacheKeyPrefix: 'transactions',
     });
     

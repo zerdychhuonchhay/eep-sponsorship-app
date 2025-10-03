@@ -5,7 +5,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable, SkeletonCard, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, EditIcon, TrashIcon, CloudUploadIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, EditIcon, TrashIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -78,7 +78,6 @@ const StudentsPage: React.FC = () => {
     } = usePaginatedData<Student>({
         fetcher: api.getStudents,
         apiQueryString,
-        currentPage,
         cacheKeyPrefix: 'students',
     });
     
@@ -198,7 +197,7 @@ const StudentsPage: React.FC = () => {
         let payload = { ...studentData };
 
         if (!isOnline) {
-            if (payload.profilePhoto instanceof File) {
+            if (payload.profilePhoto && payload.profilePhoto instanceof File) {
                 showToast('Photo uploads are not available offline and will be ignored.', 'info');
                 delete payload.profilePhoto;
             }
@@ -238,7 +237,7 @@ const StudentsPage: React.FC = () => {
         let payload = { ...studentData };
 
         if (!isOnline) {
-            if (payload.profilePhoto instanceof File) {
+            if (payload.profilePhoto && payload.profilePhoto instanceof File) {
                 showToast('Photo uploads are not available offline and will be ignored.', 'info');
                 delete payload.profilePhoto;
             }

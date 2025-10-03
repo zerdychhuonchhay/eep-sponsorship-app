@@ -31,7 +31,6 @@ const AuditLogPage: React.FC = () => {
     } = usePaginatedData<AuditLog>({
         fetcher: api.getAuditLogs,
         apiQueryString,
-        currentPage,
         cacheKeyPrefix: 'audit-logs',
     });
     

@@ -103,7 +103,6 @@ const TasksPage: React.FC = () => {
     } = usePaginatedData<Task>({
         fetcher: api.getTasks,
         apiQueryString,
-        currentPage,
         cacheKeyPrefix: 'tasks',
     });
     
