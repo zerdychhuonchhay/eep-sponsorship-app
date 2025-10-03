@@ -27,6 +27,7 @@ import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
 import DataWrapper from '@/components/DataWrapper.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import MobileStudentCard from '@/components/students/MobileStudentCard.tsx';
+import { useOffline } from '@/contexts/OfflineContext.tsx';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
@@ -56,6 +57,8 @@ const StudentsPage: React.FC = () => {
     const { studentTableColumns, studentViewMode, setStudentViewMode } = useSettings();
     const { isAiEnabled } = useSettings();
     const isMobile = useMediaQuery('(max-width: 767px)');
+    const { isOnline, queueChange } = useOffline();
+    const [studentsList, setStudentsList] = useState<Student[]>([]);
 
     const {
         sortConfig, currentPage, searchTerm, filters, apiQueryString,
@@ -71,7 +74,23 @@ const StudentsPage: React.FC = () => {
         fetcher: api.getStudents,
         apiQueryString,
         currentPage,
+        cacheKeyPrefix: 'students',
     });
+    
+    useEffect(() => {
+        if(paginatedData?.results) {
+            setStudentsList(paginatedData.results);
+        }
+    }, [paginatedData]);
+
+    useEffect(() => {
+        const handleSync = () => {
+            showToast('Data synced from server.', 'info');
+            refetch();
+        };
+        window.addEventListener('offline-sync-complete', handleSync);
+        return () => window.removeEventListener('offline-sync-complete', handleSync);
+    }, [refetch, showToast]);
     
     const filterOptions: FilterOption[] = [
         { id: 'student_status', label: 'Status', options: Object.values(StudentStatus).map(s => ({ value: s, label: s })) },
@@ -80,7 +99,6 @@ const StudentsPage: React.FC = () => {
         { id: 'sponsor', label: 'Sponsor', options: sponsorLookup.map(s => ({ value: String(s.id), label: s.name })) }
     ];
     
-    const studentsList = paginatedData?.results || [];
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
     
     useEffect(() => {
@@ -123,15 +141,32 @@ const StudentsPage: React.FC = () => {
     };
     
     const handleDeleteStudent = async (studentId: string) => {
-        if(window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) {
-            try {
-                await api.deleteStudent(studentId);
-                showToast('Student deleted.', 'success');
-                setSelectedStudent(null);
-                refetchListData();
-            } catch (error: any) {
-                showToast(error.message || 'Failed to delete student.', 'error');
-            }
+        if(!window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) return;
+        
+        // Optimistic UI update
+        setStudentsList(prev => prev.filter(s => s.studentId !== studentId));
+
+        if (!isOnline) {
+            await queueChange({
+                type: 'DELETE_STUDENT',
+                payload: { studentId },
+                timestamp: Date.now(),
+            });
+            showToast('Offline: Student will be deleted upon reconnection.', 'info');
+            if (selectedStudent?.studentId === studentId) setSelectedStudent(null);
+            return;
+        }
+
+        try {
+            await api.deleteStudent(studentId);
+            showToast('Student deleted.', 'success');
+            if (selectedStudent?.studentId === studentId) setSelectedStudent(null);
+            // Data will be refetched by the hook, but we can force it if needed
+            refetchListData();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to delete student.', 'error');
+            // Revert optimistic update on failure
+            setStudentsList(paginatedData?.results || []);
         }
     };
     
@@ -312,7 +347,7 @@ const StudentsPage: React.FC = () => {
                                     <ActiveFiltersDisplay activeFilters={{...filters, search: searchTerm}} onRemoveFilter={(key) => key === 'search' ? setSearchTerm('') : handleFilterChange(key, '')} customLabels={{ sponsor: (id) => sponsorLookup.find(s => String(s.id) === id)?.name }} />
                                 </div>
                                 
-                                {isLoading ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
+                                {isLoading && studentsList.length === 0 ? renderDesktopSkeletons() : isInitialLoadAndEmpty ? (
                                     <EmptyState title="No Students in System" message="Get started by adding your first student or importing a list." action={ canCreate && (<div className="flex justify-center gap-4"><Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />}>Add Student</Button><Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />}>Import Students</Button></div>)} />
                                 ) : (
                                     <DataWrapper isStale={isStale}>
