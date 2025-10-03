@@ -18,6 +18,7 @@ import Pagination from '@/components/Pagination.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import { usePermissions } from '@/contexts/AuthContext.tsx';
 import PageActions from '@/components/layout/PageActions.tsx';
+import { useOffline } from '@/contexts/OfflineContext.tsx';
 
 const SponsorDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ const SponsorDetailPage: React.FC = () => {
     const { showToast } = useNotification();
     const { refetchSponsorLookup } = useData();
     const { canUpdate, canDelete } = usePermissions('sponsors');
+    const { isOnline, queueChange } = useOffline();
     
     const [sponsor, setSponsor] = useState<Sponsor | null>(null);
     const [sponsoredStudents, setSponsoredStudents] = useState<PaginatedResponse<Student> | null>(null);
@@ -60,29 +62,52 @@ const SponsorDetailPage: React.FC = () => {
     }, [fetchData]);
 
     const handleUpdateSponsor = async (sponsorData: Omit<Sponsor, 'sponsoredStudentCount'>) => {
-        if (!id) return;
+        if (!id || !sponsor) return;
         setIsSubmitting(true);
+        const originalSponsor = sponsor;
+        const updatedSponsor = { ...sponsor, ...sponsorData };
+
+        setSponsor(updatedSponsor);
+        setIsEditing(false);
+
+        if (!isOnline) {
+            await queueChange({ type: 'UPDATE_SPONSOR', payload: updatedSponsor, timestamp: Date.now() });
+            showToast('Offline: Sponsor updated. Will sync when online.', 'info');
+            setIsSubmitting(false);
+            refetchSponsorLookup();
+            return;
+        }
+
         try {
-            const updatedSponsor = await api.updateSponsor(sponsorData);
-            setSponsor(updatedSponsor);
+            const serverUpdatedSponsor = await api.updateSponsor(sponsorData);
+            setSponsor(serverUpdatedSponsor);
             showToast('Sponsor updated successfully!', 'success');
-            setIsEditing(false);
             refetchSponsorLookup();
         } catch (error: any) {
             showToast(error.message || 'Failed to update sponsor.', 'error');
+            setSponsor(originalSponsor);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDeleteSponsor = async () => {
-        if (!id) return;
+        if (!id || !sponsor) return;
         if (window.confirm('Are you sure you want to delete this sponsor? This will not delete the students, but they will become unsponsored.')) {
+            
+            navigate('/sponsors');
+
+            if (!isOnline) {
+                await queueChange({ type: 'DELETE_SPONSOR', payload: { id }, timestamp: Date.now() });
+                showToast('Offline: Sponsor will be deleted upon reconnection.', 'info');
+                refetchSponsorLookup();
+                return;
+            }
+
             try {
                 await api.deleteSponsor(id);
                 showToast('Sponsor deleted.', 'success');
                 refetchSponsorLookup();
-                navigate('/sponsors');
             } catch (error: any) {
                 showToast(error.message || 'Failed to delete sponsor.', 'error');
             }

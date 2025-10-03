@@ -24,6 +24,7 @@
     import { usePaginatedData } from '@/hooks/usePaginatedData.ts';
     import DataWrapper from '@/components/DataWrapper.tsx';
     import MobileListItem from '@/components/ui/MobileListItem.tsx';
+    import { useOffline } from '@/contexts/OfflineContext.tsx';
 
 
     const SponsorsPage: React.FC = () => {
@@ -35,6 +36,8 @@
         const isMobile = useMediaQuery('(max-width: 767px)');
         const { sponsorViewMode, setSponsorViewMode } = useSettings();
         const navigate = useNavigate();
+        const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+        const { isOnline, queueChange } = useOffline();
 
         const { 
             currentPage, apiQueryString, setCurrentPage, handleSort, sortConfig
@@ -51,10 +54,39 @@
             cacheKeyPrefix: 'sponsors',
         });
 
-        const handleSave = async (sponsor: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
+        useEffect(() => {
+            if (paginatedData?.results) {
+                setSponsors(paginatedData.results);
+            }
+        }, [paginatedData]);
+    
+        useEffect(() => {
+            const handleSync = () => {
+                showToast('Sponsors synced.', 'info');
+                refetch();
+                refetchSponsorLookup();
+            };
+            window.addEventListener('offline-sync-complete', handleSync);
+            return () => window.removeEventListener('offline-sync-complete', handleSync);
+        }, [refetch, refetchSponsorLookup, showToast]);
+
+        const handleSave = async (sponsorData: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
             setIsSubmitting(true);
+            if (!isOnline) {
+                const tempId = `temp-${Date.now()}`;
+                const newSponsor: Sponsor = { ...sponsorData, id: tempId, sponsoredStudentCount: 0 };
+                
+                setSponsors(prev => [newSponsor, ...prev].sort((a,b) => a.name.localeCompare(b.name)));
+                
+                await queueChange({ type: 'CREATE_SPONSOR', payload: newSponsor, timestamp: Date.now() });
+                showToast('Offline: Sponsor will be created upon reconnection.', 'info');
+                setIsAdding(false);
+                setIsSubmitting(false);
+                return;
+            }
+    
             try {
-                await api.addSponsor(sponsor);
+                await api.addSponsor(sponsorData);
                 showToast('Sponsor added successfully!', 'success');
                 setIsAdding(false);
                 refetch();
@@ -66,7 +98,6 @@
             }
         };
         
-        const sponsors = paginatedData?.results || [];
         const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
         const renderDesktopSkeletons = () => {
@@ -98,7 +129,7 @@
             
                 {isMobile ? (
                     <div className="space-y-3">
-                        {isLoading ? (
+                        {isLoading && sponsors.length === 0 ? (
                              <div className="space-y-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}</div>
                         ) : (
                              <DataWrapper isStale={isStale}>
@@ -127,7 +158,7 @@
                             <div className="flex justify-end p-4">
                                 <ViewToggle view={sponsorViewMode} onChange={setSponsorViewMode} />
                             </div>
-                            {isLoading ? renderDesktopSkeletons() : (
+                            {isLoading && sponsors.length === 0 ? renderDesktopSkeletons() : (
                                 <DataWrapper isStale={isStale}>
                                     {isInitialLoadAndEmpty ? (
                                         <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />

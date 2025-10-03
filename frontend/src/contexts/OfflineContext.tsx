@@ -3,7 +3,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus.ts';
 import * as db from '@/utils/db.ts';
 import { api } from '@/services/api.ts';
 import { useNotification } from './NotificationContext.tsx';
-import { Task } from '@/types.ts';
+import { Task, Sponsor } from '@/types.ts';
 
 interface QueuedChange {
     id: number;
@@ -71,6 +71,17 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
                         break;
                     case 'DELETE_TASK':
                         await api.deleteTask(change.payload.id);
+                        break;
+                    case 'CREATE_SPONSOR': {
+                        const { id: tempId, ...createPayload } = change.payload;
+                        await api.addSponsor(createPayload);
+                        break;
+                    }
+                    case 'UPDATE_SPONSOR':
+                        await api.updateSponsor(change.payload as Sponsor);
+                        break;
+                    case 'DELETE_SPONSOR':
+                        await api.deleteSponsor(change.payload.id);
                         break;
                 }
                 await db.deleteChange(change.id);
