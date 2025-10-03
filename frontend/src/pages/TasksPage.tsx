@@ -121,9 +121,9 @@ const TasksPage: React.FC = () => {
                 setTasks(prevList => {
                     let listChanged = false;
                     const newList = prevList.map(task => {
-                        if (task.id in createdMap) {
+                        if (String(task.id) in createdMap) {
                             listChanged = true;
-                            return createdMap[task.id];
+                            return createdMap[String(task.id)];
                         }
                         return task;
                     });
@@ -214,24 +214,32 @@ const TasksPage: React.FC = () => {
     };
     
     const handleQuickStatusChange = async (taskToUpdate: Task, newStatus: TaskStatus) => {
-        const originalTasks = tasks;
         const updatedTask = { ...taskToUpdate, status: newStatus };
-        setTasks(tasks.map(task => 
-            task.id === taskToUpdate.id ? updatedTask : task
-        ));
-
+    
+        // Use functional update to avoid race conditions with stale state.
+        setTasks(prevTasks =>
+            prevTasks.map(task =>
+                task.id === taskToUpdate.id ? updatedTask : task
+            )
+        );
+    
         if (!isOnline) {
             await queueChange({ type: 'UPDATE_TASK', payload: updatedTask, timestamp: Date.now() });
             showToast(`Offline: Task status updated. Will sync.`, 'info');
             return;
         }
-
+    
         try {
             await api.updateTask(updatedTask);
             showToast(`Task status updated to ${newStatus}.`, 'success');
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
-            setTasks(originalTasks);
+            // Revert the change on failure using the original task object.
+            setTasks(prevTasks =>
+                prevTasks.map(task =>
+                    task.id === taskToUpdate.id ? taskToUpdate : task
+                )
+            );
         }
     };
     
