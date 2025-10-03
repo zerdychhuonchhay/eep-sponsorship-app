@@ -28,6 +28,7 @@ import DataWrapper from '@/components/DataWrapper.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import MobileStudentCard from '@/components/students/MobileStudentCard.tsx';
 import { useOffline } from '@/contexts/OfflineContext.tsx';
+import * as db from '@/utils/db.ts';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
@@ -44,7 +45,9 @@ const FormLoader: React.FC = () => (
 const StudentsPage: React.FC = () => {
     const { sponsorLookup, refetchStudentLookup } = useData();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [detailedStudent, setDetailedStudent] = useState<Student | null>(null);
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [isShowingImportModal, setIsShowingImportModal] = useState(false);
     const { showToast } = useNotification();
@@ -92,6 +95,50 @@ const StudentsPage: React.FC = () => {
         return () => window.removeEventListener('offline-sync-complete', handleSync);
     }, [refetch, showToast]);
     
+    const fetchAndSetDetailedStudent = useCallback(async (studentId: string, initialData?: Student) => {
+        setIsDetailLoading(true);
+        if (initialData) {
+            setDetailedStudent(initialData); // Show partial data immediately
+        }
+    
+        const cacheKey = `student-detail-${studentId}`;
+    
+        try {
+            const cachedData = await db.get(cacheKey);
+            if (cachedData) {
+                setDetailedStudent(cachedData);
+            }
+        } catch (e) {
+            console.error("Cache read failed:", e);
+        } finally {
+           if (!isOnline) {
+              setIsDetailLoading(false);
+           }
+        }
+    
+        if (isOnline) {
+           try {
+               const freshData = await api.getStudentById(studentId);
+               setDetailedStudent(freshData);
+               await db.put(cacheKey, freshData);
+           } catch (error) {
+               showToast("Could not load latest student details from server.", 'error');
+           } finally {
+               setIsDetailLoading(false);
+           }
+        }
+    
+    }, [isOnline, showToast]);
+    
+    useEffect(() => {
+        if (selectedStudentId) {
+            const studentFromList = studentsList.find(s => s.studentId === selectedStudentId);
+            fetchAndSetDetailedStudent(selectedStudentId, studentFromList);
+        } else {
+            setDetailedStudent(null);
+        }
+    }, [selectedStudentId, fetchAndSetDetailedStudent, studentsList]);
+
     const filterOptions: FilterOption[] = [
         { id: 'student_status', label: 'Status', options: Object.values(StudentStatus).map(s => ({ value: s, label: s })) },
         { id: 'sponsorship_status', label: 'Sponsorship', options: Object.values(SponsorshipStatus).map(s => ({ value: s, label: s })) },
@@ -119,9 +166,10 @@ const StudentsPage: React.FC = () => {
     }, [refetch, refetchStudentLookup]);
 
     const handleEditSave = (updatedStudent: Student) => {
-        setEditingStudent(updatedStudent);
-        if (selectedStudent && selectedStudent.studentId === updatedStudent.studentId) {
-            setSelectedStudent(updatedStudent);
+        setEditingStudent(null);
+        showToast('Student updated successfully!', 'success');
+        if (detailedStudent && detailedStudent.studentId === updatedStudent.studentId) {
+            setDetailedStudent(updatedStudent);
         }
         refetchListData();
     };
@@ -140,11 +188,16 @@ const StudentsPage: React.FC = () => {
         }
     };
     
-    const handleDeleteStudent = async (studentId: string) => {
+    const handleDeleteStudent = async (studentId: string, fromDetailView: boolean = false) => {
         if(!window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) return;
         
         // Optimistic UI update
         setStudentsList(prev => prev.filter(s => s.studentId !== studentId));
+
+        if (fromDetailView) {
+            setSelectedStudentId(null);
+            setDetailedStudent(null);
+        }
 
         if (!isOnline) {
             await queueChange({
@@ -153,14 +206,12 @@ const StudentsPage: React.FC = () => {
                 timestamp: Date.now(),
             });
             showToast('Offline: Student will be deleted upon reconnection.', 'info');
-            if (selectedStudent?.studentId === studentId) setSelectedStudent(null);
             return;
         }
 
         try {
             await api.deleteStudent(studentId);
             showToast('Student deleted.', 'success');
-            if (selectedStudent?.studentId === studentId) setSelectedStudent(null);
             // Data will be refetched by the hook, but we can force it if needed
             refetchListData();
         } catch (error: any) {
@@ -169,18 +220,6 @@ const StudentsPage: React.FC = () => {
             setStudentsList(paginatedData?.results || []);
         }
     };
-    
-    const refreshSelectedStudent = useCallback(async () => {
-        if (!selectedStudent) return;
-        try {
-            const updatedStudent = await api.getStudentById(selectedStudent.studentId);
-            setSelectedStudent(updatedStudent);
-            refetchListData();
-        } catch(e) {
-            showToast("Could not refresh student data.", 'error');
-            setSelectedStudent(null);
-        }
-    }, [selectedStudent, showToast, refetchListData]);
 
     const handleImportFinished = () => {
         setIsShowingImportModal(false);
@@ -248,8 +287,8 @@ const StudentsPage: React.FC = () => {
     
     return (
         <div className="space-y-6">
-            <PageHeader title={selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : "Students"}>
-                {!selectedStudent && canCreate && (
+            <PageHeader title={detailedStudent ? `${detailedStudent.firstName} ${detailedStudent.lastName}` : "Students"}>
+                {!detailedStudent && canCreate && (
                     <PageActions>
                         <Button onClick={() => setIsShowingImportModal(true)} variant="secondary" icon={<UploadIcon className="w-5 h-5" />} aria-label="Import Students" />
                         <Button onClick={() => setEditingStudent({} as Student)} icon={<PlusIcon className="w-5 h-5" />} aria-label="Add Student" />
@@ -257,13 +296,14 @@ const StudentsPage: React.FC = () => {
                 )}
             </PageHeader>
 
-            {selectedStudent ? (
+            {detailedStudent ? (
                 <StudentDetailView 
-                    student={selectedStudent} 
-                    onBack={() => setSelectedStudent(null)}
+                    student={detailedStudent} 
+                    isLoading={isDetailLoading}
+                    onBack={() => setSelectedStudentId(null)}
                     onEdit={(student) => setEditingStudent(student)}
-                    onDelete={handleDeleteStudent}
-                    onDataChange={refreshSelectedStudent}
+                    onDelete={(studentId) => handleDeleteStudent(studentId, true)}
+                    onDataChange={() => selectedStudentId && fetchAndSetDetailedStudent(selectedStudentId)}
                 />
             ) : (
                 <>
@@ -313,7 +353,7 @@ const StudentsPage: React.FC = () => {
                                                         key={student.studentId}
                                                         student={student}
                                                         actionItems={actionItems}
-                                                        onViewProfile={setSelectedStudent}
+                                                        onViewProfile={(s) => setSelectedStudentId(s.studentId)}
                                                         sponsorName={activeSponsorship?.sponsorName}
                                                     />
                                                 );
@@ -354,13 +394,13 @@ const StudentsPage: React.FC = () => {
                                         {studentsList.length > 0 ? (
                                             studentViewMode === 'card' ? (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                                    {studentsList.map((student) => (<StudentCard key={student.studentId} student={student} isSelected={selectedStudentIds.has(student.studentId)} onSelect={handleSelectStudent} onViewProfile={setSelectedStudent} canUpdate={canUpdate} isSelectionMode={isSelectionMode} />))}
+                                                    {studentsList.map((student) => (<StudentCard key={student.studentId} student={student} isSelected={selectedStudentIds.has(student.studentId)} onSelect={handleSelectStudent} onViewProfile={(s) => setSelectedStudentId(s.studentId)} canUpdate={canUpdate} isSelectionMode={isSelectionMode} />))}
                                                 </div>
                                             ) : (
                                                 <div className="overflow-x-auto">
                                                     <table className="ui-table">
                                                         <thead><tr>{canUpdate && isSelectionMode && <th className="w-12"></th>}{studentTableColumns.map(col => (<th key={col.id as string}><button className="flex items-center gap-1 hover:text-primary" onClick={() => handleSort(col.id as keyof Student)}>{col.label}{sortConfig?.key === col.id && (sortConfig.order === 'asc' ? <ArrowUpIcon className="w-4 h-4" /> : <ArrowDownIcon className="w-4 h-4" />)}</button></th>))}</tr></thead>
-                                                        <tbody>{studentsList.map(s => (<tr key={s.studentId} className="cursor-pointer" onClick={() => isSelectionMode ? handleSelectStudent(s.studentId, !selectedStudentIds.has(s.studentId)) : setSelectedStudent(s)}>{canUpdate && isSelectionMode && (<td onClick={e => e.stopPropagation()}><input type="checkbox" className="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary" checked={selectedStudentIds.has(s.studentId)} onChange={e => handleSelectStudent(s.studentId, e.target.checked)} /></td>)}{studentTableColumns.map(col => (<td key={col.id as string}>{col.renderCell(s)}</td>))}</tr>))}</tbody>
+                                                        <tbody>{studentsList.map(s => (<tr key={s.studentId} className="cursor-pointer" onClick={() => isSelectionMode ? handleSelectStudent(s.studentId, !selectedStudentIds.has(s.studentId)) : setSelectedStudentId(s.studentId)}>{canUpdate && isSelectionMode && (<td onClick={e => e.stopPropagation()}><input type="checkbox" className="form-checkbox h-5 w-5 text-primary rounded focus:ring-primary" checked={selectedStudentIds.has(s.studentId)} onChange={e => handleSelectStudent(s.studentId, e.target.checked)} /></td>)}{studentTableColumns.map(col => (<td key={col.id as string}>{col.renderCell(s)}</td>))}</tr>))}</tbody>
                                                     </table>
                                                 </div>
                                             )

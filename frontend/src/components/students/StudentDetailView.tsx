@@ -27,6 +27,7 @@ import { Card, CardContent } from '@/components/ui/Card.tsx';
 
 interface StudentDetailViewProps {
     student: Student;
+    isLoading: boolean;
     onBack: () => void;
     onEdit: (student: Student) => void;
     onDelete: (studentId: string) => void;
@@ -49,7 +50,7 @@ const NarrativeDetailCard: React.FC<{ title: string; data: Record<string, any> }
 
 
 const StudentDetailView: React.FC<StudentDetailViewProps> = ({ 
-    student, onBack, onEdit, onDelete, onDataChange,
+    student, isLoading, onBack, onEdit, onDelete, onDataChange,
 }) => {
     const [modal, setModal] = useState<'add_report' | 'edit_report' | 'add_follow_up' | 'edit_follow_up' | 'sponsorship' | 'upload_doc' | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -550,7 +551,12 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
     ];
 
     return (
-        <div className="space-y-6">
+        <div className="relative space-y-6">
+             {isLoading && (
+                <div className="absolute inset-0 bg-white/70 dark:bg-box-dark/70 z-10 flex items-center justify-center rounded-lg">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
+                </div>
+            )}
             <button onClick={handleBackClick} className="text-primary hover:underline font-medium mb-6">
                 {isMobile ? '← Back to Summary' : '← Back to Student List'}
             </button>
