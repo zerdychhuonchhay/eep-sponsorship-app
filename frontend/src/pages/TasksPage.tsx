@@ -26,6 +26,7 @@ import DataWrapper from '@/components/DataWrapper.tsx';
 import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import MobileListItem from '@/components/ui/MobileListItem.tsx';
 import Drawer from '@/components/ui/Drawer.tsx';
+import { useOffline } from '@/contexts/OfflineContext.tsx';
 
 const TaskForm: React.FC<{ 
     onSave: (task: TaskFormData) => void; 
@@ -87,6 +88,7 @@ const TasksPage: React.FC = () => {
     const { canCreate, canUpdate, canDelete } = usePermissions('tasks');
     const isMobile = useMediaQuery('(max-width: 767px)');
     const [tasks, setTasks] = useState<Task[]>([]);
+    const { isOnline, queueChange } = useOffline();
 
     const {
         sortConfig, currentPage, filters, apiQueryString,
@@ -111,23 +113,56 @@ const TasksPage: React.FC = () => {
         }
     }, [paginatedData]);
 
+    useEffect(() => {
+        const handleSync = () => {
+            showToast('Tasks synced from server.', 'info');
+            refetch();
+        };
+        window.addEventListener('offline-sync-complete', handleSync);
+        return () => window.removeEventListener('offline-sync-complete', handleSync);
+    }, [refetch, showToast]);
+
     const filterOptions: FilterOption[] = [
         { id: 'status', label: 'Status', options: Object.values(TaskStatus).map(s => ({ value: s, label: s }))},
         { id: 'priority', label: 'Priority', options: Object.values(TaskPriority).map(p => ({ value: p, label: p }))},
     ];
     
+    const closeForm = () => {
+        setIsAdding(false);
+        setEditingTask(null);
+    };
+
     const handleSaveTask = async (taskData: TaskFormData) => {
         setIsApiSubmitting(true);
+        const isEdit = !!editingTask;
+
+        if (!isOnline) {
+            if (isEdit && editingTask) {
+                const updatedTask = { ...editingTask, ...taskData };
+                setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+                await queueChange({ type: 'UPDATE_TASK', payload: updatedTask, timestamp: Date.now() });
+                showToast('Offline: Task updated. Will sync when online.', 'info');
+            } else {
+                const tempId = `temp-${Date.now()}`;
+                const newTask: Task = { ...taskData, id: tempId };
+                setTasks(prev => [newTask, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+                await queueChange({ type: 'CREATE_TASK', payload: newTask, timestamp: Date.now() });
+                showToast('Offline: Task created. Will sync when online.', 'info');
+            }
+            closeForm();
+            setIsApiSubmitting(false);
+            return;
+        }
+    
         try {
-            if (editingTask) {
+            if (isEdit && editingTask) {
                 await api.updateTask({ ...taskData, id: editingTask.id });
                 showToast('Task updated successfully!', 'success');
             } else {
                 await api.addTask(taskData);
                 showToast('Task added successfully!', 'success');
             }
-            setEditingTask(null);
-            setIsAdding(false);
+            closeForm();
             refetch();
         } catch (error: any) {
             showToast(error.message || 'Failed to save task.', 'error');
@@ -137,28 +172,46 @@ const TasksPage: React.FC = () => {
     };
     
     const handleDeleteTask = async (taskId: string) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            try {
-                await api.deleteTask(taskId);
-                showToast('Task deleted.', 'success');
-                refetch();
-            } catch (error: any) {
-                showToast(error.message || 'Failed to delete task.', 'error');
-            }
+        if (!window.confirm('Are you sure you want to delete this task?')) return;
+
+        const taskToDelete = tasks.find(t => t.id === taskId);
+        if (!taskToDelete) return;
+
+        // Optimistic UI update
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+
+        if (!isOnline) {
+            await queueChange({ type: 'DELETE_TASK', payload: { id: taskId }, timestamp: Date.now() });
+            showToast('Offline: Task will be deleted upon reconnection.', 'info');
+            return;
+        }
+
+        try {
+            await api.deleteTask(taskId);
+            showToast('Task deleted.', 'success');
+            refetch();
+        } catch (error: any) {
+            showToast(error.message || 'Failed to delete task.', 'error');
+            setTasks(prev => [...prev, taskToDelete].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())); // Revert
         }
     };
     
     const handleQuickStatusChange = async (taskToUpdate: Task, newStatus: TaskStatus) => {
         const originalTasks = tasks;
-        
-        const updatedTasks = tasks.map(task => 
-            task.id === taskToUpdate.id ? { ...task, status: newStatus } : task
-        );
-        setTasks(updatedTasks);
+        const updatedTask = { ...taskToUpdate, status: newStatus };
+        setTasks(tasks.map(task => 
+            task.id === taskToUpdate.id ? updatedTask : task
+        ));
+
+        if (!isOnline) {
+            await queueChange({ type: 'UPDATE_TASK', payload: updatedTask, timestamp: Date.now() });
+            showToast(`Offline: Task status updated. Will sync.`, 'info');
+            return;
+        }
 
         try {
-            await api.updateTask({ ...taskToUpdate, status: newStatus });
-            showToast(`Task "${taskToUpdate.title}" status updated to ${newStatus}.`, 'success');
+            await api.updateTask(updatedTask);
+            showToast(`Task status updated to ${newStatus}.`, 'success');
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
             setTasks(originalTasks);
@@ -173,7 +226,7 @@ const TasksPage: React.FC = () => {
     
     const totalPages = paginatedData ? Math.ceil(paginatedData.count / 15) : 1;
 
-    const mainContent = isLoading ? (
+    const mainContent = isLoading && tasks.length === 0 ? (
         isMobile ? (
             <div className="space-y-4">
                 {Array.from({ length: 8 }).map((_, i) => <SkeletonListItem key={i} />)}
@@ -261,10 +314,6 @@ const TasksPage: React.FC = () => {
     );
     
     const formIsOpen = isAdding || !!editingTask;
-    const closeForm = () => {
-        setIsAdding(false);
-        setEditingTask(null);
-    };
 
     const formContent = (
         <TaskForm 

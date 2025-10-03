@@ -3,6 +3,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus.ts';
 import * as db from '@/utils/db.ts';
 import { api } from '@/services/api.ts';
 import { useNotification } from './NotificationContext.tsx';
+import { Task } from '@/types.ts';
 
 interface QueuedChange {
     id: number;
@@ -59,7 +60,18 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
                     case 'DELETE_STUDENT':
                         await api.deleteStudent(change.payload.studentId);
                         break;
-                    // Future mutation types like 'UPDATE_STUDENT' would be handled here
+                    case 'CREATE_TASK': {
+                        // The temp ID is only for the frontend. The backend creates its own.
+                        const { id: tempId, ...createPayload } = change.payload;
+                        await api.addTask(createPayload);
+                        break;
+                    }
+                    case 'UPDATE_TASK':
+                        await api.updateTask(change.payload as Task);
+                        break;
+                    case 'DELETE_TASK':
+                        await api.deleteTask(change.payload.id);
+                        break;
                 }
                 await db.deleteChange(change.id);
                 results.push({ ...change, status: 'success' });
