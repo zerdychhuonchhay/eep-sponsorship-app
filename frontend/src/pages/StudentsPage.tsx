@@ -5,7 +5,7 @@ import { useNotification } from '@/contexts/NotificationContext.tsx';
 import { SkeletonTable, SkeletonCard, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
 import { useTableControls } from '@/hooks/useTableControls.ts';
 import Pagination from '@/components/Pagination.tsx';
-import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, EditIcon, TrashIcon } from '@/components/Icons.tsx';
+import { PlusIcon, UploadIcon, SearchIcon, SparklesIcon, ArrowUpIcon, ArrowDownIcon, UserIcon, EditIcon, TrashIcon, CloudUploadIcon } from '@/components/Icons.tsx';
 import StudentDetailView from '@/components/students/StudentDetailView.tsx';
 import Modal from '@/components/Modal.tsx';
 import StudentImportModal from '@/components/students/StudentImportModal.tsx';
@@ -32,6 +32,7 @@ import * as db from '@/utils/db.ts';
 
 const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
 
+// FIX: Correctly defined the FormLoader component to return a ReactNode.
 const FormLoader: React.FC = () => (
     <div className="flex justify-center items-center h-96">
         <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -93,13 +94,39 @@ const StudentsPage: React.FC = () => {
     }, [refetch, refetchStudentLookup]);
 
     useEffect(() => {
-        const handleSync = () => {
-            showToast('Data synced from server.', 'info');
-            refetchListData();
+        const handleSync = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const createdMap = customEvent.detail?.created;
+    
+            if (createdMap && Object.keys(createdMap).length > 0) {
+                setStudentsList(prevList => {
+                    let listChanged = false;
+                    const newList = prevList.map(student => {
+                        if (student.studentId in createdMap) {
+                            listChanged = true;
+                            return createdMap[student.studentId]; // Replace temp student with permanent one
+                        }
+                        return student;
+                    });
+    
+                    if (listChanged) {
+                        // Also update lookups if a student was created
+                        refetchStudentLookup();
+                        return newList;
+                    }
+                    return prevList;
+                });
+                showToast('Offline changes synced and updated.', 'success');
+            } else {
+                // Fallback for simple syncs like DELETE/UPDATE
+                showToast('Data synced from server.', 'info');
+                refetchListData();
+            }
         };
+    
         window.addEventListener('offline-sync-complete', handleSync);
         return () => window.removeEventListener('offline-sync-complete', handleSync);
-    }, [refetchListData, showToast]);
+    }, [refetchListData, showToast, refetchStudentLookup]);
     
     const fetchAndSetDetailedStudent = useCallback(async (studentId: string, initialData?: Student) => {
         setIsDetailLoading(true);

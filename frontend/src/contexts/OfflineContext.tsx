@@ -53,25 +53,28 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         const changesToProcess = [...pendingChanges];
         const results = [];
+        const createdMappings: Record<string, any> = {};
 
         for (const change of changesToProcess) {
             try {
+                let apiResponse;
                 switch(change.type) {
                     case 'DELETE_STUDENT':
                         await api.deleteStudent(change.payload.studentId);
                         break;
                     case 'CREATE_STUDENT': {
-                        const { id: tempId, ...createPayload } = change.payload;
-                        await api.addStudent(createPayload);
+                        const { studentId: tempId, ...createPayload } = change.payload;
+                        apiResponse = await api.addStudent(createPayload);
+                        createdMappings[tempId] = apiResponse;
                         break;
                     }
                     case 'UPDATE_STUDENT':
                         await api.updateStudent(change.payload as Partial<Student> & { studentId: string });
                         break;
                     case 'CREATE_TASK': {
-                        // The temp ID is only for the frontend. The backend creates its own.
                         const { id: tempId, ...createPayload } = change.payload;
-                        await api.addTask(createPayload);
+                        apiResponse = await api.addTask(createPayload);
+                        createdMappings[tempId] = apiResponse;
                         break;
                     }
                     case 'UPDATE_TASK':
@@ -82,7 +85,8 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
                         break;
                     case 'CREATE_SPONSOR': {
                         const { id: tempId, ...createPayload } = change.payload;
-                        await api.addSponsor(createPayload);
+                        apiResponse = await api.addSponsor(createPayload);
+                        createdMappings[tempId] = apiResponse;
                         break;
                     }
                     case 'UPDATE_SPONSOR':
@@ -108,8 +112,10 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
 
         if (successes > 0) {
             showToast(`${successes} change(s) synced successfully.`, 'success');
-            // Dispatch a global event for components to refetch their data
-            window.dispatchEvent(new CustomEvent('offline-sync-complete'));
+            // Dispatch a global event for components to refetch or perform smart updates
+            window.dispatchEvent(new CustomEvent('offline-sync-complete', {
+                detail: { created: createdMappings }
+            }));
         }
         if (failures > 0) {
             showToast(`${failures} change(s) failed to sync. They remain queued.`, 'error');
@@ -118,7 +124,6 @@ export const OfflineProvider: React.FC<{ children: ReactNode }> = ({ children })
     }, [isSyncing, pendingChanges, showToast, loadPendingChanges]);
 
     useEffect(() => {
-        // When the app comes online and there are changes to sync, process them.
         if (isOnline && pendingChanges.length > 0 && !isSyncing) {
             processQueue();
         }

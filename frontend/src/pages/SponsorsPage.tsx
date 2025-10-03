@@ -3,7 +3,7 @@
     import { api } from '@/services/api.ts';
     import { Sponsor } from '@/types.ts';
     import Modal from '@/components/Modal.tsx';
-    import { PlusIcon, ArrowUpIcon, ArrowDownIcon, SponsorIcon } from '@/components/Icons.tsx';
+    import { PlusIcon, ArrowUpIcon, ArrowDownIcon, SponsorIcon, CloudUploadIcon } from '@/components/Icons.tsx';
     import { useNotification } from '@/contexts/NotificationContext.tsx';
     import { SkeletonCard, SkeletonTable, SkeletonListItem } from '@/components/SkeletonLoader.tsx';
     import { useTableControls } from '@/hooks/useTableControls.ts';
@@ -61,10 +61,31 @@
         }, [paginatedData]);
     
         useEffect(() => {
-            const handleSync = () => {
-                showToast('Sponsors synced.', 'info');
-                refetch();
-                refetchSponsorLookup();
+            const handleSync = (event: Event) => {
+                const customEvent = event as CustomEvent;
+                const createdMap = customEvent.detail?.created;
+        
+                if (createdMap && Object.keys(createdMap).length > 0) {
+                    setSponsors(prevList => {
+                        let listChanged = false;
+                        const newList = prevList.map(sponsor => {
+                            if (sponsor.id in createdMap) {
+                                listChanged = true;
+                                return createdMap[sponsor.id];
+                            }
+                            return sponsor;
+                        });
+                        if (listChanged) {
+                            refetchSponsorLookup();
+                            return newList;
+                        }
+                        return prevList;
+                    });
+                    showToast('Offline sponsor changes synced.', 'success');
+                } else {
+                    showToast('Sponsors synced from server.', 'info');
+                    refetch();
+                }
             };
             window.addEventListener('offline-sync-complete', handleSync);
             return () => window.removeEventListener('offline-sync-complete', handleSync);
@@ -137,15 +158,23 @@
                                     <EmptyState title="No Sponsors Found" message="Add your first sponsor to get started." />
                                 ) : (
                                     <>
-                                        {sponsors.map(sponsor => (
-                                            <MobileListItem
-                                                key={sponsor.id}
-                                                icon={<SponsorIcon className="w-5 h-5 text-primary" />}
-                                                title={sponsor.name}
-                                                subtitle={`Sponsored Students: ${sponsor.sponsoredStudentCount}`}
-                                                onClick={() => navigate(`/sponsors/${sponsor.id}`)}
-                                            />
-                                        ))}
+                                        {sponsors.map(sponsor => {
+                                            const isPending = sponsor.id.startsWith('temp-');
+                                            return (
+                                                <MobileListItem
+                                                    key={sponsor.id}
+                                                    icon={<SponsorIcon className="w-5 h-5 text-primary" />}
+                                                    title={
+                                                        <div className="flex items-center gap-2">
+                                                            {sponsor.name}
+                                                            {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                                        </div>
+                                                    }
+                                                    subtitle={`Sponsored Students: ${sponsor.sponsoredStudentCount}`}
+                                                    onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}
+                                                />
+                                            );
+                                        })}
                                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                                     </>
                                 )}
@@ -184,14 +213,22 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {sponsors.map(sponsor => (
-                                                        <tr key={sponsor.id} className="cursor-pointer" onClick={() => navigate(`/sponsors/${sponsor.id}`)}>
-                                                            <td className="font-medium">{sponsor.name}</td>
-                                                            <td className="text-body-color">{sponsor.email}</td>
-                                                            <td className="text-body-color">{formatDateForDisplay(sponsor.sponsorshipStartDate)}</td>
-                                                            <td className="text-body-color">{sponsor.sponsoredStudentCount}</td>
-                                                        </tr>
-                                                    ))}
+                                                    {sponsors.map(sponsor => {
+                                                        const isPending = sponsor.id.startsWith('temp-');
+                                                        return (
+                                                            <tr key={sponsor.id} className={!isPending ? "cursor-pointer" : ""} onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}>
+                                                                <td className="font-medium">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {sponsor.name}
+                                                                        {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="text-body-color">{sponsor.email}</td>
+                                                                <td className="text-body-color">{formatDateForDisplay(sponsor.sponsorshipStartDate)}</td>
+                                                                <td className="text-body-color">{sponsor.sponsoredStudentCount}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>

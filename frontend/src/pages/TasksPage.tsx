@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
 import { Task, TaskStatus, TaskPriority } from '../types.ts';
 import Modal from '../components/Modal.tsx';
-import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, TasksIcon } from '../components/Icons.tsx';
+import { PlusIcon, EditIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, TasksIcon, CloudUploadIcon } from '../components/Icons.tsx';
 import { useNotification } from '../contexts/NotificationContext.tsx';
 import { SkeletonTable, SkeletonListItem } from '../components/SkeletonLoader.tsx';
 import { FormInput, FormSelect, FormTextArea } from '../components/forms/FormControls.tsx';
@@ -114,9 +114,27 @@ const TasksPage: React.FC = () => {
     }, [paginatedData]);
 
     useEffect(() => {
-        const handleSync = () => {
-            showToast('Tasks synced from server.', 'info');
-            refetch();
+        const handleSync = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const createdMap = customEvent.detail?.created;
+    
+            if (createdMap && Object.keys(createdMap).length > 0) {
+                setTasks(prevList => {
+                    let listChanged = false;
+                    const newList = prevList.map(task => {
+                        if (task.id in createdMap) {
+                            listChanged = true;
+                            return createdMap[task.id];
+                        }
+                        return task;
+                    });
+                    return listChanged ? newList : prevList;
+                });
+                showToast('Offline task changes synced.', 'success');
+            } else {
+                showToast('Tasks synced from server.', 'info');
+                refetch();
+            }
         };
         window.addEventListener('offline-sync-complete', handleSync);
         return () => window.removeEventListener('offline-sync-complete', handleSync);
@@ -237,16 +255,24 @@ const TasksPage: React.FC = () => {
             {tasks.length > 0 ? (
                 isMobile ? (
                     <div className="space-y-3">
-                        {tasks.map((task) => (
-                            <MobileListItem
-                                key={task.id}
-                                icon={<TasksIcon className="w-5 h-5 text-primary" />}
-                                title={task.title}
-                                subtitle={`Due: ${new Date(task.dueDate).toLocaleDateString()}`}
-                                rightContent={<Badge type={task.priority} />}
-                                onClick={canUpdate ? () => setEditingTask(task) : undefined}
-                            />
-                        ))}
+                        {tasks.map((task) => {
+                            const isPending = task.id.startsWith('temp-');
+                            return (
+                                <MobileListItem
+                                    key={task.id}
+                                    icon={<TasksIcon className="w-5 h-5 text-primary" />}
+                                    title={
+                                        <div className="flex items-center gap-2">
+                                            {task.title}
+                                            {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                        </div>
+                                    }
+                                    subtitle={`Due: ${new Date(task.dueDate).toLocaleDateString()}`}
+                                    rightContent={<Badge type={task.priority} />}
+                                    onClick={canUpdate && !isPending ? () => setEditingTask(task) : undefined}
+                                />
+                            );
+                        })}
                         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
                     </div>
                 ) : (
@@ -268,8 +294,9 @@ const TasksPage: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {tasks.map((task) => {
+                                        const isPending = task.id.startsWith('temp-');
                                         const actionItems = [];
-                                        if (canUpdate) {
+                                        if (canUpdate && !isPending) {
                                             actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });
                                         }
                                         if (canDelete) {
@@ -279,7 +306,10 @@ const TasksPage: React.FC = () => {
                                         return (
                                             <tr key={task.id}>
                                                 <td>
-                                                    <p className="font-medium">{task.title}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-medium">{task.title}</p>
+                                                        {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary" title="Pending sync" />}
+                                                    </div>
                                                     {task.description && <p className="text-sm text-body-color mt-1 line-clamp-2" title={task.description}>{task.description}</p>}
                                                 </td>
                                                 <td className="text-body-color">{new Date(task.dueDate).toLocaleDateString()}</td>
@@ -290,7 +320,7 @@ const TasksPage: React.FC = () => {
                                                         onChange={(e) => handleQuickStatusChange(task, e.target.value as TaskStatus)}
                                                         className={`w-full rounded border-0 bg-transparent py-1 px-2 font-medium outline-none transition text-xs font-semibold ${statusColors[task.status]}`}
                                                         onClick={(e) => e.stopPropagation()}
-                                                        disabled={!canUpdate}
+                                                        disabled={!canUpdate || isPending}
                                                     >
                                                         {Object.values(TaskStatus).map((s: string) => <option key={s} value={s}>{s}</option>)}
                                                     </select>

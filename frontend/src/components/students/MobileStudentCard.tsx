@@ -2,7 +2,7 @@ import React from 'react';
 import { Student } from '@/types.ts';
 import { calculateAge } from '@/utils/dateUtils.ts';
 import Badge from '@/components/ui/Badge.tsx';
-import { UserIcon } from '@/components/Icons.tsx';
+import { UserIcon, CloudUploadIcon } from '@/components/Icons.tsx';
 import ActionDropdown, { ActionItem } from '@/components/ActionDropdown.tsx';
 
 interface MobileStudentCardProps {
@@ -21,6 +21,8 @@ const StatItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, 
 
 
 const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onViewProfile, actionItems, sponsorName }) => {
+    const isPending = student.studentId.startsWith('temp-');
+
     return (
         <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-sm overflow-hidden">
             <div className="p-4">
@@ -28,7 +30,7 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onViewPr
                 <div className="flex items-center gap-4 mb-4">
                     <div
                         className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden cursor-pointer"
-                        onClick={() => onViewProfile(student)}
+                        onClick={() => !isPending && onViewProfile(student)}
                     >
                         {student.profilePhoto ? (
                             <img src={student.profilePhoto} alt={student.firstName} className="h-full w-full object-cover"/>
@@ -38,8 +40,11 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onViewPr
                             </div>
                         )}
                     </div>
-                    <div className="flex-grow overflow-hidden cursor-pointer" onClick={() => onViewProfile(student)}>
-                        <h3 className="font-semibold text-lg text-black dark:text-white truncate">{`${student.firstName} ${student.lastName}`}</h3>
+                    <div className="flex-grow overflow-hidden cursor-pointer" onClick={() => !isPending && onViewProfile(student)}>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-lg text-black dark:text-white truncate">{`${student.firstName} ${student.lastName}`}</h3>
+                            {isPending && <CloudUploadIcon className="w-4 h-4 text-secondary flex-shrink-0" title="Pending sync" />}
+                        </div>
                         <p className="text-sm text-body-color dark:text-gray-400">{student.studentId}</p>
                     </div>
                 </div>
@@ -47,7 +52,7 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onViewPr
                 {/* Card Body - Key Info Grid */}
                 <div
                     className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4 cursor-pointer"
-                    onClick={() => onViewProfile(student)}
+                    onClick={() => !isPending && onViewProfile(student)}
                 >
                     <StatItem label="Age" value={calculateAge(student.dateOfBirth)} />
                     <StatItem label="Grade" value={student.currentGrade} />
