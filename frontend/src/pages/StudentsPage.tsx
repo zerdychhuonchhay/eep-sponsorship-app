@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '@/services/api.ts';
 import { Student, StudentStatus, SponsorshipStatus, Gender } from '@/types.ts';
 import { useNotification } from '@/contexts/NotificationContext.tsx';
@@ -29,18 +29,7 @@ import useMediaQuery from '@/hooks/useMediaQuery.ts';
 import MobileStudentCard from '@/components/students/MobileStudentCard.tsx';
 import { useOffline } from '@/contexts/OfflineContext.tsx';
 import * as db from '@/utils/db.ts';
-
-const StudentForm = lazy(() => import('@/components/students/StudentForm.tsx'));
-
-// FIX: Correctly defined the FormLoader component to return a ReactNode.
-const FormLoader: React.FC = () => (
-    <div className="flex justify-center items-center h-96">
-        <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-    </div>
-);
+import StudentForm from '@/components/students/StudentForm.tsx';
 
 // --- Main Page Component ---
 const StudentsPage: React.FC = () => {
@@ -507,17 +496,15 @@ const StudentsPage: React.FC = () => {
             )}
 
             <Modal isOpen={!!editingStudent} onClose={() => setEditingStudent(null)} title={editingStudent?.studentId ? 'Edit Student' : 'Add New Student'}>
-                <Suspense fallback={<FormLoader />}>
-                    <StudentForm 
-                        key={editingStudent?.studentId || 'new'} 
-                        student={editingStudent!} 
-                        onCancel={() => setEditingStudent(null)}
-                        onSaveCreate={handleSaveCreateStudent}
-                        onSaveUpdate={handleSaveUpdateStudent}
-                        isCreating={isCreating}
-                        savingSection={savingSection}
-                    />
-                </Suspense>
+                <StudentForm 
+                    key={editingStudent?.studentId || 'new'} 
+                    student={editingStudent!} 
+                    onCancel={() => setEditingStudent(null)}
+                    onSaveCreate={handleSaveCreateStudent}
+                    onSaveUpdate={handleSaveUpdateStudent}
+                    isCreating={isCreating}
+                    savingSection={savingSection}
+                />
             </Modal>
             
             {isShowingImportModal && (<StudentImportModal existingStudents={[]} studentsOnPage={studentsList} onFinished={handleImportFinished} />)}
