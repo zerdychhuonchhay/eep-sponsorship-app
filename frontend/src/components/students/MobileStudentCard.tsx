@@ -21,7 +21,7 @@ const StatItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, 
 
 
 const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onViewProfile, actionItems, sponsorName }) => {
-    const isPending = String(student.studentId).startsWith('temp-');
+    const isPending = typeof student.studentId === 'string' && student.studentId.startsWith('temp-');
 
     return (
         <div className="bg-white dark:bg-box-dark rounded-lg border border-stroke dark:border-strokedark shadow-sm overflow-hidden">

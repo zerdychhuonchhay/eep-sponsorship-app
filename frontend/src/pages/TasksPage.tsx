@@ -263,7 +263,7 @@ const TasksPage: React.FC = () => {
                 isMobile ? (
                     <div className="space-y-3">
                         {tasks.map((task) => {
-                            const isPending = String(task.id).startsWith('temp-');
+                            const isPending = typeof task.id === 'string' && task.id.startsWith('temp-');
                             return (
                                 <MobileListItem
                                     key={task.id}
@@ -301,7 +301,7 @@ const TasksPage: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {tasks.map((task) => {
-                                        const isPending = String(task.id).startsWith('temp-');
+                                        const isPending = typeof task.id === 'string' && task.id.startsWith('temp-');
                                         const actionItems = [];
                                         if (canUpdate && !isPending) {
                                             actionItems.push({ label: 'Edit', icon: <EditIcon className="w-4 h-4" />, onClick: () => setEditingTask(task) });

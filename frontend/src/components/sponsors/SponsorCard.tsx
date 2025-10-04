@@ -11,7 +11,7 @@ interface SponsorCardProps {
 
 const SponsorCard: React.FC<SponsorCardProps> = ({ sponsor }) => {
     const navigate = useNavigate();
-    const isPending = String(sponsor.id).startsWith('temp-');
+    const isPending = typeof sponsor.id === 'string' && sponsor.id.startsWith('temp-');
 
     return (
         <Card
