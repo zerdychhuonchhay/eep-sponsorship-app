@@ -191,10 +191,8 @@ const TasksPage: React.FC = () => {
     const handleDeleteTask = async (taskId: string) => {
         if (!window.confirm('Are you sure you want to delete this task?')) return;
 
-        const taskToDelete = tasks.find(t => t.id === taskId);
-        if (!taskToDelete) return;
-
         // Optimistic UI update
+        const originalTasks = tasks;
         setTasks(prev => prev.filter(t => t.id !== taskId));
 
         if (!isOnline) {
@@ -206,18 +204,19 @@ const TasksPage: React.FC = () => {
         try {
             await api.deleteTask(taskId);
             showToast('Task deleted.', 'success');
-            refetch();
+            refetch(); // Refetch to ensure pagination and counts are correct
         } catch (error: any) {
             showToast(error.message || 'Failed to delete task.', 'error');
-            setTasks(prev => [...prev, taskToDelete].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())); // Revert
+            // On failure, revert the optimistic update
+            setTasks(originalTasks);
         }
     };
     
     const handleQuickStatusChange = async (taskToUpdate: Task, newStatus: TaskStatus) => {
         const updatedTask = { ...taskToUpdate, status: newStatus };
     
-        // FIX: Use a functional update to prevent race conditions from stale state.
-        // This is the correct pattern for optimistic UI updates.
+        // Optimistic UI Update
+        const originalTasks = tasks;
         setTasks(prevTasks =>
             prevTasks.map(task =>
                 task.id === taskToUpdate.id ? updatedTask : task
@@ -235,13 +234,8 @@ const TasksPage: React.FC = () => {
             showToast(`Task status updated to ${newStatus}.`, 'success');
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
-            // FIX: Revert the change on failure, also using a safe functional update.
-            // This ensures the revert is applied to the current state, not a stale one.
-            setTasks(prevTasks =>
-                prevTasks.map(task =>
-                    task.id === taskToUpdate.id ? taskToUpdate : task
-                )
-            );
+            // On failure, revert the optimistic update
+            setTasks(originalTasks);
         }
     };
     

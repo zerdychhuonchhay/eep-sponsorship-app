@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
-    // FIX: Use `ReturnType<typeof setTimeout>` for the timeout ID to ensure cross-environment compatibility (Node.js vs. browser).
+    // Use `ReturnType<typeof setTimeout>` for the timeout ID to ensure cross-environment compatibility (Node.js vs. browser).
     const refreshTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const clearRefreshTokenTimer = () => {

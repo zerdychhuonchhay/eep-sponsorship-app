@@ -268,10 +268,8 @@ const StudentsPage: React.FC = () => {
     
     const handleDeleteStudent = async (studentId: string, fromDetailView: boolean = false) => {
         if(!window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) return;
-        
-        const studentToDelete = studentsList.find(s => s.studentId === studentId);
-        if (!studentToDelete) return;
 
+        const originalStudents = studentsList;
         // Optimistic UI update
         setStudentsList(prev => prev.filter(s => s.studentId !== studentId));
 
@@ -293,11 +291,13 @@ const StudentsPage: React.FC = () => {
         try {
             await api.deleteStudent(studentId);
             showToast('Student deleted.', 'success');
-            refetchListData();
+            // On success, we don't need to refetch because the optimistic update was correct.
+            // This prevents a flicker. We may need to refetch if pagination count is critical.
+            refetchListData(); // Refetch to keep pagination and totals accurate.
         } catch (error: any) {
             showToast(error.message || 'Failed to delete student.', 'error');
-            // FIX: Revert the change safely using a functional update instead of stale data.
-            setStudentsList(prev => [...prev, studentToDelete].sort((a,b) => a.firstName.localeCompare(b.firstName)));
+            // On failure, revert the optimistic update by restoring the original students list.
+            setStudentsList(originalStudents);
         }
     };
 
