@@ -160,7 +160,7 @@
                                 ) : (
                                     <>
                                         {sponsors.map(sponsor => {
-                                            const isPending = sponsor.id && typeof sponsor.id === 'string' && sponsor.id.startsWith('temp-');
+                                            const isPending = String(sponsor.id).startsWith('temp-');
                                             return (
                                                 <MobileListItem
                                                     key={sponsor.id}
@@ -215,7 +215,7 @@
                                                 </thead>
                                                 <tbody>
                                                     {sponsors.map(sponsor => {
-                                                        const isPending = sponsor.id && typeof sponsor.id === 'string' && sponsor.id.startsWith('temp-');
+                                                        const isPending = String(sponsor.id).startsWith('temp-');
                                                         return (
                                                             <tr key={sponsor.id} className={!isPending ? "cursor-pointer" : ""} onClick={() => !isPending && navigate(`/sponsors/${sponsor.id}`)}>
                                                                 <td className="font-medium">
