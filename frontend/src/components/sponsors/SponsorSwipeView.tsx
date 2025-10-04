@@ -31,7 +31,7 @@ const SponsorSwipeView: React.FC<SponsorSwipeViewProps> = ({ sponsors, isLoading
 
     const goToPrev = useCallback(() => {
         if (currentIndex > 0) {
-            setCurrentIndex(prev => prev + 1);
+            setCurrentIndex(prev => prev - 1);
         }
     }, [currentIndex]);
 
