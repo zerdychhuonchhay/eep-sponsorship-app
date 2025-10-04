@@ -216,7 +216,8 @@ const TasksPage: React.FC = () => {
     const handleQuickStatusChange = async (taskToUpdate: Task, newStatus: TaskStatus) => {
         const updatedTask = { ...taskToUpdate, status: newStatus };
     
-        // Use functional update to avoid race conditions with stale state.
+        // FIX: Use a functional update to prevent race conditions from stale state.
+        // This is the correct pattern for optimistic UI updates.
         setTasks(prevTasks =>
             prevTasks.map(task =>
                 task.id === taskToUpdate.id ? updatedTask : task
@@ -234,7 +235,8 @@ const TasksPage: React.FC = () => {
             showToast(`Task status updated to ${newStatus}.`, 'success');
         } catch (error: any) {
             showToast(`Failed to update task: ${error.message}`, 'error');
-            // Revert the change on failure using the original task object.
+            // FIX: Revert the change on failure, also using a safe functional update.
+            // This ensures the revert is applied to the current state, not a stale one.
             setTasks(prevTasks =>
                 prevTasks.map(task =>
                     task.id === taskToUpdate.id ? taskToUpdate : task
