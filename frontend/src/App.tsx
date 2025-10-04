@@ -12,7 +12,6 @@ import { UIProvider } from '@/contexts/UIContext.tsx';
 import Toast from '@/components/Toast.tsx';
 import Header from '@/components/layout/Header.tsx';
 import Sidebar from '@/components/layout/Sidebar.tsx';
-import PageLoader from './components/PageLoader.tsx';
 import AIAssistant from './components/AIAssistant.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
