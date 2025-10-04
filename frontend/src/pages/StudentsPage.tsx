@@ -280,6 +280,9 @@ const StudentsPage: React.FC = () => {
     const handleDeleteStudent = async (studentId: string, fromDetailView: boolean = false) => {
         if(!window.confirm('Are you sure you want to delete this student? This will also remove all associated records.')) return;
         
+        const studentToDelete = studentsList.find(s => s.studentId === studentId);
+        if (!studentToDelete) return;
+
         // Optimistic UI update
         setStudentsList(prev => prev.filter(s => s.studentId !== studentId));
 
@@ -304,7 +307,8 @@ const StudentsPage: React.FC = () => {
             refetchListData();
         } catch (error: any) {
             showToast(error.message || 'Failed to delete student.', 'error');
-            setStudentsList(paginatedData?.results || []);
+            // FIX: Revert the change safely using a functional update instead of stale data.
+            setStudentsList(prev => [...prev, studentToDelete].sort((a,b) => a.firstName.localeCompare(b.firstName)));
         }
     };
 
