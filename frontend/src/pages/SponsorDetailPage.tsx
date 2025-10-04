@@ -64,13 +64,11 @@ const SponsorDetailPage: React.FC = () => {
     const handleUpdateSponsor = async (sponsorData: Omit<Sponsor, 'sponsoredStudentCount'>) => {
         if (!id || !sponsor) return;
         setIsSubmitting(true);
-        const originalSponsor = sponsor;
-        const updatedSponsor = { ...sponsor, ...sponsorData };
-
-        setSponsor(updatedSponsor);
-        setIsEditing(false);
 
         if (!isOnline) {
+            const updatedSponsor = { ...sponsor, ...sponsorData };
+            setSponsor(updatedSponsor); // Optimistic UI for offline mode
+            setIsEditing(false);
             await queueChange({ type: 'UPDATE_SPONSOR', payload: updatedSponsor, timestamp: Date.now() });
             showToast('Offline: Sponsor updated. Will sync when online.', 'info');
             setIsSubmitting(false);
@@ -78,14 +76,16 @@ const SponsorDetailPage: React.FC = () => {
             return;
         }
 
+        // Online logic - no optimistic update
         try {
             const serverUpdatedSponsor = await api.updateSponsor(sponsorData);
-            setSponsor(serverUpdatedSponsor);
+            setSponsor(serverUpdatedSponsor); // Update with response from server
+            setIsEditing(false); // Close modal on success
             showToast('Sponsor updated successfully!', 'success');
             refetchSponsorLookup();
         } catch (error: any) {
             showToast(error.message || 'Failed to update sponsor.', 'error');
-            setSponsor(originalSponsor);
+            // No UI reversion needed
         } finally {
             setIsSubmitting(false);
         }
