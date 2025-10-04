@@ -95,7 +95,7 @@
         const handleSave = async (sponsorData: Omit<Sponsor, 'id' | 'sponsoredStudentCount'>) => {
             setIsSubmitting(true);
             if (!isOnline) {
-                const tempId = `temp-${Date.now()}`;
+                const tempId = `temp-${Date.now()}-${Math.random()}`;
                 const newSponsor: Sponsor = { ...sponsorData, id: tempId, sponsoredStudentCount: 0 };
                 
                 setSponsors(prev => [newSponsor, ...prev].sort((a,b) => a.name.localeCompare(b.name)));

@@ -191,7 +191,7 @@ const StudentsPage: React.FC = () => {
                 delete payload.profilePhoto;
             }
 
-            const tempId = `temp-${Date.now()}`;
+            const tempId = `temp-${Date.now()}-${Math.random()}`;
             const newStudent: Student = { ...payload, studentId: tempId, sponsorships: [], documents: [] };
             
             // Optimistic UI update

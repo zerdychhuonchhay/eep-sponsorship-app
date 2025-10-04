@@ -24,14 +24,13 @@ import ProtectedRoute from './components/ProtectedRoute.tsx';
 import SignupPage from './pages/SignupPage.tsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
-
-const AuditLogPage = React.lazy(() => import('@/pages/AuditLogPage.tsx'));
-const SponsorsPage = React.lazy(() => import('@/pages/SponsorsPage.tsx'));
-const SponsorDetailPage = React.lazy(() => import('@/pages/SponsorDetailPage.tsx'));
-const ReportsPage = React.lazy(() => import('@/pages/ReportsPage.tsx'));
-const SettingsPage = React.lazy(() => import('@/pages/SettingsPage.tsx'));
-const UsersAndRolesPage = React.lazy(() => import('@/pages/UserManagementPage.tsx'));
-const ProfilePage = React.lazy(() => import('@/pages/ProfilePage.tsx'));
+import AuditLogPage from '@/pages/AuditLogPage.tsx';
+import SponsorsPage from '@/pages/SponsorsPage.tsx';
+import SponsorDetailPage from '@/pages/SponsorDetailPage.tsx';
+import ReportsPage from '@/pages/ReportsPage.tsx';
+import SettingsPage from '@/pages/SettingsPage.tsx';
+import UsersAndRolesPage from '@/pages/UserManagementPage.tsx';
+import ProfilePage from '@/pages/ProfilePage.tsx';
 
 const AppContent: React.FC = () => {
     const location = useLocation();
@@ -55,41 +54,13 @@ const AppContent: React.FC = () => {
                                     <Route path="filings" element={<FilingsPage />} />
                                     <Route path="tasks" element={<TasksPage />} />
                                     <Route path="academics" element={<AcademicsPage />} />
-                                     <Route path="sponsors" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <SponsorsPage />
-                                        </React.Suspense>
-                                    } />
-                                    <Route path="sponsors/:id" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <SponsorDetailPage />
-                                        </React.Suspense>
-                                    } />
-                                     <Route path="reports" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <ReportsPage />
-                                        </React.Suspense>
-                                    } />
-                                    <Route path="audit" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <AuditLogPage />
-                                        </React.Suspense>
-                                    } />
-                                     <Route path="users" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <UsersAndRolesPage />
-                                        </React.Suspense>
-                                    } />
-                                     <Route path="settings" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <SettingsPage />
-                                        </React.Suspense>
-                                    } />
-                                    <Route path="profile" element={
-                                        <React.Suspense fallback={<PageLoader />}>
-                                            <ProfilePage />
-                                        </React.Suspense>
-                                    } />
+                                     <Route path="sponsors" element={<SponsorsPage />} />
+                                    <Route path="sponsors/:id" element={<SponsorDetailPage />} />
+                                     <Route path="reports" element={<ReportsPage />} />
+                                    <Route path="audit" element={<AuditLogPage />} />
+                                     <Route path="users" element={<UsersAndRolesPage />} />
+                                     <Route path="settings" element={<SettingsPage />} />
+                                    <Route path="profile" element={<ProfilePage />} />
                                 </Routes>
                             </CSSTransition>
                         </TransitionGroup>

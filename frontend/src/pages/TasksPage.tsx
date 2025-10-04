@@ -160,7 +160,7 @@ const TasksPage: React.FC = () => {
                 await queueChange({ type: 'UPDATE_TASK', payload: updatedTask, timestamp: Date.now() });
                 showToast('Offline: Task updated. Will sync when online.', 'info');
             } else {
-                const tempId = `temp-${Date.now()}`;
+                const tempId = `temp-${Date.now()}-${Math.random()}`;
                 const newTask: Task = { ...taskData, id: tempId };
                 setTasks(prev => [newTask, ...prev].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
                 await queueChange({ type: 'CREATE_TASK', payload: newTask, timestamp: Date.now() });
