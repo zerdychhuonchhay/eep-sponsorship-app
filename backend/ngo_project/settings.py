@@ -13,7 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-secret-key-here')
 
 # IMPORTANT: DEBUG should be False in production for security
-DEBUG = True
+# This line reads the DEBUG variable from your environment.
+# It defaults to 'False' and checks if the value is the string 'true'.
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 # This allows your live Railway domain to be accessed.
 ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS')
